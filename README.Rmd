@@ -1,0 +1,20 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+  )
+```
+
+# Project I - 15N seasonality
+## Part of PhD studies of Emil A.S. Andersen
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+To better work with and across with other collaborators, I will make certain parts of this project public.

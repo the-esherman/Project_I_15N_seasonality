@@ -147,8 +147,8 @@ vegroot15N_d15N_Nconc_Long0 <- vegroot15N_d15N_Nconc_Long0 %>%
 #
 # Actual needed
 vegroot15N_NLong1 <- vegroot15N_NLong %>%
-  add_column(Part = str_split_fixed(vegroot15N_RLong$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(vegroot15N_RLong$Type,"_\\w+",n=2)[,1])
+  add_column(Part = str_split_fixed(vegroot15N_NLong$Type,"\\w+_",n=2)[,2]) %>%
+  add_column(Species = str_split_fixed(vegroot15N_NLong$Type,"_\\w+",n=2)[,1])
 #
 #
 # Transform Recovery to long format
@@ -257,11 +257,12 @@ Rec15N %>%
   group_by(across(c(Site, Round))) %>%
   get_summary_stats(TotalRecovery)
 #
+# Snow cover
 table_dat_N_atom1 %>%
   group_by(Site, Round) %>%
-  get_summary_stats(Snow_patch)
+  get_summary_stats(Snow_plot)
 table_dat_N_atom %>%
-  ggboxplot(x = "Round", y = "Snow_patch", color = "Site", palette = "jco", short.panel.labs = FALSE) + guides(x = guide_axis(n.dodge = 2))
+  ggboxplot(x = "Round", y = "Snow_plot", color = "Site", palette = "jco", short.panel.labs = FALSE) + guides(x = guide_axis(n.dodge = 2))
 #
 #
 #

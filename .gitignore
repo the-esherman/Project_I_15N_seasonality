@@ -3,3 +3,13 @@
 .Rdata
 .httr-oauth
 .DS_Store
+
+# Raw data
+raw_data/*
+
+# Images and exported data
+images/*
+export/*
+
+# Removed code
+R_code/15N_data_removed.R

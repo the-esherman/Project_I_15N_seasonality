@@ -1,0 +1,54 @@
+---
+title: "Study I"
+author: "EASA"
+date: '2022-06-21'
+bookdown::html_document2:
+    fig_caption: true
+    toc: false
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, cache = FALSE, tidy = TRUE, tidy.opts = list(width.cutoff = 50))
+library(tidyverse)
+library(broom)
+library(kableExtra)
+library(crosstalk)
+library(leaflet)
+library(DT)
+library(plotly)
+library(downloadthis)
+library(readxl)
+options("kableExtra.html.bsTable" = T)
+```
+
+# Download data
+
+```{r, echo=F}
+vegroot15N <- read_excel("15N vegetation and roots v0.11.xlsx", sheet = "15N", col_names = TRUE)
+vegrootNatAb <- read_excel("15N vegetation and roots v0.11.xlsx", sheet = "NatAbu", col_names = TRUE)
+
+```
+
+# Download data
+
+```{r, echo=F}
+vegroot15N <- read_excel("15N vegetation and roots v0.11.xlsx", sheet = "15N", col_names = TRUE)
+vegrootNatAb <- read_excel("15N vegetation and roots v0.11.xlsx", sheet = "NatAbu", col_names = TRUE)
+
+```
+
+# Check out data
+
+```{r, echo=F, eval = F}
+DT::datatable(vegroot15N, extensions = c('Buttons', 'ColReorder'),
+          caption = '15N values of different parts through a year',
+            filter = "top",
+            options = list(dom = 'Blfrtip',
+                            colReorder = TRUE,
+                          scrollX='400px',
+                           scrollY='200px',
+                           buttons = c('copy', 'csv', 'excel', I('colvis')),
+                           lengthMenu = list(c(10,25,50,-1),
+                                             c(10,25,50,"All"))))
+```

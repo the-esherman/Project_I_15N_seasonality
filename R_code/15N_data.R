@@ -1319,6 +1319,36 @@ vegroot15N_RLong_one %>%
   facet_wrap( ~ Site, ncol = 2) + 
   labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + guides(x = guide_axis(n.dodge = 2)) + 
   theme_light() 
+#
+#
+# Proportional to total recovery
+Rec15N %>%
+  group_by(across(c("Site", "Round"))) %>%
+  summarise(avgRecovery = mean((TotalRecovery/sysRec*100), na.rm = TRUE), se = sd((TotalRecovery/sysRec*100))/sqrt(length((TotalRecovery/sysRec*100))), .groups = "keep") %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgRecovery)) +
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
+  #ylim(0,30) +
+  facet_wrap( ~ Site, ncol = 2) + 
+  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants, proportional to total recovery") + guides(x = guide_axis(n.dodge = 2)) + 
+  theme_light() 
+#
+# Mic - MBN
+Rec15N %>%
+  group_by(across(c("Site", "Round"))) %>%
+  summarise(avgRecovery = mean((R_MBN/sysRec*100), na.rm = TRUE), se = sd((R_MBN/sysRec*100))/sqrt(length((R_MBN/sysRec*100))), .groups = "keep") %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgRecovery)) +
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
+  facet_wrap( ~ Site, ncol = 2) + 
+  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in MBN, proportional to total recovery") + guides(x = guide_axis(n.dodge = 2)) + 
+  theme_light() 
+
+
+
+
 
 Recov_FR <- ggplot(vegroot15N, aes(Round, R_FR, colour = Site))
 Recov_FR + geom_boxplot()

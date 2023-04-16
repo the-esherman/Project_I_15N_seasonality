@@ -5,6 +5,8 @@ library(tidyverse)
 library(lubridate)
 library(readxl)
 library(viridis)
+library(dygraphs)
+library(xts)
 #
 #
 #------- ### Load the data ### -------
@@ -52,14 +54,17 @@ Abisko_avgTair <- Abisko_Tair %>%
   summarise(Abisko = mean(Tair_A2, na.rm = TRUE), .groups = "keep") %>%
   rename("Date" = "date(Date_A)")
 #
-Vassijuare_avgTair <- Vassijaure_Tair %>%
+Vassijaure_avgTair <- Vassijaure_Tair %>%
   group_by(date(Date_V)) %>%
   summarise(Vassijaure = mean(Tair_V2, na.rm = TRUE), .groups = "keep") %>%
   rename("Date" = "date(Date_V)")
 #
+avgTair_wide <- left_join(Abisko_avgTair, Vassijaure_avgTair) %>%
+  rename("Abisko_Tair" = Abisko,
+         "Vassijaure_Tair" = Vassijaure)
 # Combine Abisko and Vassijaure and pivot longer
-avgTair_long <- left_join(Abisko_avgTair, Vassijuare_avgTair) %>%
-  pivot_longer(2:3, names_to = "Site", values_to = "dielT")
+avgTair_long <- left_join(Abisko_avgTair, Vassijaure_avgTair) %>%
+  pivot_longer(2:3, names_to = "Site", values_to = "dielT_air")
 #
 #
 #
@@ -82,10 +87,44 @@ slice(5:(n()-24)) %>% # No data for the last 24 logs
   mutate(across(c(V_Date, V1_Date, V2_Date, V3_Date, V4_Date, V5_Date), ymd_hms))
 #
 # Mean Soil temperature
-
-
+Abisko_avgTsoil <- Abisko_EM50 %>%
+  select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
+  group_by(date(Date)) %>%
+  summarise(A1N_Tsoil = mean(A1N_Tsoil, na.rm = TRUE),
+            A2N_Tsoil = mean(A2N_Tsoil, na.rm = TRUE),
+            A3N_Tsoil = mean(A3N_Tsoil, na.rm = TRUE),
+            A4N_Tsoil = mean(A4N_Tsoil, na.rm = TRUE),
+            A5N_Tsoil = mean(A5N_Tsoil, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(Date)") %>%
+  mutate(Abisko = mean(c(A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil), na.rm = TRUE))
+#
+Vassijaure_avgTsoil <- Vassijaure_EM50 %>%
+  select(V_Date, V1N_Tsoil, V2N_Tsoil, V3N_Tsoil, V4N_Tsoil, V5N_Tsoil) %>%
+  group_by(date(V_Date)) %>%
+  summarise(V1N_Tsoil = mean(V1N_Tsoil, na.rm = TRUE),
+            V2N_Tsoil = mean(V2N_Tsoil, na.rm = TRUE),
+            V3N_Tsoil = mean(V3N_Tsoil, na.rm = TRUE),
+            V4N_Tsoil = mean(V4N_Tsoil, na.rm = TRUE),
+            V5N_Tsoil = mean(V5N_Tsoil, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(V_Date)") %>%
+  mutate(Vassijaure = mean(c(V1N_Tsoil, V2N_Tsoil, V3N_Tsoil, V4N_Tsoil, V5N_Tsoil), na.rm = TRUE))
+#
+# Average across plots
+avgTsoil_wide <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
+  select(c(Date, Abisko, Vassijaure)) %>%
+  rename("Abisko_Tsoil" = Abisko,
+         "Vassijaure_Tsoil" = Vassijaure)
+# Combine Abisko and Vassijaure and pivot longer
+avgTsoil_long <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
+  select(c(Date, Abisko, Vassijaure)) %>%
+  pivot_longer(2:3, names_to = "Site", values_to = "dielT_soil")
 #
 #
+# Combine all temperatures
+avgT_wide <- left_join(avgTair_wide, avgTsoil_wide)
+avgT_long <- left_join(avgTair_long, avgTsoil_long)
 #
 #------- # Soil Temperature # -------|
 
@@ -105,16 +144,61 @@ slice(5:(n()-24)) %>% # No data for the last 24 logs
 #------- ### Plot ### -------
 
 # Plot it
-avgTair %>%
-  ggplot(aes(x = Date, y = dielT, colour = Site)) +
+avgTair_long %>%
+  ggplot(aes(x = Date, y = dielT_air, colour = Site)) +
+  geom_point() +
   geom_line() +
   scale_color_viridis(discrete = TRUE) +
   xlab("Time") + ylab("Temperature C")
+#
+avgTsoil_long %>%
+  ggplot(aes(x = Date, y = dielT_soil, colour = Site)) +
+  geom_line() +
+  scale_color_viridis(discrete = TRUE) +
+  xlab("Time") + ylab("Temperature C")
+#
+
+avgT_wide %>%
+  ggplot() +
+  geom_line(aes(x = Date, y = Abisko_Tair), color = "#E69F00",linetype = "solid") +
+  geom_line(aes(x = Date, y = Vassijaure_Tair), color = "#009E73",linetype = "solid") +
+  geom_line(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", linetype = "dashed") +
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", linetype = "dotdash") +
+  #scale_color_viridis(discrete = TRUE, option = "E") +
+  xlab("Time") + ylab("Temperature C") 
+  #theme_bw()
+
+avgT_long %>%
+  #pivot_longer(3:4, names_to = "Temp", values_to = "dielT") %>%
+  #group_by(Site) %>%
+  ggplot() +
+  geom_line(aes(x = Date, y = dielT_air, colour = Site),linetype = "solid", size = 1) +
+  geom_line(aes(x = Date, y = dielT_soil, colour = Site), linetype = "dotdash", size = 1) +
+  #scale_color_viridis(discrete = TRUE, option = "E") +
+  xlab("Time") + ylab("Temperature C") +
+  theme_bw()
+#facet_wrap( ~ Site)
+
+
 
 #------- # Leftovers # -------
 
+data <- data.frame(
+  time=seq(from=Sys.Date()-40, to=Sys.Date(), by=1 ), 
+  value1=runif(41), 
+  value2=runif(41)+0.7
+)
+# Then you can create the xts format:
+don=xts( x=data[,-1], order.by=data$time)
 
+# Chart
+p <- dygraph(don)
+p
 
+# Interesting, but does not let me zoom down to negative values
+don=xts( x=avgT_long[,-1], order.by=avgT_long$Date)
+p <- dygraph(don)
+p
 
 # Not really working as of now
 #

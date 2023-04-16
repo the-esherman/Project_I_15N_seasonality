@@ -9,12 +9,14 @@ library(viridis)
 #
 #------- ### Load the data ### -------
 #------- # Air temperature logger # -------|
-Abisko_Tair <- read_xlsx("raw_data/Abisko_Tair.xlsx", skip = 5, col_names = TRUE, col_types = c("date", "date", "text","date","text","text","text","date","text","text","text","date","text","text","text","text", "text"))
-Vassijaure_Tair <- read_xlsx("raw_data/Vassijaure_Tair.xlsx", skip = 5, col_names = TRUE, col_types = c("date", "date", "text","date","text","text","text","date","text","text","text","date","text","text","text","text", "text"))
+Tair_cols <- c("date", "date", "text","date","text","text","text","date","text","text","text","date","text","text","text","text", "text")
+Abisko_Tair <- read_xlsx("raw_data/Abisko_Tair.xlsx", skip = 5, col_names = TRUE, col_types = Tair_cols)
+Vassijaure_Tair <- read_xlsx("raw_data/Vassijaure_Tair.xlsx", skip = 5, col_names = TRUE, col_types = Tair_cols)
 #
 # Soil temperature and moisture data and PAR sensor
-Abisko_EM50 <- read_xlsx("raw_data/allEMdata Abisko.xlsx", col_names = TRUE)
-Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = TRUE)
+EM50_cols <- c("date", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "date", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")
+Abisko_EM50 <- read_xlsx("raw_data/allEMdata Abisko.xlsx", col_names = TRUE, col_types = EM50_cols)
+Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = TRUE, col_types = EM50_cols)
 #
 #
 #
@@ -55,9 +57,38 @@ Vassijuare_avgTair <- Vassijaure_Tair %>%
   summarise(Vassijaure = mean(Tair_V2, na.rm = TRUE), .groups = "keep") %>%
   rename("Date" = "date(Date_V)")
 #
+# Combine Abisko and Vassijaure and pivot longer
+avgTair_long <- left_join(Abisko_avgTair, Vassijuare_avgTair) %>%
+  pivot_longer(2:3, names_to = "Site", values_to = "dielT")
+#
+#
+#
+#------- # EM50 loggers # -------|
+# Remove last lines without a date and extra header part. Set NaN to NA
+Abisko_EM50 <- Abisko_EM50 %>%
+  slice(5:n()) %>%
+  select(-c(NA...9, NA...18, NA...27, NA...36, NA...45)) %>%
+  filter(!(is.na(Date))) %>%
+  mutate(across(where(is.character), ~na_if(.,"NaN")),
+         across(where(is.numeric), ~na_if(.,NaN))) %>%
+  mutate(across(c(Date, A1_Date, A2_Date, A3_Date, A4_Date, A5_Date), ymd_hms))
+#
+Vassijaure_EM50 <- Vassijaure_EM50 %>%
+slice(5:(n()-24)) %>% # No data for the last 24 logs
+  select(-c(NA...18, NA...27, NA...36, NA...37, NA...43, NA...44)) %>%
+  filter(!(is.na(V_Date))) %>% # if the date is not there, we cannot use the data
+  mutate(across(where(is.character), ~na_if(.,"NaN")),
+         across(where(is.numeric), ~na_if(.,NaN))) %>%
+  mutate(across(c(V_Date, V1_Date, V2_Date, V3_Date, V4_Date, V5_Date), ymd_hms))
+#
+# Mean Soil temperature
+
+
+#
 #
 #
 #------- # Soil Temperature # -------|
+
 
 #
 #
@@ -72,8 +103,7 @@ Vassijuare_avgTair <- Vassijaure_Tair %>%
 #
 #
 #------- ### Plot ### -------
-avgTair <- left_join(Abisko_avgTair, Vassijuare_avgTair) %>%
-  pivot_longer(2:3, names_to = "Site", values_to = "dielT")
+
 # Plot it
 avgTair %>%
   ggplot(aes(x = Date, y = dielT, colour = Site)) +

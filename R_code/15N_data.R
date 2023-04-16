@@ -1,7 +1,7 @@
 # 15N vegetation and root data
 # By Emil A.S. Andersen
 # 
-# ### Libraries ###
+#------- ### Libraries ### -------
 library(tidyverse)
 library(readxl)
 library(gridExtra)
@@ -17,7 +17,7 @@ library(ez)
 #
 #
 #
-# ### Load data ###
+#------- ### Load data ### -------
 #
 DataName <- "raw_data/15N vegetation and roots v0.34.6.xlsx"
 #
@@ -47,7 +47,7 @@ Nair_Rst = 1/272
 N_add <- 1.084
 #
 #
-# ### Functions
+#------- ### Functions ### -------
 #
 # filter based on a condition when graphing ggplot
 pick <- function(condition){
@@ -55,7 +55,7 @@ pick <- function(condition){
 }
 #
 #
-# ### Main data
+#------- ### Main data ### -------
 #
 # Combine and calculate recovery
 
@@ -251,7 +251,7 @@ write_delim(t1_wide2,"export/MBNTable.dat", delim = "\t")
 write_delim(t1_wide3,"export/TDNTable.dat", delim = "\t")
 #
 #
-# ## Summary tables ##
+#------- ## Summary tables ## -------
 # Plant recovery
 Rec15N %>%
   group_by(across(c(Site, Round))) %>%
@@ -276,7 +276,7 @@ table_dat_N_atom %>%
 #
 #
 #
-# ### Statistical testing ###
+#------- ### Statistical testing ### -------
 #
 # Q1: Is there any (potential for) N-uptake activity in plant roots during the winter period?
 # Model: Recovery ~ Time, Site, Time*Site
@@ -344,8 +344,8 @@ vegroot15N_RLong_one2$Round <- as.factor(vegroot15N_RLong_one2$Round)
 #
 #
 #
-# ### Statistics ###
-#  ##     Q1     ##
+#------- ### Statistics ### -------
+#-------  ##     Q1     ## -------
 #
 # Model
 # Response variable: whole plant recovery of 15N (% of combined functional groups and plant organs)
@@ -424,7 +424,7 @@ plantModel2
 # #
 # summary(plantIntactModel)
 # summary(PlantModel2)
-#####
+#
 #
 # rmANOVA alternative, but does not take into consideration sphericity assumption or corrections
 summary(aov(PlantRecovery ~ Round*Site + Error(Site/Plot), data = vegroot15N_RLong_xl))
@@ -648,8 +648,8 @@ by(vegroot15N_RLong_xl$logPlantRecovery, list(vegroot15N_RLong_xl$Round, vegroot
 #
 #
 #
-# ### Statistics ###
-#  ##     Q1a     ##
+#------- ### Statistics ### -------
+#-------  ##     Q1a    ##  -------
 #
 # Model
 # Response variable: plant recovery of 15N (% of combined functional groups particitioned into organs)
@@ -899,8 +899,8 @@ OrganBoxP2 +
 #
 #
 #
-# ### Statistics ###
-#  ##     Q2     ##
+#------- ### Statistics ### -------
+#-------  ##     Q2     ##  -------
 #
 # Model
 # Response variable: Microbial recovery of 15N (%), MBN
@@ -1221,7 +1221,7 @@ mauchly.test(mlmfit, X=~1)
 #
 #
 #
-# ### Plotting ###
+#------- ### Plotting ### -------
 #
 # Plot average recovery of each component per site over each measuring period
 # Evergreen shrubs
@@ -1519,7 +1519,7 @@ vegroot15N_d15N_Nconc_Long %>%
 #
 #
 #
-# ### Checking data ###
+#------- ### Checking data ### -------
 #
 library("outliers") 
 library("VIM") # For matrixplot
@@ -1560,4 +1560,4 @@ IRMS_dupli <- IRMS %>%
 
 #
 #
-# The End
+#------- The End -------

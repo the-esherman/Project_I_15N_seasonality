@@ -7,8 +7,8 @@ library(readxl)
 library(viridis)
 #
 #
-# Load the data
-# Air temperature logger
+#------- ### Load the data ### -------
+#------- # Air temperature logger # -------|
 Abisko_Tair <- read_xlsx("raw_data/Abisko_Tair.xlsx", skip = 5, col_names = TRUE, col_types = c("date", "date", "text","date","text","text","text","date","text","text","text","date","text","text","text","text", "text"))
 Vassijaure_Tair <- read_xlsx("raw_data/Vassijaure_Tair.xlsx", skip = 5, col_names = TRUE, col_types = c("date", "date", "text","date","text","text","text","date","text","text","text","date","text","text","text","text", "text"))
 #
@@ -18,6 +18,9 @@ Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = T
 #
 #
 #
+#
+#------- ### Clean data ### -------
+#------- # Air Temperature # -------|
 # Select specific rows
 Abisko_Tair <- Abisko_Tair %>%
   dplyr::select(1:4, "Tair_C1", 8, "Tair_31", 12, "Tair_39_2", "Tair_A", "Tair_A2") %>%
@@ -52,6 +55,23 @@ Vassijuare_avgTair <- Vassijaure_Tair %>%
   summarise(Vassijaure = mean(Tair_V2, na.rm = TRUE), .groups = "keep") %>%
   rename("Date" = "date(Date_V)")
 #
+#
+#
+#------- # Soil Temperature # -------|
+
+#
+#
+#
+#------- # Soil Moisture # -------|
+
+#
+#
+#
+#------- # PAR # -------|
+
+#
+#
+#------- ### Plot ### -------
 avgTair <- left_join(Abisko_avgTair, Vassijuare_avgTair) %>%
   pivot_longer(2:3, names_to = "Site", values_to = "dielT")
 # Plot it
@@ -61,6 +81,7 @@ avgTair %>%
   scale_color_viridis(discrete = TRUE) +
   xlab("Time") + ylab("Temperature C")
 
+#------- # Leftovers # -------
 
 
 
@@ -70,3 +91,7 @@ avgTair %>%
 # Abisko_Tair <- Abisko_Tair %>%
 #   mutate(avgTair_A = rowMeans(do.call(rbind, list(Abisko_Tair$Tair_A39_1, Abisko_Tair$Tair_C1, Abisko_Tair$Tair_31, Abisko_Tair$Tair_39_2)), na.rm = TRUE))
 # mean(c(Abisko_Tair$Tair_A39_1, Abisko_Tair$Tair_C1, Abisko_Tair$Tair_31, Abisko_Tair$Tair_39_2), na.rm = TRUE)
+#
+#
+#
+#------- The End -------

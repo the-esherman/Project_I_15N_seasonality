@@ -7,6 +7,8 @@ library(readxl)
 library(viridis)
 library(dygraphs)
 library(xts)
+library(plotly)
+library(hrbrthemes)
 #
 #
 #------- ### Load the data ### -------
@@ -21,6 +23,8 @@ Abisko_EM50 <- read_xlsx("raw_data/allEMdata Abisko.xlsx", col_names = TRUE, col
 Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = TRUE, col_types = EM50_cols)
 #
 #
+# SMHI weather station data
+
 #
 #
 #------- ### Clean data ### -------
@@ -160,13 +164,33 @@ avgTsoil_long %>%
 
 avgT_wide %>%
   ggplot() +
-  geom_line(aes(x = Date, y = Abisko_Tair), color = "#E69F00",linetype = "solid") +
-  geom_line(aes(x = Date, y = Vassijaure_Tair), color = "#009E73",linetype = "solid") +
-  geom_line(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", linetype = "dashed") +
-  geom_line(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", linetype = "dotdash") +
+  geom_line(aes(x = Date, y = Abisko_Tair), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + # Orange
+  geom_point(aes(x = Date, y = Abisko_Tair), shape = 6) +
+  geom_line(aes(x = Date, y = Vassijaure_Tair), linetype = "solid", size=1, alpha = 0.4) + # Bluish green, color = "#009E73"
+  geom_point(aes(x = Date, y = Vassijaure_Tair), shape = 4) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil), linetype = "dashed", size=1) + # Vermilion, color = "#D55E00"
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil), linetype = "dotdash", size=1) + # Blue, color = "#0072B2"
   #scale_color_viridis(discrete = TRUE, option = "E") +
-  xlab("Time") + ylab("Temperature C") 
-  #theme_bw()
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  #xlab("Time") + ylab("Temperature C") +
+  theme_ipsum() +
+  theme_bw()
+  
+  legend("bottomleft", 
+         legend = c("Group 1", "Group 2"), 
+         col = c(rgb(0.2,0.4,0.1,0.7), 
+                 rgb(0.8,0.4,0.1,0.7)), 
+         pch = c(17,19), 
+         bty = "n", 
+         pt.cex = 2, 
+         cex = 1.2, 
+         text.col = "black", 
+         horiz = F , 
+         inset = c(0.1, 0.1)) +
+  
 
 avgT_long %>%
   #pivot_longer(3:4, names_to = "Temp", values_to = "dielT") %>%

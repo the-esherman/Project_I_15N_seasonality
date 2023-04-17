@@ -2,6 +2,7 @@
 # From own data
 #
 library(tidyverse)
+library(readr)
 library(lubridate)
 library(readxl)
 library(viridis)
@@ -24,7 +25,8 @@ Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = T
 #
 #
 # SMHI weather station data
-
+SMHI_Abisko_Tair <- read_csv2("raw_data/smhi_Temp_Abisko_new.csv", skip = 10)
+SMHI_Katterjakk_Tair <- read_csv2("raw_data/smhi_Kattejakk_Temp.csv", skip = 9)
 #
 #
 #------- ### Clean data ### -------
@@ -83,13 +85,16 @@ Abisko_EM50 <- Abisko_EM50 %>%
   mutate(across(c(Date, A1_Date, A2_Date, A3_Date, A4_Date, A5_Date), ymd_hms))
 #
 Vassijaure_EM50 <- Vassijaure_EM50 %>%
-slice(5:(n()-24)) %>% # No data for the last 24 logs
+  slice(5:(n()-24)) %>% # No data for the last 24 logs
   select(-c(NA...18, NA...27, NA...36, NA...37, NA...43, NA...44)) %>%
   filter(!(is.na(V_Date))) %>% # if the date is not there, we cannot use the data
   mutate(across(where(is.character), ~na_if(.,"NaN")),
          across(where(is.numeric), ~na_if(.,NaN))) %>%
   mutate(across(c(V_Date, V1_Date, V2_Date, V3_Date, V4_Date, V5_Date), ymd_hms))
 #
+#
+#
+#------- # Soil Temperature # -------|
 # Mean Soil temperature
 Abisko_avgTsoil <- Abisko_EM50 %>%
   select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
@@ -129,9 +134,6 @@ avgTsoil_long <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
 # Combine all temperatures
 avgT_wide <- left_join(avgTair_wide, avgTsoil_wide)
 avgT_long <- left_join(avgTair_long, avgTsoil_long)
-#
-#------- # Soil Temperature # -------|
-
 
 #
 #
@@ -143,6 +145,45 @@ avgT_long <- left_join(avgTair_long, avgTsoil_long)
 #
 #------- # PAR # -------|
 
+#
+#
+#
+#------- # SMHI weather data # -------|
+# Abisko
+SMHI_Abisko_Tair <- SMHI_Abisko_Tair %>%
+  select(1:3) %>%
+  mutate(across(Datum, ymd), # If also for time: across("Tid (UTC)", hms))
+         across(Lufttemperatur, as.numeric)) %>% 
+  filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
+  filter(!(year(Datum) == 2020 & month(Datum) > 10),
+         !(year(Datum) == 2019 & month(Datum) < 7))
+#
+SMHI_A_avgTair <- SMHI_Abisko_Tair %>%
+  group_by(date(Datum)) %>%
+  summarise(Abisko_Tair_SMHI = mean(Lufttemperatur, na.rm = TRUE), .groups = "keep") %>%
+  rename("Date" = "date(Datum)")
+#
+# Katterjåkk (closest station to Vassijaure)
+SMHI_Katterjakk_Tair <- SMHI_Katterjakk_Tair %>%
+  select(1:3) %>%
+  mutate(across(Datum, ymd), # If also for time: across("Tid (UTC)", hms))
+         across(Lufttemperatur, as.numeric)) %>% 
+  filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
+  filter(!(year(Datum) == 2020 & month(Datum) > 10),
+         !(year(Datum) == 2019 & month(Datum) < 7))
+#
+SMHI_K_avgTair <- SMHI_Katterjakk_Tair %>%
+  group_by(date(Datum)) %>%
+  summarise(Katterjakk_Tair_SMHI = mean(Lufttemperatur, na.rm = TRUE), .groups = "keep") %>%
+  rename("Date" = "date(Datum)")
+#
+# Combine
+
+# Combine all
+avgT_wide2 <- left_join(avgT_wide, SMHI_A_avgTair) %>%
+  left_join(SMHI_K_avgTair)
+
+#
 #
 #
 #------- ### Plot ### -------
@@ -162,12 +203,12 @@ avgTsoil_long %>%
   xlab("Time") + ylab("Temperature C")
 #
 
-avgT_wide %>%
+avgT_wide2 %>%
   ggplot() +
-  geom_line(aes(x = Date, y = Abisko_Tair), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + # Orange
-  geom_point(aes(x = Date, y = Abisko_Tair), shape = 6) +
-  geom_line(aes(x = Date, y = Vassijaure_Tair), linetype = "solid", size=1, alpha = 0.4) + # Bluish green, color = "#009E73"
-  geom_point(aes(x = Date, y = Vassijaure_Tair), shape = 4) +
+  geom_line(aes(x = Date, y = Abisko_Tair_SMHI), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + # Orange
+  geom_point(aes(x = Date, y = Abisko_Tair_SMHI), shape = 6) +
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI), linetype = "solid", size=1, alpha = 0.4) + # Bluish green, color = "#009E73"
+  geom_point(aes(x = Date, y = Katterjakk_Tair_SMHI), shape = 4) +
   geom_line(aes(x = Date, y = Abisko_Tsoil), linetype = "dashed", size=1) + # Vermilion, color = "#D55E00"
   geom_line(aes(x = Date, y = Vassijaure_Tsoil), linetype = "dotdash", size=1) + # Blue, color = "#0072B2"
   #scale_color_viridis(discrete = TRUE, option = "E") +
@@ -176,7 +217,7 @@ avgT_wide %>%
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
   #xlab("Time") + ylab("Temperature C") +
-  theme_ipsum() +
+  #theme_ipsum() +
   theme_bw()
   
   legend("bottomleft", 

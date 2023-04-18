@@ -207,22 +207,58 @@ avgTsoil_long %>%
 #
 
 # For getting the labels, use aes of e.g. linetype/shape, color or fill
+#
+# Vassijaure air and soil
+avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature"), size = 0.75) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature"), size = 0.75) + 
+  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6, size = 0.75) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
+  theme_bw(base_size = 15)
+  #theme(axis.text.x=element_text(angle=10, hjust=0.5))
+# Abisko air and soil
+avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+  geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
+  geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 6) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  guides(fill = guide_legend(title = "Soil temperature")) +
+  theme_bw()
+# Air temperatures - all
 avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
   geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
   geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
-  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
-  #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
-  #geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
+  #geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
+  geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
   #geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 4) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
   theme_bw()
+# Soil temperatures - all
 avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
-  #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
-  #geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
-  #geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure soil temperature")) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko soil temperature")) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  theme_bw()
+
+# Everything - chaos
+avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
+  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
   geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
   geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
   geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 4) +
@@ -297,7 +333,80 @@ dotchart(avgT_wide2$Vassijaure_Tsoil,
          main="Cleveland plot", xlab = "Observed values", 
          pch = 19, color = hcl.colors(12),
          gpch = 12, gcolor = 1)
-
+#
+# Abisko soil temperature sensors
+hist(Abisko_EM50$A1N_Tsoil, main = "Histogram - A1N_Tsoil")
+dotchart(Abisko_EM50$A1N_Tsoil,
+         main="Cleveland plot - A1N_Tsoil", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12),
+         gpch = 12, gcolor = 1)
+hist(Abisko_EM50$A2N_Tsoil, main = "Histogram - A2N_Tsoil")
+hist(Abisko_EM50$A3N_Tsoil, main = "Histogram - A3N_Tsoil")
+hist(Abisko_EM50$A4N_Tsoil, main = "Histogram - A4N_Tsoil")
+hist(Abisko_EM50$A5N_Tsoil, main = "Histogram - A5N_Tsoil")
+#
+Abisko_EM50 %>% ggplot(aes(x = Date, y = A1N_Tsoil)) + geom_point()
+Abisko_EM50 %>% ggplot(aes(x = Date, y = A2N_Tsoil)) + geom_point()
+Abisko_EM50 %>% ggplot(aes(x = Date, y = A3N_Tsoil)) + geom_point()
+Abisko_EM50 %>% ggplot(aes(x = Date, y = A4N_Tsoil)) + geom_point()
+Abisko_EM50 %>% ggplot(aes(x = Date, y = A5N_Tsoil)) + geom_point()
+Abisko_EM50 %>% ggplot() + 
+  geom_point(aes(x = date(Date), y = A1N_Tsoil, shape = "A1N")) +
+  geom_point(aes(x = date(Date), y = A2N_Tsoil, shape = "A2N")) +
+  geom_point(aes(x = date(Date), y = A3N_Tsoil, shape = "A3N")) +
+  geom_point(aes(x = date(Date), y = A4N_Tsoil, shape = "A4N")) +
+  geom_point(aes(x = date(Date), y = A5N_Tsoil, shape = "A5N")) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  #coord_cartesian(xlim = c(ymd("2019-07-01"),ymd("2020-09-28"))) +
+  labs(x = "Time of year", y = "Measured temperature °C", title = "Soil temperature - Abisko outliers") +
+  theme_bw()
+#
+#
+# Vassijaure soil temperature sensors
+hist(Vassijaure_EM50$V1N_Tsoil, main = "Histogram - V1N_Tsoil")
+dotchart(Vassijaure_EM50$V1N_Tsoil,
+         main="Cleveland plot - V1N_Tsoil", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12),
+         gpch = 12, gcolor = 1)
+hist(Vassijaure_EM50$V2N_Tsoil, main = "Histogram - V2N_Tsoil")
+hist(Vassijaure_EM50$V3N_Tsoil, main = "Histogram - V3N_Tsoil")
+hist(Vassijaure_EM50$V4N_Tsoil, main = "Histogram - V4N_Tsoil")
+hist(Vassijaure_EM50$V5N_Tsoil, main = "Histogram - V5N_Tsoil")
+#
+Vassijaure_EM50 %>% ggplot(aes(x = V_Date, y = V1N_Tsoil)) + geom_point()
+Vassijaure_EM50 %>% ggplot(aes(x = V_Date, y = V2N_Tsoil)) + geom_point()
+Vassijaure_EM50 %>% ggplot(aes(x = V_Date, y = V3N_Tsoil)) + geom_point()
+Vassijaure_EM50 %>% ggplot(aes(x = V_Date, y = V4N_Tsoil)) + geom_point()
+Vassijaure_EM50 %>% ggplot(aes(x = V_Date, y = V5N_Tsoil)) + geom_point()
+Vassijaure_EM50 %>% ggplot() + 
+  geom_point(aes(x = date(V_Date), y = V1N_Tsoil, shape = "V1N")) +
+  geom_point(aes(x = date(V_Date), y = V2N_Tsoil, shape = "V2N")) +
+  geom_point(aes(x = date(V_Date), y = V3N_Tsoil, shape = "V3N")) +
+  geom_point(aes(x = date(V_Date), y = V4N_Tsoil, shape = "V4N")) +
+  geom_point(aes(x = date(V_Date), y = V5N_Tsoil, shape = "V5N")) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  #coord_cartesian(xlim = c(ymd("2019-07-01"),ymd("2020-09-28"))) +
+  labs(x = "Time of year", y = "Measured temperature °C", title = "Soil temperature - Vassijaure outliers") +
+  theme_bw()
+#
+#
+# Air temperature
+# Abisko
+hist(Abisko_Tair$Tair_A2, main = "Histogram - Tair Abisko")
+dotchart(Abisko_Tair$Tair_A2,
+         main="Cleveland plot - Tair Abisko", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12),
+         gpch = 12, gcolor = 1)
+Abisko_Tair %>% ggplot(aes(x = date(Date_A), y = Tair_A2)) + geom_point() +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  labs(x = "Time of year", y = "Measured temperature °C", title = "Air temperature - Abisko") +
+  theme_bw()
+#
+# Vassijaure
+Vassijaure_Tair %>% ggplot(aes(x = date(Date_V), y = Tair_V2)) + geom_point() +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  labs(x = "Time of year", y = "Measured temperature °C", title = "Air temperature - Vassijaure") +
+  theme_bw()
 
 #------- # Leftovers # -------
 

@@ -98,12 +98,17 @@ Vassijaure_EM50 <- Vassijaure_EM50 %>%
 # Mean Soil temperature
 Abisko_avgTsoil <- Abisko_EM50 %>%
   select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
+  # Remove soil temperatures below -15 C
   mutate(A1N_Tsoil = replace(A1N_Tsoil, A1N_Tsoil < -15, NA), # Has very low values in July 2019 and during winter
          A2N_Tsoil = replace(A1N_Tsoil, A2N_Tsoil < -15, NA),
          A3N_Tsoil = replace(A1N_Tsoil, A3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
          A4N_Tsoil = replace(A1N_Tsoil, A4N_Tsoil < -15, NA),
          A5N_Tsoil = replace(A1N_Tsoil, A5N_Tsoil < -15, NA)) %>%
-    #across(c(A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil), ~na_if(., . < -15))) #%>%
+  mutate(A1N_Tsoil = if_else(month(Date) == 7 & A1N_Tsoil < 5, NA, A1N_Tsoil),
+         A2N_Tsoil = if_else(month(Date) == 7 & A2N_Tsoil < 0, NA, A1N_Tsoil),
+         A3N_Tsoil = if_else(month(Date) == 7 & A3N_Tsoil < 0, NA, A1N_Tsoil),
+         A4N_Tsoil = if_else(month(Date) == 7 & A4N_Tsoil < 0, NA, A1N_Tsoil),
+         A5N_Tsoil = if_else(month(Date) == 7 & A5N_Tsoil < 0, NA, A1N_Tsoil)) %>%
   group_by(date(Date)) %>%
   summarise(A1N_Tsoil = mean(A1N_Tsoil, na.rm = TRUE),
             A2N_Tsoil = mean(A2N_Tsoil, na.rm = TRUE),
@@ -116,6 +121,7 @@ Abisko_avgTsoil <- Abisko_EM50 %>%
 #
 Vassijaure_avgTsoil <- Vassijaure_EM50 %>%
   select(V_Date, V1N_Tsoil, V2N_Tsoil, V3N_Tsoil, V4N_Tsoil, V5N_Tsoil) %>%
+  # Remove soil temperatures below -15 C
   mutate(V1N_Tsoil = replace(V1N_Tsoil, V1N_Tsoil < -15, NA), # Has very low values in July 2019 and during winter
          V2N_Tsoil = replace(V2N_Tsoil, V2N_Tsoil < -15, NA),
          V3N_Tsoil = replace(V3N_Tsoil, V3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
@@ -220,10 +226,10 @@ avgTsoil_long %>%
 # For getting the labels, use aes of e.g. linetype/shape, color or fill
 #
 # Vassijaure air and soil
-avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
-  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature"), size = 0.75) + 
-  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature"), size = 0.75) + 
-  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6, size = 0.75) +
+avgT_wide2 %>% ggplot() +
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjåkk air temperature")) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature"), na.rm = TRUE) + 
+  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6, na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
@@ -231,42 +237,47 @@ avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
   guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
   theme_bw(base_size = 15)
   #theme(axis.text.x=element_text(angle=10, hjust=0.5))
+#
 # Abisko air and soil
-avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
   geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
-  geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 6) +
+  geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 6, na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
-  guides(fill = guide_legend(title = "Soil temperature")) +
-  theme_bw()
+  guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
+  theme_bw(base_size = 15)
+
 # Air temperatures - all
-avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
-  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
-  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
-  #geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
-  geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
-  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
-  #geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 4) +
+avgT_wide2 %>% ggplot() +
+  #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature"), na.rm = TRUE) + 
+  #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
-  theme_bw()
+  labs(x = "Time of year", y = "Mean diel temperature °C") + # , title = "Air temperature"
+  guides(lty = guide_legend(title = "")) +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "top")
+#
 # Soil temperatures - all
-avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
-  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure soil temperature")) +
-  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko soil temperature")) +
+avgT_wide2 %>% ggplot() +
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure soil temperature"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko soil temperature"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
-  theme_bw()
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Soil temperature") +
+  guides(fill = guide_legend(title = "Soil temperature")) +
+  theme(legend.position = "bottom")
+  theme_bw(base_size = 15)
 
 # Everything - chaos
-avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
   geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
   geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
@@ -277,7 +288,8 @@ avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
-  theme_bw()
+  guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
+  theme_bw(base_size = 15)
 
 
 avgT_wide2 %>%
@@ -443,6 +455,10 @@ p
 # Abisko_Tair <- Abisko_Tair %>%
 #   mutate(avgTair_A = rowMeans(do.call(rbind, list(Abisko_Tair$Tair_A39_1, Abisko_Tair$Tair_C1, Abisko_Tair$Tair_31, Abisko_Tair$Tair_39_2)), na.rm = TRUE))
 # mean(c(Abisko_Tair$Tair_A39_1, Abisko_Tair$Tair_C1, Abisko_Tair$Tair_31, Abisko_Tair$Tair_39_2), na.rm = TRUE)
+#
+
+avgT_wide2 %>% 
+  ggplot(aes(x = Date, y = Vassijaure_Tair)) + geom_smooth()
 #
 #
 #

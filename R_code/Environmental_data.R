@@ -98,6 +98,12 @@ Vassijaure_EM50 <- Vassijaure_EM50 %>%
 # Mean Soil temperature
 Abisko_avgTsoil <- Abisko_EM50 %>%
   select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
+  mutate(A1N_Tsoil = replace(A1N_Tsoil, A1N_Tsoil < -15, NA), # Has very low values in July 2019 and during winter
+         A2N_Tsoil = replace(A1N_Tsoil, A2N_Tsoil < -15, NA),
+         A3N_Tsoil = replace(A1N_Tsoil, A3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
+         A4N_Tsoil = replace(A1N_Tsoil, A4N_Tsoil < -15, NA),
+         A5N_Tsoil = replace(A1N_Tsoil, A5N_Tsoil < -15, NA)) %>%
+    #across(c(A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil), ~na_if(., . < -15))) #%>%
   group_by(date(Date)) %>%
   summarise(A1N_Tsoil = mean(A1N_Tsoil, na.rm = TRUE),
             A2N_Tsoil = mean(A2N_Tsoil, na.rm = TRUE),
@@ -110,6 +116,11 @@ Abisko_avgTsoil <- Abisko_EM50 %>%
 #
 Vassijaure_avgTsoil <- Vassijaure_EM50 %>%
   select(V_Date, V1N_Tsoil, V2N_Tsoil, V3N_Tsoil, V4N_Tsoil, V5N_Tsoil) %>%
+  mutate(V1N_Tsoil = replace(V1N_Tsoil, V1N_Tsoil < -15, NA), # Has very low values in July 2019 and during winter
+         V2N_Tsoil = replace(V2N_Tsoil, V2N_Tsoil < -15, NA),
+         V3N_Tsoil = replace(V3N_Tsoil, V3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
+         V4N_Tsoil = replace(V4N_Tsoil, V4N_Tsoil < -15, NA),
+         V5N_Tsoil = replace(V5N_Tsoil, V5N_Tsoil < -15, NA)) %>%
   group_by(date(V_Date)) %>%
   summarise(V1N_Tsoil = mean(V1N_Tsoil, na.rm = TRUE),
             V2N_Tsoil = mean(V2N_Tsoil, na.rm = TRUE),
@@ -271,14 +282,14 @@ avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
 
 avgT_wide2 %>%
   ggplot() +
-  #geom_line(aes(x = Date, y = Abisko_Tair_SMHI), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + #                                                                                                         # Orange
-  #geom_point(aes(x = Date, y = Abisko_Tair_SMHI), shape = 6) +
+  geom_line(aes(x = Date, y = Abisko_Tair_SMHI), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + #                                                                                                         # Orange
+  geom_point(aes(x = Date, y = Abisko_Tair_SMHI), shape = 6) +
   geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk"), color = "#009E73", linetype = "solid", size=1, alpha = 0.4) + #                                                                                  # Bluish green
-  #geom_point(aes(x = Date, y = Katterjakk_Tair_SMHI), shape = 4) +
+  geom_point(aes(x = Date, y = Katterjakk_Tair_SMHI), shape = 4) +
   geom_line(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", linetype = "dashed", size=1) + #      # Vermilion
-  #geom_point(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", shape = 6, size=1) + #              # Vermilion
-  #geom_line(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", linetype = "dotdash", size=1) + ## Blue
-  #geom_point(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", shape = 4, size=1) + # Blue
+  geom_point(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", shape = 6, size=1) + #              # Vermilion
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", linetype = "dotdash", size=1) + ## Blue
+  geom_point(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", shape = 4, size=1) + # Blue
   #scale_color_viridis(discrete = TRUE, option = "E") +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +

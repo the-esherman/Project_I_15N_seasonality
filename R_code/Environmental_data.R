@@ -78,15 +78,15 @@ avgTair_long <- left_join(Abisko_avgTair, Vassijaure_avgTair) %>%
 # Remove last lines without a date and extra header part. Set NaN to NA
 Abisko_EM50 <- Abisko_EM50 %>%
   slice(5:n()) %>%
-  select(-c(NA...9, NA...18, NA...27, NA...36, NA...45)) %>%
-  filter(!(is.na(Date))) %>%
+  dplyr::select(-c(NA...9, NA...18, NA...27, NA...36, NA...45)) %>%
+  dplyr::filter(!(is.na(Date))) %>%
   mutate(across(where(is.character), ~na_if(.,"NaN")),
          across(where(is.numeric), ~na_if(.,NaN))) %>%
   mutate(across(c(Date, A1_Date, A2_Date, A3_Date, A4_Date, A5_Date), ymd_hms))
 #
 Vassijaure_EM50 <- Vassijaure_EM50 %>%
   slice(5:(n()-24)) %>% # No data for the last 24 logs
-  select(-c(NA...18, NA...27, NA...36, NA...37, NA...43, NA...44)) %>%
+  dplyr::select(-c(NA...18, NA...27, NA...36, NA...37, NA...43, NA...44)) %>%
   filter(!(is.na(V_Date))) %>% # if the date is not there, we cannot use the data
   mutate(across(where(is.character), ~na_if(.,"NaN")),
          across(where(is.numeric), ~na_if(.,NaN))) %>%
@@ -127,7 +127,7 @@ avgTsoil_wide <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
          "Vassijaure_Tsoil" = Vassijaure)
 # Combine Abisko and Vassijaure and pivot longer
 avgTsoil_long <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
-  select(c(Date, Abisko, Vassijaure)) %>%
+  dplyr::select(c(Date, Abisko, Vassijaure)) %>%
   pivot_longer(2:3, names_to = "Site", values_to = "dielT_soil")
 #
 #
@@ -151,11 +151,11 @@ avgT_long <- left_join(avgTair_long, avgTsoil_long)
 #------- # SMHI weather data # -------|
 # Abisko
 SMHI_Abisko_Tair <- SMHI_Abisko_Tair %>%
-  select(1:3) %>%
+  dplyr::select(1:3) %>%
   mutate(across(Datum, ymd), # If also for time: across("Tid (UTC)", hms))
          across(Lufttemperatur, as.numeric)) %>% 
-  filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
-  filter(!(year(Datum) == 2020 & month(Datum) > 10),
+  dplyr::filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
+  dplyr::filter(!(year(Datum) == 2020 & month(Datum) > 10),
          !(year(Datum) == 2019 & month(Datum) < 7))
 #
 SMHI_A_avgTair <- SMHI_Abisko_Tair %>%
@@ -165,11 +165,11 @@ SMHI_A_avgTair <- SMHI_Abisko_Tair %>%
 #
 # Katterjåkk (closest station to Vassijaure)
 SMHI_Katterjakk_Tair <- SMHI_Katterjakk_Tair %>%
-  select(1:3) %>%
+  dplyr::select(1:3) %>%
   mutate(across(Datum, ymd), # If also for time: across("Tid (UTC)", hms))
          across(Lufttemperatur, as.numeric)) %>% 
-  filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
-  filter(!(year(Datum) == 2020 & month(Datum) > 10),
+  dplyr::filter(year(Datum) == 2019 | year(Datum) == 2020) %>%
+  dplyr::filter(!(year(Datum) == 2020 & month(Datum) > 10),
          !(year(Datum) == 2019 & month(Datum) < 7))
 #
 SMHI_K_avgTair <- SMHI_Katterjakk_Tair %>%
@@ -182,7 +182,10 @@ SMHI_K_avgTair <- SMHI_Katterjakk_Tair %>%
 # Combine all
 avgT_wide2 <- left_join(avgT_wide, SMHI_A_avgTair) %>%
   left_join(SMHI_K_avgTair)
-
+#
+# Pivot long
+avgT_long2 <- avgT_wide2 %>%
+  pivot_longer(2:7, names_to = "Site", values_to = "dielT")
 #
 #
 #
@@ -203,21 +206,50 @@ avgTsoil_long %>%
   xlab("Time") + ylab("Temperature C")
 #
 
+# For getting the labels, use aes of e.g. linetype/shape, color or fill
+avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
+  geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
+  #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
+  #geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
+  #geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 4) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  theme_bw()
+avgT_wide2 %>% ggplot() + # aes(lty = "Katterjakk", "Vassijaure")
+  #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
+  #geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature")) + 
+  #geom_point(aes(x = Date, y = Vassijaure_Tsoil, fill = "Vassijaure soil temperature"), shape = 6) +
+  geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature")) +
+  geom_point(aes(x = Date, y = Abisko_Tsoil, fill = "Abisko soil temperature"), shape = 4) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  theme_bw()
+
+
 avgT_wide2 %>%
   ggplot() +
-  geom_line(aes(x = Date, y = Abisko_Tair_SMHI), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + # Orange
-  geom_point(aes(x = Date, y = Abisko_Tair_SMHI), shape = 6) +
-  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI), linetype = "solid", size=1, alpha = 0.4) + # Bluish green, color = "#009E73"
-  geom_point(aes(x = Date, y = Katterjakk_Tair_SMHI), shape = 4) +
-  geom_line(aes(x = Date, y = Abisko_Tsoil), linetype = "dashed", size=1) + # Vermilion, color = "#D55E00"
-  geom_line(aes(x = Date, y = Vassijaure_Tsoil), linetype = "dotdash", size=1) + # Blue, color = "#0072B2"
+  #geom_line(aes(x = Date, y = Abisko_Tair_SMHI), color = "#E69F00", linetype = "solid", size=1, alpha = 0.4) + #                                                                                                         # Orange
+  #geom_point(aes(x = Date, y = Abisko_Tair_SMHI), shape = 6) +
+  geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk"), color = "#009E73", linetype = "solid", size=1, alpha = 0.4) + #                                                                                  # Bluish green
+  #geom_point(aes(x = Date, y = Katterjakk_Tair_SMHI), shape = 4) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", linetype = "dashed", size=1) + #      # Vermilion
+  #geom_point(aes(x = Date, y = Abisko_Tsoil), color = "#D55E00", shape = 6, size=1) + #              # Vermilion
+  #geom_line(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", linetype = "dotdash", size=1) + ## Blue
+  #geom_point(aes(x = Date, y = Vassijaure_Tsoil), color = "#0072B2", shape = 4, size=1) + # Blue
   #scale_color_viridis(discrete = TRUE, option = "E") +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
   #xlab("Time") + ylab("Temperature C") +
-  #theme_ipsum() +
+  theme_ipsum() +
   theme_bw()
   
   legend("bottomleft", 
@@ -230,8 +262,13 @@ avgT_wide2 %>%
          cex = 1.2, 
          text.col = "black", 
          horiz = F , 
-         inset = c(0.1, 0.1)) +
-  
+         inset = c(0.1, 0.1))
+#
+avgT_long2 %>%
+  dplyr::filter(Site == "Abisko_Tair" | Site == "Abisko_Tsoil") %>%
+  ggplot() +
+  geom_line(aes(x = Date, y = dielT, color = Site))
+
 
 avgT_long %>%
   #pivot_longer(3:4, names_to = "Temp", values_to = "dielT") %>%
@@ -244,6 +281,22 @@ avgT_long %>%
   theme_bw()
 #facet_wrap( ~ Site)
 
+#
+#
+#
+#------- # Outliers # -------
+#
+hist(avgT_wide2$Abisko_Tsoil, main = "Histogram")
+hist(avgT_wide2$Vassijaure_Tsoil, main = "Histogram")
+# Cleveland plot
+dotchart(avgT_wide2$Abisko_Tsoil, 
+         main="Cleveland plot", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12),
+         gpch = 12, gcolor = 1)
+dotchart(avgT_wide2$Vassijaure_Tsoil, 
+         main="Cleveland plot", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12),
+         gpch = 12, gcolor = 1)
 
 
 #------- # Leftovers # -------

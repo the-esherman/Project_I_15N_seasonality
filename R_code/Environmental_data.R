@@ -253,28 +253,28 @@ avgT_wide2 %>% ggplot() +
 # Air temperatures - all
 avgT_wide2 %>% ggplot() +
   #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
-  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure air temperature"), na.rm = TRUE) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure"), na.rm = TRUE) + 
   #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
-  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko air temperature"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Mean diel temperature °C") + # , title = "Air temperature"
-  guides(lty = guide_legend(title = "")) +
+  guides(lty = guide_legend(title = "Air temperature")) +
   theme_bw(base_size = 15) +
   theme(legend.position = "top")
 #
 # Soil temperatures - all
 avgT_wide2 %>% ggplot() +
-  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure soil temperature"), na.rm = TRUE) +
-  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko soil temperature"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Soil temperature") +
-  guides(fill = guide_legend(title = "Soil temperature")) +
-  theme(legend.position = "bottom")
-  theme_bw(base_size = 15)
+  labs(x = "Time of year", y = "Mean diel temperature °C") + # , title = "Soil temperature"
+  guides(lty = guide_legend(title = "Soil temperature")) +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "top")
 
 # Everything - chaos
 avgT_wide2 %>% ggplot() +

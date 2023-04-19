@@ -13,7 +13,7 @@ library(pastecs)
 library(nlme)
 library(multcomp)
 library(WRS)
-library(ez)
+#library(ez)
 #
 #
 #
@@ -38,6 +38,9 @@ table_dat_N_atom <- read_xlsx(DataName, sheet = "Table", skip = 1, col_names = T
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
 winterP2 <- data.frame(wstart = c("05_Nov-19", "05_Nov-19"), wend = c("12_May-20", "13_Jun-20"))
+#
+# List of Measuring periods as they should appear in graphs
+measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
 #
 # Reference atmospheric Nitrogen
 # Either 0.003676 or 1/272 (more decimals)
@@ -81,20 +84,6 @@ Month_yr <- tribble(~MP, ~Round,
 #
 #
 #
-# Calculate Nconc for total plant, Nconc for organs
-# For this first calculate N in each func.grp/organ then sum
-table_dat_N_atom1 <- table_dat_N_atom %>%
-  left_join(vegroot15N)
-t1_1 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(Nconc_tot)
-t1_2 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(Biomass_tot)
-t1_3 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(d15N_avg)
-
 # Transform to long format for d15N values
 #
 vegroot15N_dLong <- vegroot15N %>%
@@ -196,6 +185,23 @@ Rec15N <- Mic15N %>%
   left_join(vegroot15N_RLong_one) %>%
   mutate(sysRec = replace_na(R_SE, 0) + replace_na(R_MBN, 0) + replace_na(TotalRecovery, 0))
 #
+#
+#
+#------- ## Summary tables ## -------
+# Calculate Nconc for total plant, Nconc for organs
+# For this first calculate N in each func.grp/organ then sum
+table_dat_N_atom1 <- table_dat_N_atom %>%
+  left_join(vegroot15N)
+t1_1 <- table_dat_N_atom1 %>%
+  group_by(across(c(Site, Round))) %>%
+  get_summary_stats(Nconc_tot)
+t1_2 <- table_dat_N_atom1 %>%
+  group_by(across(c(Site, Round))) %>%
+  get_summary_stats(Biomass_tot)
+t1_3 <- table_dat_N_atom1 %>%
+  group_by(across(c(Site, Round))) %>%
+  get_summary_stats(d15N_avg)
+#
 t1_4 <- Rec15N %>%
   group_by(Site, Round) %>%
   get_summary_stats(TotalRecovery)
@@ -251,7 +257,7 @@ write_delim(t1_wide2,"export/MBNTable.dat", delim = "\t")
 write_delim(t1_wide3,"export/TDNTable.dat", delim = "\t")
 #
 #
-#------- ## Summary tables ## -------
+#
 # Plant recovery
 Rec15N %>%
   group_by(across(c(Site, Round))) %>%
@@ -1307,7 +1313,7 @@ vegroot15N_RLong %>%
 
 #
 #
-#
+# Abisko Vassijaure plant recovery facet
 vegroot15N_RLong_one %>%
   group_by(across(c("Site", "Round"))) %>%
   summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
@@ -1315,10 +1321,12 @@ vegroot15N_RLong_one %>%
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_col(aes(Round, avgRecovery)) +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  ylim(0,30) +
+  ylim(0,20) +
+  scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
+  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
+  theme_classic(base_size = 12) +
+  theme(panel.spacing = unit(2, "lines"))
 #
 #
 # Proportional to total recovery

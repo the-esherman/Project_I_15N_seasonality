@@ -10,6 +10,7 @@ library(dygraphs)
 library(xts)
 library(plotly)
 library(hrbrthemes)
+library(gridExtra)
 #
 #
 #------- ### Load the data ### -------
@@ -27,6 +28,13 @@ Vassijaure_EM50 <- read_xlsx("raw_data/allEMdata Vassijaure.xlsx", col_names = T
 # SMHI weather station data
 SMHI_Abisko_Tair <- read_csv2("raw_data/smhi_Temp_Abisko_new.csv", skip = 10)
 SMHI_Katterjakk_Tair <- read_csv2("raw_data/smhi_Kattejakk_Temp.csv", skip = 9)
+#
+# Define the winter period as snow covered period
+# First and last day of measuring snow on entire plots
+# Abisko: 20191021 - 20200506; Vassijaure: 20191028-20200601
+# Safe to assume Vassijaure also started earlier than when measured, thus assumed same day.
+winterP <- data.frame(wstart = c(ymd(20191021), ymd(20191021)), wend = c(ymd(20200506), ymd(20200601)))
+#
 #
 #
 #------- ### Clean data ### -------
@@ -225,6 +233,7 @@ avgTsoil_long %>%
 
 # For getting the labels, use aes of e.g. linetype/shape, color or fill
 #
+ggplot() + geom_rect(winterP, aes(x=, ymin=-Inf, ymax=Inf), stat="identity", alpha = 0.5, fill = 'grey', inherit.aes = FALSE)
 # Vassijaure air and soil
 avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjåkk air temperature")) + 
@@ -246,12 +255,14 @@ avgT_wide2 %>% ggplot() +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C", title = "Air and soil temperature") +
+  labs(x = "Time of year", y = "Air temperature °C", title = "Air and soil temperature") +
   guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
   theme_bw(base_size = 15)
 
 # Air temperatures - all
-avgT_wide2 %>% ggplot() +
+airT_plot <- avgT_wide2 %>% ggplot() +
+  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Abisko snow
   #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
   geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure"), na.rm = TRUE) + 
   #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
@@ -259,22 +270,27 @@ avgT_wide2 %>% ggplot() +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C") + # , title = "Air temperature"
-  guides(lty = guide_legend(title = "Air temperature")) +
+  labs(x = NULL, y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
+  guides(lty = guide_legend(title = "Mean diel temperature")) +
   theme_bw(base_size = 15) +
-  theme(legend.position = "top")
+  theme(legend.position = "top", axis.text.x = element_blank())
 #
 # Soil temperatures - all
-avgT_wide2 %>% ggplot() +
+soilT_plot <- avgT_wide2 %>% ggplot() +
+  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Abisko snow
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = "Time of year", y = "Mean diel temperature °C") + # , title = "Soil temperature"
-  guides(lty = guide_legend(title = "Soil temperature")) +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-10,20)) +
+  labs(x = "Time of year", y = "Soil temperature (°C)") + # , title = "Soil temperature"
+  guides(lty = "none") + # guide_legend(title = "Soil temperature")
   theme_bw(base_size = 15) +
   theme(legend.position = "top")
+#
+grid.arrange(airT_plot, soilT_plot, ncol = 1)
+
 
 # Everything - chaos
 avgT_wide2 %>% ggplot() +

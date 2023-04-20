@@ -531,7 +531,7 @@ confint(PostPlant2)
 #
 # From Signe
 #model:
-lme1<-lme(logPlantRecovery ~ Site*Round,
+lme1<-lme(logPlantRecovery ~ Round*Site,
           random = ~1|Site/Plot,
           data = vegroot15N_RLong_xl, na.action = na.exclude , method = "REML")
 
@@ -787,7 +787,7 @@ confint(PostOrgan2)
 #
 # From Signe
 #model:
-lme1a<-lme(cubeOrganRecovery ~ Site*Round*Organ,
+lme1a<-lme(cubeOrganRecovery ~ Round*Site*Organ,
           random = ~1|Site/Plot,
           data = vegroot15N_RLong_Organ, na.action = na.exclude , method = "REML")
 
@@ -1277,14 +1277,23 @@ vegroot15N_RLong %>%
   # Plot 
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack") +
-  coord_cartesian(ylim = c(-15,5)) +
+  geom_col(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(-15,3)) +
   scale_fill_viridis_d() +
   #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-15, -12, -9, -6, -3, 0, 3)) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))#,#legend.position=c(1,1),
+        #legend.justification=c(1, 1))#, 
+        #legend.key.width=unit(1, "lines"), 
+        #legend.key.height=unit(1, "lines"), 
+        #plot.margin = unit(c(5, 1, 0.5, 0.5), "lines")) 
 #+ annotate("rect", xmin = winterP2$wstart, xmax = winterP2$wend, ymin = Inf, ymax = -Inf, fill = "grey", alpha = 0.5)
 #
 #
@@ -1319,14 +1328,14 @@ vegroot15N_RLong_one %>%
   summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
+  geom_col(aes(Round, avgRecovery),color = "black") +
   ylim(0,20) +
   scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
-  theme_classic(base_size = 12) +
-  theme(panel.spacing = unit(2, "lines"))
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + #, title = "15N recovery in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 # Proportional to total recovery
@@ -1335,12 +1344,14 @@ Rec15N %>%
   summarise(avgRecovery = mean((TotalRecovery/sysRec*100), na.rm = TRUE), se = sd((TotalRecovery/sysRec*100))/sqrt(length((TotalRecovery/sysRec*100))), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery, ymax=avgRecovery+se), position=position_dodge(.9)) +
   geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
   #ylim(0,30) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants, proportional to total recovery") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period", y = expression("% of added "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  theme_classic(base_size = 20)  +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 # Mic - MBN
 Rec15N %>%

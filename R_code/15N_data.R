@@ -4,39 +4,29 @@
 #------- ### Libraries ### -------
 library(tidyverse)
 library(readxl)
-library(gridExtra)
-library(viridis)
-library(ggpubr)
-library(rstatix)
+#library(gridExtra)
+#library(viridis)
+#library(ggpubr)
+#library(rstatix)
 library(car)
 library(pastecs)
 library(nlme)
-library(multcomp)
-library(WRS)
+#library(multcomp)
+#library(WRS)
 #library(ez)
 #
 #
 #
 #------- ### Load data ### -------
 #
-DataName <- "raw_data/15N vegetation and roots v0.34.7.xlsx"
+DataName <- "raw_data/15N vegetation and roots v0.35.xlsx"
 #
-# Biomass, d15N, atom% 15N, and recovery ("R_")
-vegroot15N <- read_xlsx(DataName, sheet = "15N", skip = 1, col_names = TRUE)
-# Natural abundance
-vegrootsNatAbu <- read_xlsx(DataName, sheet = "NatAbu", col_names = TRUE)
+# Biomass, d15N, atom% 15N, and N concentration for enriched and natural abundance samples
+vegroot15N <- read_csv("clean_data/Plant_15N_data.csv", col_names = TRUE)
+#
 # Microbial biomass, d15N, atom% 15N, and recovery ("R_")
-Mic15N <- read_xlsx(DataName, sheet = "MBN", skip = 1, col_names = TRUE)
+Mic15N <- read_csv("clean_data/Mic_15N_data.csv", skip = 1, col_names = TRUE)
 #
-vegroot15Nlong <- read_xlsx(DataName, sheet = "Long", col_names = TRUE)
-#
-IRMS <- read_xlsx("raw_data/IRMS_data v0.9.xlsx", col_names = TRUE)
-#
-Nconc <- read_xlsx(DataName, sheet = "Nconc", skip = 1, col_names = TRUE)
-inorgN <- read_xlsx(DataName, sheet = "InorgN", skip = 1, col_names = TRUE)
-#
-# Table data for N concentrations and snow
-table_dat_N_atom <- read_xlsx(DataName, sheet = "Table", skip = 1, col_names = TRUE)
 #
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
@@ -52,19 +42,15 @@ Nair_Rst = 1/272
 # Added 15N; mg 15N pr patch
 N_add <- 1.084
 #
+# Extraction correction factor
+K_EN = 0.4
+# See https://climexhandbook.w.uib.no/2019/11/06/soil-microbial-biomass-c-n-and-p/ and UCPH bio lab protocol (where K_EN = 0.4)
 #
-#------- ### Functions ### -------
-#
-# filter based on a condition when graphing ggplot
-pick <- function(condition){
-  function(d) d %>% filter_(condition)
-}
 #
 #
 #------- ### Main data ### -------
 #
-# Combine and calculate recovery
-
+# Calculate recovery
 #
 # Transform numbered months to another format
 Month_yr <- tribble(~MP, ~Round,
@@ -86,135 +72,14 @@ Month_yr <- tribble(~MP, ~Round,
 )
 #
 #
+# Calculate recovery for plant partition
+vegroot15N <- vegroot15N %>%
+  mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100)
 #
-# Transform to long format for biomass
-#
-vegroot15N_bioLong <- vegroot15N %>%
-  dplyr::select(Site, Plot, MP, Round, 23:37) %>%
-  dplyr::rename("ES_S" = "ESS",
-                "DS_S" = "DSS",
-                "G_S" = "GS",
-                "O_S" = "OS",
-                "U_S" = "US",
-                "ES_CR" = "ESCR",
-                "DS_CR" = "DSCR",
-                "G_CR" = "GCR",
-                "ES_FR" = "ESFR",
-                "DS_FR" = "DSFR",
-                "G_FR" = "GFR",
-                "O_FR" = "OFR",
-                "Root_CR" = "CR",
-                "Root_FR" = "FR",
-                "RootG_FR" = "RG"
-  ) %>%
-  pivot_longer(cols = 5:19, names_to = "Type", values_to = "Biomass")
-# Split to have species and organ
-vegroot15N_bioLong <- vegroot15N_bioLong %>%
-  add_column(Part = str_split_fixed(vegroot15N_bioLong$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(vegroot15N_bioLong$Type,"_\\w+",n=2)[,1])
-#
-#
-# Transform to long format for d15N values
-#
-vegroot15N_dLong <- vegroot15N %>%
-  dplyr::select(Site, Plot, MP, Round, 41:55) %>%
-  dplyr::rename("ES_S" = "d15N_ESS",
-                "DS_S" = "d15N_DSS",
-                "G_S" = "d15N_GS",
-                "O_S" = "d15N_OS",
-                "U_S" = "d15N_US",
-                "ES_CR" = "d15N_ESCR",
-                "DS_CR" = "d15N_DSCR",
-                "G_CR" = "d15N_GCR",
-                "ES_FR" = "d15N_ESFR",
-                "DS_FR" = "d15N_DSFR",
-                "G_FR" = "d15N_GFR",
-                "O_FR" = "d15N_OFR",
-                "Root_CR" = "d15N_CR",
-                "Root_FR" = "d15N_FR",
-                "RootG_FR" = "d15N_RG"
-                ) %>%
-  pivot_longer(cols = 5:19, names_to = "Type", values_to = "d15N")
-#
-#
-vegroot15N_NLong <- vegroot15N %>%
-  dplyr::select(Site, Plot, MP, Round, 86:100) %>%
-  dplyr::rename("ES_S" = "Nconc_ESS",
-                "DS_S" = "Nconc_DSS",
-                "G_S" = "Nconc_GS",
-                "O_S" = "Nconc_OS",
-                "U_S" = "Nconc_US",
-                "ES_CR" = "Nconc_ESCR",
-                "DS_CR" = "Nconc_DSCR",
-                "G_CR" = "Nconc_GCR",
-                "ES_FR" = "Nconc_ESFR",
-                "DS_FR" = "Nconc_DSFR",
-                "G_FR" = "Nconc_GFR",
-                "O_FR" = "Nconc_OFR",
-                "Root_CR" = "Nconc_CR",
-                "Root_FR" = "Nconc_FR",
-                "RootG_FR" = "Nconc_RG"
-  ) %>%
-  pivot_longer(cols = 5:19, names_to = "Type", values_to = "Nconc")
-#
-# Something for graphing or outlier check...?
-vegroot15N_d15N_Nconc_Long0 <- vegroot15N_dLong %>% left_join(vegroot15N_NLong)
-#
-vegroot15N_d15N_Nconc_Long0 <- vegroot15N_d15N_Nconc_Long0 %>%
-  add_column(Part = str_split_fixed(vegroot15N_d15N_Nconc_Long0$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(vegroot15N_d15N_Nconc_Long0$Type,"_\\w+",n=2)[,1])
-#
-# Actual needed
-vegroot15N_NLong1 <- vegroot15N_NLong %>%
-  add_column(Part = str_split_fixed(vegroot15N_NLong$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(vegroot15N_NLong$Type,"_\\w+",n=2)[,1])
-#
-#
-# Transform Recovery to long format
-#
-vegroot15N_RLong <- vegroot15N %>%
-  dplyr::select(Site, Plot, MP, Round, 56:70) %>%
-  dplyr::rename("ES_S" = "R_ESS",
-                "DS_S" = "R_DSS",
-                "G_S" = "R_GS",
-                "O_S" = "R_OS",
-                "U_S" = "R_US",
-                "ES_CR" = "R_ESCR",
-                "DS_CR" = "R_DSCR",
-                "G_CR" = "R_GCR",
-                "ES_FR" = "R_ESFR",
-                "DS_FR" = "R_DSFR",
-                "G_FR" = "R_GFR",
-                "O_FR" = "R_OFR",
-                "Root_CR" = "R_CR",
-                "Root_FR" = "R_FR",
-                "RootG_FR" = "R_RG"
-  ) %>%
-  pivot_longer(cols = 5:19, names_to = "Type", values_to = "Recovery")
-# Get functional group and part
-vegroot15N_RLong <- vegroot15N_RLong %>%
-  add_column(Part = str_split_fixed(vegroot15N_RLong$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(vegroot15N_RLong$Type,"_\\w+",n=2)[,1])
-#
-# Combine all types of recovery into one:
-vegroot15N_RLong_one <- vegroot15N_RLong %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
-  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-#
-# Partition only in organs
-vegroot15N_RLong_Organ <- vegroot15N_RLong %>%
-  group_by(across(c("Site","Plot", "Round", "Part"))) %>%
-  summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  dplyr::rename("Organ" = "Part") %>%
-  ungroup()
-vegroot15N_RLong_Organ_original <- vegroot15N_RLong_Organ
-#
-#
-Rec15N <- Mic15N %>%
-  left_join(vegroot15N_RLong_one) %>%
-  mutate(sysRec = replace_na(R_SE, 0) + replace_na(R_MBN, 0) + replace_na(TotalRecovery, 0))
-#
+# Calculate recovery for microbial partition
+Mic15N <- Mic15N %>%
+  mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
+  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF_NatAb*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE_NatAb*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
 #
 #
 #-------   ## Summary tables ## -------
@@ -312,74 +177,6 @@ table_dat_N_atom %>%
 #
 #
 #
-#------- #### Statistical testing ### -------
-#
-# Q1: Is there any (potential for) N-uptake activity in plant roots during the winter period?
-# Model: Recovery ~ Time, Site, Time*Site
-#
-#
-#
-Rec15N <- Rec15N %>%
-  mutate(across(c("MP", "Plot"), as.character))
-#
-Rec15N %>%
-  ggplot(aes(Round, TotalRecovery)) + geom_boxplot()
-#
-by(Rec15N$TotalRecovery, Rec15N$MP, stat.desc)
-#
-vegroot15N_RLong_one$Round <- as.factor(vegroot15N_RLong_one$Round)
-vegroot15N_RLong_one$Plot <- as.factor(vegroot15N_RLong_one$Plot)
-vegroot15N_RLong_one$Site <- as.factor(vegroot15N_RLong_one$Site)
-
-# Make contrasts# Not working, need "factors"
-SummervsWinter<-c(1,1,0,0,-1,-1,-1,-1,-1,0,0,0,1,1,1)
-SpringvsAutumn<-c(0,0,1,1,1,0,0,0,0,-1,-1,-1,0,0,0)
-SnowvsNot<-c(-1,-1,-1,-1,1,1,1,1,1,0,1,1,-1,-1,-1)
-contrasts(vegroot15N_RLong_one$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot)
-#
-# Anova with ezANOVA # Not working
-# library(ez)
-# 
-# plantModel<-ezANOVA(data = vegroot15N_RLong_one, dv = .(TotalRecovery), wid = .(Plot), within = .(Round, Site), detailed = TRUE, type = 3)
-#
-
-baseline<-lme(TotalRecovery ~ 1, random = ~1|Plot/Round, data = vegroot15N_RLong_one, method = "ML")
-plantModel<-lme(TotalRecovery ~ Round, random = ~1|Plot/Round, data = vegroot15N_RLong_one, method = "ML")
-anova(baseline, plantModel)
-summary(plantModel)
-postHocs<-glht(plantModel, linfct = mcp(Round = "Tukey"))
-summary(postHocs)
-confint(postHocs)
-#
-# Wilcox's method, more robust still
-# Data Wide and trim site and plot
-vegroot15N_Rone <- pivot_wider(vegroot15N_RLong_one, names_from = "Round", values_from = "TotalRecovery")
-vegroot15N_Rone_trim <- vegroot15N_Rone[,-c(1,2)]
-#
-rmanova(vegroot15N_Rone_trim)
-rmmcp(vegroot15N_Rone_trim)
-# bootstrap
-rmanovab(vegroot15N_Rone_trim, nboot = 2000)
-pairdepb(vegroot15N_Rone_trim, nboot = 2000)
-# 
-# Factorial rmANOVA
-#
-# Boxplots
-vegroot15N_RLong_one %>%
-  ggplot(aes(Round, TotalRecovery)) + geom_boxplot() + facet_wrap(~ Site)
-by(vegroot15N_RLong_one$TotalRecovery, list(vegroot15N_RLong_one$Round, vegroot15N_RLong_one$Site), stat.desc, basic = FALSE)
-#
-vegroot15N_RLong_one2 <- vegroot15N_RLong_one %>%
-  mutate(Round = substr(Round, 1,2))
-
-  slice(vegroot15N_RLong_one2, -(76:150), .preserve = FALSE)
-vegroot15N_RLong_one2$Round <- as.factor(vegroot15N_RLong_one2$Round)
-#
-# Seems like rows cannot be removed?
-#
-#
-#
-#
 #-------  ### Statistics ### -------
 #-------   ##     Q1     ## -------
 #
@@ -427,143 +224,18 @@ PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_RLong_xl)
 Anova(PlantModel_alias, type ="II")
 # alias checks dependencies
 alias(PlantModel_alias)
-
-
 #
-# Check for missing values in data set. See esp. Plot vs Round vs Site
-ezDesign(vegroot15N_RLong_xl, x = Round, y = Plot)
-ezDesign(vegroot15N_RLong_xl, x = Site, y = Plot)
-ezDesign(vegroot15N_RLong_xl, x = Round, y = Site)
-ezDesign(vegroot15N_RLong_xl, x = Plot, y = PlantRecovery)
-ezDesign(vegroot15N_RLong_xl, x = Site, y = PlantRecovery)
-
-# Still not working
-# Too many rounds and too few replicates. It works when rounds is reduced to 7 or below.
-plantModel2<-ezANOVA(data = vegroot15N_RLong_xl, dv = .(PlantRecovery), wid = .(Plot), within = .(Round, Site), type = 3, detailed = TRUE)
-plantModel2
-#
-####
-# AvsV<-c(1,-1)
-# contrasts(vegroot15N_RLong_one$Site)<-AvsV
-# #
-# baseline2 <- lme(TotalRecovery ~ 1, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_one, method = "ML")
-# plantRoundModel <- update(baseline2, .~. + Round)
-# plantSiteModel <- update(plantRoundModel, .~. + Site)
-# plantIntactModel <- update(plantSiteModel, .~. + Round:Site)
-# 
-# PlantModel2 <- lme(TotalRecovery ~ Round + Site + Round:Site, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_one, method = "ML")
-# 
-# #
-# anova(baseline2, plantModel2)
-# anova(baseline2, plantRoundModel, plantSiteModel, plantIntactModel, type = "III")
-# anova(baseline2, plantSiteModel, plantRoundModel, plantIntactModel)
-# #
-# summary(plantIntactModel)
-# summary(PlantModel2)
-#
-#
-# rmANOVA alternative, but does not take into consideration sphericity assumption or corrections
-summary(aov(PlantRecovery ~ Round*Site + Error(Site/Plot), data = vegroot15N_RLong_xl))
-#
-#
-#
-#
-# Alternative: Two-way ANOVA
-# have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
-PlantModel3 <- aov(logPlantRecovery ~ Round*Site, data = vegroot15N_RLong_xl)
-Anova(PlantModel3, type ="III")
-
-qqplot(PlantModel3, main = "Normal Q-Q Plot")
-
-# Test Homogeneity of variance
-leveneTest(vegroot15N_RLong_xl$PlantRecovery, vegroot15N_RLong_xl$Round, center = median)
-leveneTest(vegroot15N_RLong_xl$PlantRecovery, vegroot15N_RLong_xl$Site, center = median)
-leveneTest(vegroot15N_RLong_xl$PlantRecovery, interaction(vegroot15N_RLong_xl$Round, vegroot15N_RLong_xl$Site), center = median)
 # transform data
 vegroot15N_RLong_xl <- vegroot15N_RLong_xl %>%
   mutate(sqrtPlantRecovery = sqrt(PlantRecovery)) %>%
   mutate(invPlantRecovery = 1/PlantRecovery) %>%
   mutate(logPlantRecovery = log(PlantRecovery+1)) %>%
   mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this!!
-#
-# Check distribution
-vegroot15N_RLong_xl %>% 
-  ggplot(aes(PlantRecovery), color = Site) + geom_histogram()
-vegroot15N_RLong_xl %>% 
-  ggplot(aes(logPlantRecovery), color = Site) + geom_histogram()
-hist(vegroot15N_RLong_xl$logPlantRecovery, main = "Historgram of plant recovery")
-#
-#
-shapiro.test(vegroot15N_RLong_xl$logPlantRecovery)
-# Normally distributed
-#
-# Check qq-plot of transformations
-# log transformation best
-qqnorm(vegroot15N_RLong_xl$PlantRecovery, main = "Normal Q-Q Plot")
-qqline(vegroot15N_RLong_xl$PlantRecovery)
-qqnorm(vegroot15N_RLong_xl$logPlantRecovery, main = "Log Q-Q Plot")
-qqline(vegroot15N_RLong_xl$logPlantRecovery)
-qqnorm(vegroot15N_RLong_xl$invPlantRecovery, main = "Inverse Q-Q Plot")
-qqline(vegroot15N_RLong_xl$invPlantRecovery)
-qqnorm(vegroot15N_RLong_xl$sqrtPlantRecovery, main = "sqrt Q-Q Plot")
-qqline(vegroot15N_RLong_xl$sqrtPlantRecovery)
-qqnorm(vegroot15N_RLong_xl$arcPlantRecovery, main = "arcsin of sqrt Q-Q Plot")
-qqline(vegroot15N_RLong_xl$arcPlantRecovery)
-#
-# Check homogeneity of variance
-# log is homogeneous (almost not for Round)
-leveneTest(vegroot15N_RLong_xl$logPlantRecovery, vegroot15N_RLong_xl$Round, center = median)
-leveneTest(vegroot15N_RLong_xl$logPlantRecovery, vegroot15N_RLong_xl$Site, center = median)
-leveneTest(vegroot15N_RLong_xl$logPlantRecovery, interaction(vegroot15N_RLong_xl$Round, vegroot15N_RLong_xl$Site), center = median)
-#
-# Log is approx. normal-distributed, and variance is equal
-#
-# Two-way ANOVA
-PlantModel3 <- aov(logPlantRecovery ~ Round*Site + Error(Site/Plot), data = vegroot15N_RLong_xl)
-Anova(PlantModel3, type ="II")
 
-# Multilevel linear model approach
-baseline_plant <- lme(logPlantRecovery ~ 1, random = ~1|Site/Plot, data = vegroot15N_RLong_xl, method = "ML")
-plantRoundModel <- update(baseline_plant, .~. + Round)
-plantSiteModel2 <- update(baseline_plant, .~. + Site)
-plantSiteModel <- update(plantRoundModel, .~. + Site)
-plantIntactModel <- update(plantSiteModel, .~. + Round:Site)
-
-#PlantModel2 <- lme(TotalRecovery ~ Round + Site + Round:Site, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_one, method = "ML")
-
-#
-#anova(baseline_plant, plantModel2)
-anova(baseline_plant, plantRoundModel, plantSiteModel, plantIntactModel, type = "III")
-anova(baseline_plant, plantRoundModel, plantSiteModel2, plantIntactModel, type = "III")
-anova(baseline_plant, plantSiteModel, plantRoundModel, plantIntactModel, type = "III")
-#
-summary(plantIntactModel)
-
-vegroot15N_RLong_xl %>%
-  ggplot(aes(x = reorder(Round, sort(as.numeric(Round))), PlantRecovery, colour = Site)) + stat_summary(fun.y = mean, geom = "point") + stat_summary(fun.y = mean, geom = "line", aes(group= Site)) + stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2) + labs(x = "Round", y = "Mean Recovery", colour = "Site")
-
-#
-#
-#summary(aov(logPlantRecovery ~ Round*Site + Error(Plot/Round/Site), data = vegroot15N_RLong_xl))
-#
-#
-# Posthoc test
-PostPlant <- glht(plantIntactModel, linfct = mcp(Round = "Tukey"))
-summary(PostPlant)
-confint(PostPlant)
-#
-plantIntactModel_post <- lme(logPlantRecovery ~ 1 + Site_Round, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_xl, method = "ML")
-PostPlant2 <- glht(plantIntactModel_post, linfct = mcp(Site_Round = "Tukey"))
-summary(PostPlant2)
-confint(PostPlant2)
-#
-#
-#
-# From Signe
 #model:
 lme1<-lme(logPlantRecovery ~ Round*Site,
-          random = ~1|Site/Plot,
-          data = vegroot15N_RLong_xl, na.action = na.exclude , method = "REML")
+          random = ~1|Plot/Site,
+          data = vegroot15N_RLong_xl, na.action = na.exclude, method = "REML")
 
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -578,100 +250,6 @@ par(mfrow = c(1,1))
 Anova(lme1, type=2)
 summary(lme1)
 # Significant for Round
-#
-# To get a idea of nested vs crossed design:
-# https://stats.stackexchange.com/questions/228800/crossed-vs-nested-random-effects-how-do-they-differ-and-how-are-they-specified
-#
-#
-# From: https://www.datanovia.com/en/lessons/repeated-measures-anova-in-r/
-# Check data
-# Summary statistics
-vegroot15N_RLong_xl %>%
-  group_by(Round, Site) %>%
-  get_summary_stats(logPlantRecovery, type = "mean_sd")
-#
-#
-plantBoxP <- ggboxplot(vegroot15N_RLong_xl, x = "Round", y = "PlantRecovery", color = "Site", palette = "jco")
-plantBoxP
-plantBoxP_log <- ggboxplot(vegroot15N_RLong_xl, x = "Round", y = "logPlantRecovery", color = "Site", palette = "jco")
-plantBoxP_log
-#
-# Identify outliers
-vegroot15N_RLong_xl %>%
-  group_by(Round, Site) %>%
-  identify_outliers(logPlantRecovery)
-# Several extreme outliers
-#
-# Normality
-print(
-vegroot15N_RLong_xl %>%
-  group_by(Round, Site) %>%
-  shapiro_test(logPlantRecovery), n = 30)
-ggqqplot(vegroot15N_RLong_xl, "logPlantRecovery", ggtheme = theme_bw()) + facet_grid(Round ~ Site, labeller = "label_both")
-# Not normally distributed at each Round-Site: at least 3 significantly different, log-transformed: 2, arcsin: 1 (always Vassi MP15)
-# 
-#
-# ANOVA
-plant_aov <- anova_test(data = vegroot15N_RLong_xl, dv = "logPlantRecovery", wid = "Plot", within = c("Site", "Round"))
-plant_aov
-get_anova_table(plant_aov)
-#
-# Post-hoc tests
-# One-way ANOVA
-plantOneWay <- vegroot15N_RLong_xl %>%
-  group_by(Round) %>%
-  anova_test(dv = logPlantRecovery, wid = Plot, within = Site) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-plantOneWay
-# Pair-wise comparison: paired t-test
-plantPWC <- vegroot15N_RLong_xl %>%
-  group_by(Round) %>%
-  pairwise_t_test(
-    logPlantRecovery ~ Site, paired = TRUE,
-    p.adjust.method = "bonferroni"
-  )
-plantPWC
-#
-# Similarly for Round
-plantOneWay2 <- vegroot15N_RLong_xl %>%
-  group_by(Site) %>%
-  anova_test(dv = logPlantRecovery, wid = Plot, within = Round) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-plantOneWay2
-# Pair-wise comparison: paired t-test
-plantPWC2 <- vegroot15N_RLong_xl %>%
-  group_by(Site) %>%
-  pairwise_t_test(
-    logPlantRecovery ~ Round, paired = TRUE,
-    p.adjust.method = "bonferroni"
-  )
-plantPWC2
-#
-# When no interaction effect
-# comparisons for Site variable
-vegroot15N_RLong_xl %>%
-  pairwise_t_test(
-    logPlantRecovery ~ Site, paired = TRUE, 
-    p.adjust.method = "bonferroni"
-  )
-# comparisons for Round variable
-print(
-vegroot15N_RLong_xl %>%
-  pairwise_t_test(
-    logPlantRecovery ~ Round, paired = TRUE, 
-    p.adjust.method = "bonferroni"
-  ), n = 105)
-# Visualization: box plots with p-values
-plantPWC3 <- plantPWC %>% add_xy_position(x = "Round", y.trans = function(x){exp(x)-1})
-plantBoxP + 
-  stat_pvalue_manual(plantPWC3, tip.length = 0, hide.ns = TRUE) +
-  labs(
-    subtitle = get_test_label(plant_aov, detailed = TRUE),
-    caption = get_pwc_label(plantPWC3)
-  )
-
 
 
 by(vegroot15N_RLong_xl$logPlantRecovery, list(vegroot15N_RLong_xl$Round, vegroot15N_RLong_xl$Site), stat.desc)
@@ -1086,7 +664,7 @@ by(Mic15N_RLong$logR_MBN, list(Mic15N_RLong$Round, Mic15N_RLong$Site), stat.desc
 # From Signe
 #model:
 lme2<-lme(sqrtR_MBN ~ Site*Round,
-          random = ~1|Site/Plot,
+          random = ~1|Plot/Site,
           data = Mic15N_RLong, na.action = na.exclude , method = "REML")
 
 #Checking assumptions:
@@ -1616,6 +1194,69 @@ Rec15N %>%
   facet_wrap( ~ Site, ncol = 2) + 
   labs(x = "Measuring period", y = "% of added N", title = "15N recovery in MBN, proportional to total recovery") + guides(x = guide_axis(n.dodge = 2)) + 
   theme_light() 
+
+
+#
+# Microbial and soil part
+# MBN
+Rec15N %>%
+  group_by(across(c("Site", "Round"))) %>%
+  summarise(avgR = mean(R_MBN, na.rm = TRUE), 
+            se = sd(R_MBN)/sqrt(length(R_MBN)), .groups = "keep") %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
+  geom_col(aes(Round, avgR),color = "black") +
+  coord_cartesian(ylim = c(0,120)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", 
+       y = expression("% of added "*{}^15*"N"), 
+       title = expression("Microbial "*{}^15*"N tracer recovery")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Soil
+Rec15N %>%
+  group_by(across(c("Site", "Round"))) %>%
+  summarise(avgR = mean(R_SE, na.rm = TRUE), 
+            se = sd(R_SE)/sqrt(length(R_SE)), .groups = "keep") %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
+  geom_col(aes(Round, avgR),color = "black") +
+  coord_cartesian(ylim = c(0,0.8)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", 
+       y = expression("% of added "*{}^15*"N"), 
+       title = expression("Soil "*{}^15*"N tracer recovery")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Soil 15N concentration
+Rec15N %>%
+  dplyr::rename("atomP_SE" = "atom%_SE") %>%
+  group_by(across(c("Site", "Plot", "Round"))) %>%
+  mutate(SE_15N = (Nconc_SE*10^-6)*(atomP_SE/100)*10^6) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  summarise(avgR = mean(SE_15N, na.rm = TRUE), 
+            se = sd(SE_15N)/sqrt(length(SE_15N)), .groups = "keep") %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
+  geom_col(aes(Round, avgR),color = "black") +
+  coord_cartesian(ylim = c(0,0.5)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", 
+       y = expression("["*{}^15*"N] (µg "*{}^15*"N "*g^-1*" DW)"), 
+       title = expression({}^15*"N concentration in soil extract")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
+
+
 
 
 

@@ -54,7 +54,7 @@ K_EN = 0.4
 #
 # Transform numbered months to another format
 Month_yr <- tribble(~MP, ~Round,
-  01,	"01_July_19",
+  01,	"01_Jul_19",
   02,	"02_Aug_19",
   03,	"03_Sep_19",
   04,	"04_Oct_19",
@@ -76,104 +76,17 @@ Month_yr <- tribble(~MP, ~Round,
 vegroot15N <- vegroot15N %>%
   mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100)
 #
+# Vegetation recovery for total core
+vegroot15N_total_Plant <- vegroot15N %>%
+  group_by(across(c("Site", "Plot", "Round"))) %>%
+  summarise(PlantRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+#
+#
 # Calculate recovery for microbial partition
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
   mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF_NatAb*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE_NatAb*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
-#
-#
-#-------   ## Summary tables ## -------
-# Calculate Nconc for total plant, Nconc for organs
-# For this first calculate N in each func.grp/organ then sum
-table_dat_N_atom1 <- table_dat_N_atom %>%
-  left_join(vegroot15N)
-t1_1 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(Nconc_tot)
-t1_2 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(Biomass_tot)
-t1_3 <- table_dat_N_atom1 %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(d15N_avg)
-#
-t1_4 <- Rec15N %>%
-  group_by(Site, Round) %>%
-  get_summary_stats(TotalRecovery)
-#
-t1 <- t1_1 %>%
-  bind_rows(t1_2) %>%
-  bind_rows(t1_3) %>%
-  bind_rows(t1_4)
-t1_wide1 <- t1 %>%
-  pivot_wider(names_from = "variable", values_from = c(4:15))
-#
-t1_5 <- Rec15N %>%
-  mutate(Nconc_MBN = (Nconc_SEF - Nconc_SE)/0.4) %>%
-  dplyr::filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
-  group_by(Site, Round) %>%
-  get_summary_stats(Nconc_MBN)
-#  get_summary_stats(ωN_SE) %>%
-#  get_summary_stats(ωN_SEF)
-#
-t1_6 <- Rec15N %>%
-  dplyr::filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
-  group_by(Site, Round) %>%
-  get_summary_stats(R_MBN)
-#
-t12 <- t1_5 %>%
-  bind_rows(t1_6) #%>% bind_rows(t1_7)
-t1_wide2 <- t12 %>%
-  pivot_wider(names_from = "variable", values_from = c(4:15))
-#
-t1_8 <- Rec15N %>%
-  dplyr::filter(!(is.na(R_SE))) %>% # remove empty rows, MP9 and 15 as they are missing from SE
-  group_by(Site, Round) %>%
-  get_summary_stats(Nconc_SE)
-t1_9 <- Rec15N %>%
-  dplyr::filter(!(is.na(R_SE))) %>% # remove empty rows, MP9 and 15 as they are missing from SE
-  group_by(Site, Round) %>%
-  get_summary_stats(R_SE)
-t1_10 <- Rec15N %>%
-  dplyr::filter(!(is.na(R_SE))) %>% # remove empty rows, MP9 and 15 as they are missing from SE
-  group_by(Site, Round) %>%
-  get_summary_stats(d15N_SE)
-#
-t13 <- t1_8 %>%
-  bind_rows(t1_9) %>%
-  bind_rows(t1_10)
-t1_wide3 <- t13 %>%
-  pivot_wider(names_from = "variable", values_from = c(4:15))
-#
-#
-# Save
-write_delim(t1_wide1,"export/plantTable.dat", delim = "\t")
-write_delim(t1_wide2,"export/MBNTable.dat", delim = "\t")
-write_delim(t1_wide3,"export/TDNTable.dat", delim = "\t")
-#
-#
-#
-# Plant recovery
-Rec15N %>%
-  group_by(across(c(Site, Round))) %>%
-  get_summary_stats(TotalRecovery)
-#
-# Snow cover
-table_dat_N_atom1 %>%
-  group_by(Site, Round) %>%
-  get_summary_stats(Snow_plot)
-table_dat_N_atom %>%
-  ggboxplot(x = "Round", y = "Snow_plot", color = "Site", palette = "jco", short.panel.labs = FALSE) + guides(x = guide_axis(n.dodge = 2))
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
 #
 #
 #
@@ -185,16 +98,11 @@ table_dat_N_atom %>%
 # Factors: Time, Site, Time*Site
 # Most important factor: Time
 #
-# Load data from excel instead of calculated combined
-vegroot15N_RLong_xl <- read_excel("raw_data/15N vegetation and roots v0.34.xlsx", sheet = "PlantRecov", col_names = TRUE)
-vegroot15N_RLong_xl <- vegroot15N_RLong_xl %>%
-  rename("MP" = Round) %>%
-  left_join(Month_yr, by = join_by("MP")) %>%
-  relocate("Round", .after = "Plot")
-vegroot15N_RLong_xl <- vegroot15N_RLong_xl %>%
-#  filter(Round < 7) %>% # Used to test how many rounds to able to run ezANOVA: max 7
-  mutate(across(c("Plot", "Round"), as.character))%>%
-  mutate(across(c("Site", "Round", "Site_Round"), as.factor))
+vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
+  left_join(Month_yr, by = join_by("Round")) %>%
+  relocate("MP", .after = "Plot") %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Contrasts - whole plant recovery
 # Month            (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
@@ -214,28 +122,27 @@ cont13         <- c(0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0)
 cont14         <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just to get everything to balance out
 #
 AvsV<-c(1,-1)
-contrasts(vegroot15N_RLong_xl$Site)<-AvsV
-contrasts(vegroot15N_RLong_xl$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#contrasts(vegroot15N_RLong_xl$Round)<-cbind(JulvsJan, OctvsApr)
-#contrasts(vegroot15N_RLong_xl$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
+contrasts(vegroot15N_total_Plant$Site)<-AvsV
+contrasts(vegroot15N_total_Plant$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#contrasts(vegroot15N_total_Plant$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
 #
 # Check if contrasts work, by using a two-way ANOVA
-PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_RLong_xl)
-Anova(PlantModel_alias, type ="II")
+PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_total_Plant)
+Anova(PlantModel_alias, type ="III")
 # alias checks dependencies
 alias(PlantModel_alias)
 #
 # transform data
-vegroot15N_RLong_xl <- vegroot15N_RLong_xl %>%
+vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
   mutate(sqrtPlantRecovery = sqrt(PlantRecovery)) %>%
   mutate(invPlantRecovery = 1/PlantRecovery) %>%
-  mutate(logPlantRecovery = log(PlantRecovery+1)) %>%
-  mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this!!
+  mutate(logPlantRecovery = log(PlantRecovery+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
+  mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this for general percentages!!
 
 #model:
 lme1<-lme(logPlantRecovery ~ Round*Site,
           random = ~1|Plot/Site,
-          data = vegroot15N_RLong_xl, na.action = na.exclude, method = "REML")
+          data = vegroot15N_total_Plant, na.action = na.exclude, method = "REML")
 
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -250,15 +157,6 @@ par(mfrow = c(1,1))
 Anova(lme1, type=2)
 summary(lme1)
 # Significant for Round
-
-
-by(vegroot15N_RLong_xl$logPlantRecovery, list(vegroot15N_RLong_xl$Round, vegroot15N_RLong_xl$Site), stat.desc)
-#
-#
-#
-#
-#
-#
 #
 #
 #
@@ -379,7 +277,7 @@ vegroot15N_RLong_Organ %>%
 
 #
 #
-#summary(aov(logPlantRecovery ~ Round*Site + Error(Plot/Round/Site), data = vegroot15N_RLong_xl))
+#summary(aov(logPlantRecovery ~ Round*Site + Error(Plot/Round/Site), data = vegroot15N_total_Plant))
 #
 # Posthoc test
 PostOrgan <- glht(organIntactModel, linfct = mcp(Round = "Tukey"))

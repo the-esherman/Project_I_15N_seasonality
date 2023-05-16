@@ -4,8 +4,8 @@
 #------- ### Libraries ### -------
 library(tidyverse)
 library(readxl)
-#library(gridExtra)
-#library(viridis)
+library(gridExtra)
+library(viridis)
 #library(ggpubr)
 #library(rstatix)
 library(car)
@@ -30,7 +30,7 @@ Mic15N <- read_csv("clean_data/Mic_15N_data.csv", skip = 1, col_names = TRUE)
 #
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
-winterP2 <- data.frame(wstart = c("05_Nov-19", "05_Nov-19"), wend = c("12_May-20", "13_Jun-20"))
+winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
 #
 # List of Measuring periods as they should appear in graphs
 measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
@@ -78,7 +78,7 @@ vegroot15N <- vegroot15N %>%
 #
 # Vegetation recovery for total core
 vegroot15N_total_Plant <- vegroot15N %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
   summarise(PlantRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 #
@@ -87,6 +87,16 @@ vegroot15N_total_Plant <- vegroot15N %>%
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
   mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF_NatAb*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE_NatAb*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
+#
+# Calculate recovery as a proportion of total recovered in each plot
+Rec15N <- vegroot15N_total_Plant %>%
+  left_join(Mic15N, by = join_by(Site, Plot, MP, Round)) %>%
+  select(Site, Plot, MP, Round, PlantRecovery, R_TDN, R_MBN) %>%
+  rowwise() %>%
+  mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
+  mutate(PlantR_frac = PlantRecovery/sysRec*100,
+         R_TDN_frac = R_TDN/sysRec*100,
+         R_MBN_frac = R_MBN/sysRec*100)
 #
 #
 #
@@ -99,8 +109,6 @@ Mic15N <- Mic15N %>%
 # Most important factor: Time
 #
 vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
-  left_join(Month_yr, by = join_by("Round")) %>%
-  relocate("MP", .after = "Plot") %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
@@ -525,103 +533,69 @@ inorgN %>%
 
 #-------   ##   Recovery   ## -------
 #
-# Plot average recovery of each component per site over each measuring period
-# Evergreen shrubs
-vegroot15N_RLong %>%
-  filter(Species == "ES") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgRecovery = mean(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Part == "S", avgRecovery, -avgRecovery)) %>%
-  ggplot(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR")))) + geom_col(position = "stack") + scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") + facet_wrap( ~ Site) + labs(x = "Measuring period", y = "% of added N", title = "15N recovery for Evergreen shrubs") + guides(x = guide_axis(n.dodge = 2))
-#
-# Deciduous shrubs
-vegroot15N_RLong %>%
-  filter(Species == "DS") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgRecovery = mean(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Part == "S", avgRecovery, -avgRecovery)) %>%
-  ggplot(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR")))) + geom_col(position = "stack") + scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") + facet_wrap( ~ Site) + labs(x = "Measuring period", y = "% of added N", title = "15N recovery for Deciduous shrubs") + guides(x = guide_axis(n.dodge = 2))
-#
-# Graminoids
-vegroot15N_RLong %>%
-  filter(Species == "G") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgRecovery = mean(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Part == "S", avgRecovery, -avgRecovery)) %>%
-  ggplot(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR")))) + geom_col(position = "stack") + scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") + facet_wrap( ~ Site) + labs(x = "Measuring period", y = "% of added N", title = "15N recovery for Graminoids") + guides(x = guide_axis(n.dodge = 2))
-#
 # Sum recovery and calculate average
 # This means combining
 # Shoots: ES, DS, G, O, U
 # CR: ES, DS, G, bulk
 # FR: ES, DS, G, O, bulk
-# R_G is "G" and removed from here # not anymore, changed naming. It is now part of FR
-vegroot15N_RLong %>%
-#  mutate(Part = if_else(Part == "R", "FR", Part)) %>%
-  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
+vegroot15N %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
   summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
- # filter(Species != "RootG") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
   summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Part == "S", avgRecovery, -avgRecovery),
-         se = if_else(Part == "S", se, -se),
-         avgR_SE = if_else(Part == "CR", avgRecovery, 0)) %>%
+  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery),
+         se = if_else(Organ == "S", se, -se),
+         avgR_SE = if_else(Organ == "CR", avgRecovery, 0)) %>%
   group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Part == "FR", cumsum(avgR_SE)+avgRecovery, avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
+  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgRecovery, avgRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
   #
   # Plot 
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
   coord_cartesian(ylim = c(-15,3)) +
   scale_fill_viridis_d() +
-  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
+#  scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
   scale_x_discrete(labels = measuringPeriod) +
   scale_y_continuous(breaks = c(-15, -12, -9, -6, -3, 0, 3), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))#,#legend.position=c(1,1),
-        #legend.justification=c(1, 1))#, 
-        #legend.key.width=unit(1, "lines"), 
-        #legend.key.height=unit(1, "lines"), 
-        #plot.margin = unit(c(5, 1, 0.5, 0.5), "lines")) 
-#+ annotate("rect", xmin = winterP2$wstart, xmax = winterP2$wend, ymin = Inf, ymax = -Inf, fill = "grey", alpha = 0.5)
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-#
-vegroot15N_RLong %>%
-  group_by(across(c("Site", "Plot", "Round", "Part", "Species"))) %>%
+# Each species or part separated. For a quick overview of where patterns might come from
+vegroot15N %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ", "Species"))) %>%
   summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Part", "Species"))) %>%
+  group_by(across(c("Site", "Round", "Organ", "Species"))) %>%
   summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Part == "S", avgRecovery, -avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
+  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
   #
   # Plot 
   ggplot() +
   #geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack") +
+  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack") +
   coord_cartesian(ylim = c(-8,3)) +
   scale_fill_viridis_d() +
   #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
   #geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site + Species, ncol = 7) +
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in plants") + guides(x = guide_axis(n.dodge = 3)) + 
-  theme_light() 
-
-
-
+  facet_wrap( ~ Site + Species, ncol = 5) +
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  guides(fill = guide_legend(title = "Plant organ")) + 
+  theme_light(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
 #
 #
-# Abisko Vassijaure plant recovery facet
-vegroot15N_RLong_one %>%
+#
+# Abisko and Vassijaure plant recovery faceted
+vegroot15N_total_Plant %>%
   group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
+  summarise(avgRecovery = mean(PlantRecovery, na.rm = TRUE), se = sd(PlantRecovery)/sqrt(length(PlantRecovery)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
@@ -635,33 +609,33 @@ vegroot15N_RLong_one %>%
 #
 #
 # Proportional to total recovery
+# Plant recover fraction
 Rec15N %>%
   group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean((TotalRecovery/sysRec*100), na.rm = TRUE), se = sd((TotalRecovery/sysRec*100))/sqrt(length((TotalRecovery/sysRec*100))), .groups = "keep") %>%
+  summarise(avgRecovery = mean(PlantR_frac, na.rm = TRUE), se = sd(PlantR_frac)/sqrt(length(PlantR_frac)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery, ymax=avgRecovery+se), position=position_dodge(.9)) +
   geom_col(aes(Round, avgRecovery)) +
-  #ylim(0,30) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period", y = expression("% of added "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Measuring period", y = expression("% of total recovered "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) +
   theme_classic(base_size = 20)  +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-# Mic - MBN
+# Mic - MBN fraction
 Rec15N %>%
   group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean((R_MBN/sysRec*100), na.rm = TRUE), se = sd((R_MBN/sysRec*100))/sqrt(length((R_MBN/sysRec*100))), .groups = "keep") %>%
+  summarise(avgRecovery = mean(R_MBN_frac, na.rm = TRUE), se = sd(R_MBN_frac)/sqrt(length(R_MBN_frac)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_col(aes(Round, avgRecovery)) +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in MBN, proportional to total recovery") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
-
-
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period", y = expression("% of total recovered "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) +
+  theme_classic(base_size = 20)  +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
+#
 #
 # Microbial and soil part
 # MBN
@@ -685,8 +659,8 @@ Rec15N %>%
 # Soil
 Rec15N %>%
   group_by(across(c("Site", "Round"))) %>%
-  summarise(avgR = mean(R_SE, na.rm = TRUE), 
-            se = sd(R_SE)/sqrt(length(R_SE)), .groups = "keep") %>%
+  summarise(avgR = mean(R_TDN, na.rm = TRUE), 
+            se = sd(R_TDN)/sqrt(length(R_TDN)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
@@ -700,200 +674,27 @@ Rec15N %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-# Soil 15N concentration
+#
+# System recovery
 Rec15N %>%
-  dplyr::rename("atomP_SE" = "atom%_SE") %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
-  mutate(SE_15N = (Nconc_SE*10^-6)*(atomP_SE/100)*10^6) %>%
   group_by(across(c("Site", "Round"))) %>%
-  summarise(avgR = mean(SE_15N, na.rm = TRUE), 
-            se = sd(SE_15N)/sqrt(length(SE_15N)), .groups = "keep") %>%
+  summarise(avgRecovery = mean(sysRec, na.rm = TRUE), se = sd(sysRec)/sqrt(length(sysRec)), .groups = "keep") %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgR),color = "black") +
-  coord_cartesian(ylim = c(0,0.5)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  geom_col(aes(Round, avgRecovery)) +
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", 
-       y = expression("["*{}^15*"N] (µg "*{}^15*"N "*g^-1*" DW)"), 
-       title = expression({}^15*"N concentration in soil extract")) +
+       y = expression("% of added "*{}^15*"N"), 
+       title = expression("Total "*{}^15*"N tracer recovery")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
-
-
-
-
-
-
-
-Recov_FR <- ggplot(vegroot15N, aes(Round, R_FR, colour = Site))
-Recov_FR + geom_boxplot()
-
-Recov_DSS <- ggplot(vegroot15N, aes(Round, R_DSS, colour = Site))
-Recov_DSS + geom_boxplot()
-Recov_DSCR <- ggplot(vegroot15N, aes(Round, R_DSCR, colour = Site))
-Recov_DSCR + geom_boxplot()
-Recov_DSFR <- ggplot(vegroot15N, aes(Round, R_DSFR, colour = Site))
-Recov_DSFR + geom_boxplot()
-
-
-Recov_DS <- vegroot15Nlong %>%
-  filter(Species == "DS") %>%
-  mutate(Recovery = if_else(Part == "S", Recovery, -Recovery)) %>%
-  ggplot(aes(MP, Recovery, colour = Site))
-Recov_DS + geom_col(position = "stack")
-
-
-
-
-# Microbial recovery
-# SE - TDN
-Mic15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_SE, na.rm = TRUE), se = sd(R_SE)/sqrt(length(R_SE)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in TDN") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light()
 #
-# SEF
-Mic15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_SEF, na.rm = TRUE), se = sd(R_SEF)/sqrt(length(R_SEF)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery SEF") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
-#
-# Mic - MBN
-Mic15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_MBN, na.rm = TRUE), se = sd(R_MBN)/sqrt(length(R_MBN)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery in MBN") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
 
 
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(sysRec, na.rm = TRUE), se = sd(sysRec)/sqrt(length(sysRec)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery total") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light() 
-#
-#
-# Total recovery
-Total_plot <- Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(sysRec, na.rm = TRUE), se = sd(sysRec)/sqrt(length(sysRec)), .groups = "keep") %>%
-  ggplot(aes(y = avgRecovery, x = Round, fill = Site)) +
- # geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), stat="identity", alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_bar(position = position_dodge(), stat = "identity", alpha = 0) + # invisible bars to annotate on top of
-  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) +
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.5) +
-  geom_bar(position = position_dodge(), stat = "identity", colour = "black") +
-  geom_errorbar(aes(ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  scale_fill_viridis_d(option= "plasma") +
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery total") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light()
-#
-# Microbial N recovery
-MBN_plot <- Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_MBN, na.rm = TRUE), se = sd(R_MBN)/sqrt(length(R_MBN)), .groups = "keep") %>%
-  ggplot(aes(y = avgRecovery, x = Round, fill = Site)) +
-  # geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), stat="identity", alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_bar(position = position_dodge(), stat = "identity", alpha = 0) + # invisible bars to annotate on top of
-  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) +
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.5) +
-  geom_bar(position = position_dodge(), stat = "identity", colour = "black") +
-  geom_errorbar(aes(ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  scale_fill_viridis_d(option= "plasma") +
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery microbial N")+ guides(x = guide_axis(n.dodge = 2))+ 
-  theme_light()
-#
-# TDN
-TDN_plot <- Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_SE, na.rm = TRUE), se = sd(R_SE)/sqrt(length(R_SE)), .groups = "keep") %>%
-  ggplot(aes(y = avgRecovery, x = Round, fill = Site)) +
-  # geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), stat="identity", alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_bar(position = position_dodge(), stat = "identity", alpha = 0) + # invisible bars to annotate on top of
-  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) +
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.5) +
-  geom_bar(position = position_dodge(), stat = "identity", colour = "black") +
-  geom_errorbar(aes(ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  scale_fill_viridis_d(option= "plasma") +
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery TDN") + guides(x = guide_axis(n.dodge = 2))+ 
-  theme_light()
-#
-# Plant
-plant_plot <- Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
-  ggplot(aes(y = avgRecovery, x = Round, fill = Site)) +
-  # geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), stat="identity", alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_bar(position = position_dodge(), stat = "identity", alpha = 0) + # invisible bars to annotate on top of
-  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) +
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.5) +
-  geom_bar(position = position_dodge(), stat = "identity", colour = "black") +
-  geom_errorbar(aes(ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  scale_fill_viridis_d(option= "plasma") +
-  labs(x = "Measuring period", y = "% of added N", title = "15N recovery plants") + guides(x = guide_axis(n.dodge = 2)) + 
-  theme_light()
-#
-# combine figures
-grid.arrange(Total_plot, MBN_plot, TDN_plot,plant_plot, ncol = 2)
-#
-#
-#
-#
-# Combine all types of recovery into one:
-vegroot15N_d15N_Nconc_Long1 <- vegroot15N_d15N_Nconc_Long0 %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
-  summarise(Nconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegroot15N_d15N_Nconc_Long2 <- vegroot15N_d15N_Nconc_Long0 %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
-  summarise(d15N = sum(d15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegroot15N_d15N_Nconc_Long <- vegroot15N_d15N_Nconc_Long1 %>% left_join(vegroot15N_d15N_Nconc_Long2)
-#
-vegroot15N_d15N_Nconc_Long0 %>%
-  ggplot(aes(x = Nconc, y = d15N, color = Site)) +
-  geom_point()
-#
-vegroot15N_d15N_Nconc_Long3 <- vegroot15N_d15N_Nconc_Long0 %>%
-  group_by(across(c("Site","Plot", "Round", "Part"))) %>%
-  summarise(Nconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  dplyr::rename("Organ" = "Part") %>%
-  ungroup()
-vegroot15N_d15N_Nconc_Long4 <- vegroot15N_d15N_Nconc_Long0 %>%
-  group_by(across(c("Site","Plot", "Round", "Part"))) %>%
-  summarise(d15N = sum(d15N, na.rm = TRUE), .groups = "keep") %>% # You CANNOT sum delta15N values!!
-  dplyr::rename("Organ" = "Part") %>%
-  ungroup()
-vegroot15N_d15N_Nconc_Long <- vegroot15N_d15N_Nconc_Long3 %>% left_join(vegroot15N_d15N_Nconc_Long4)
-#
-vegroot15N_d15N_Nconc_Long %>%
-  ggplot(aes(x = log((Nconc)^2+1), y = log((d15N)^2+1), color = Organ)) +
-  geom_point()
+margin <- qt()
+
+
 #
 #
 #

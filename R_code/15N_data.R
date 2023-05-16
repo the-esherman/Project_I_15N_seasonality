@@ -168,39 +168,34 @@ summary(lme1)
 # Factors: Time, Site, Organ, Time*Organ, Time*Site, Site*Organ, Time*Site*Organ
 # Most important factors: Organ, Time*Organ, Time*Site*Organ
 #
-vegroot15N_RLong_Organ <- vegroot15N_RLong_Organ_original %>%
-  mutate(across(c("Plot"), as.character))%>%
-  mutate(across(c("Site", "Round", "Organ"), as.factor))
+vegroot15N_Organ <- vegroot15N %>%
+  select(1:4,6,7,15) %>%
+  group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
+  summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  ungroup() %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
 #
 # Contrasts - plant organs
+# For contrasts of Round see Q1
 SvsR<-c(-1, -1, 2) # Shoots vs roots
 CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
 AvsV<-c(1,-1) # Abisko vs Vassijaure. Maybe not much point in specifying this, but not sure if I dare remove it
-contrasts(vegroot15N_RLong_Organ$Site)<-AvsV
-contrasts(vegroot15N_RLong_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14) # Contrasts defined in Q1
-#contrasts(vegroot15N_RLong_Organ$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
-contrasts(vegroot15N_RLong_Organ$Organ)<-cbind(SvsR,CRvsFR)
+contrasts(vegroot15N_Organ$Site)<-AvsV
+contrasts(vegroot15N_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14) # Contrasts defined in Q1
+#contrasts(vegroot15N_Organ$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
+contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
 #
 # Check if contrasts work, by using a two-way ANOVA
-OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_RLong_Organ)
+OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
 Anova(OrganModel_alias, type ="II")
 # alias checks dependencies
 alias(OrganModel_alias)
 #
 #
 #
-# Still not working. See comment above
-organModel <-ezANOVA(data = vegroot15N_RLong_Organ, dv = .(OrganRecovery), wid = .(Plot), within = .(Organ, Round, Site), type = 3, detailed = TRUE)
-#
-# Test Homogeneity of variance
-leveneTest(vegroot15N_RLong_Organ$OrganRecovery, vegroot15N_RLong_Organ$Organ, center = median) # Organ
-leveneTest(vegroot15N_RLong_Organ$OrganRecovery, vegroot15N_RLong_Organ$Round, center = median) # Round
-leveneTest(vegroot15N_RLong_Organ$OrganRecovery, vegroot15N_RLong_Organ$Site, center = median) # Site
-leveneTest(vegroot15N_RLong_Organ$OrganRecovery, interaction(vegroot15N_RLong_Organ$Round, vegroot15N_RLong_Organ$Site), center = median) # interaction Round*Site
-# Very much not equal variance, except for site
-#
 # transform data
-vegroot15N_RLong_Organ <- vegroot15N_RLong_Organ %>%
+vegroot15N_Organ <- vegroot15N_Organ %>%
   #dplyr::filter(OrganRecovery > 0) %>% 
   mutate(sqrtOrganRecovery = sqrt(OrganRecovery+1)) %>%
   mutate(invOrganRecovery = 1/OrganRecovery+1) %>%
@@ -211,91 +206,11 @@ vegroot15N_RLong_Organ <- vegroot15N_RLong_Organ %>%
   mutate(arcOrganRecovery = asin(sqrt((OrganRecovery+1)/100)))
 # BoxCox transformation?
 #
-# Check distribution
-vegroot15N_RLong_Organ %>% 
-  ggplot(aes(OrganRecovery), color = Site) + geom_histogram()
-vegroot15N_RLong_Organ %>% 
-  ggplot(aes(sqOrganRecovery), color = Site) + geom_histogram()
-vegroot15N_RLong_Organ %>% 
-  ggplot(aes(cubeOrganRecovery), color = Site) + geom_histogram()
-hist(vegroot15N_RLong_Organ$cubeOrganRecovery, main = "Historgram of plant recovery")
-hist(vegroot15N_RLong_Organ$arcOrganRecovery, main = "Historgram of plant recovery")
 #
-# Shapiro-Wilk Test
-shapiro.test(vegroot15N_RLong_Organ$cubeOrganRecovery)
-#
-# Check qq-plot of transformations
-# log transformation best
-qqnorm(vegroot15N_RLong_Organ$OrganRecovery, main = "Normal Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$OrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$logOrganRecovery, main = "Log Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$logOrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$invOrganRecovery, main = "Inverse Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$invOrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$sqrtOrganRecovery, main = "sqrt Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$sqrtOrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$expOrganRecovery, main = "exponential Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$expOrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$cubeOrganRecovery, main = "Cube root Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$cubeOrganRecovery)
-qqnorm(vegroot15N_RLong_Organ$arcOrganRecovery, main = "Angular transformation (arcsine of sqrt) Q-Q Plot")
-qqline(vegroot15N_RLong_Organ$arcOrganRecovery)
-#
-# Check homogeneity of variance
-# log is homogeneous
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, vegroot15N_RLong_Organ$Organ, center = median) # Organ
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, vegroot15N_RLong_Organ$Round, center = median) # Round
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, vegroot15N_RLong_Organ$Site, center = median) # Site
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, interaction(vegroot15N_RLong_Organ$Round, vegroot15N_RLong_Organ$Site), center = median) 
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, interaction(vegroot15N_RLong_Organ$Organ, vegroot15N_RLong_Organ$Site), center = median)
-leveneTest(vegroot15N_RLong_Organ$cubeOrganRecovery, interaction(vegroot15N_RLong_Organ$Round, vegroot15N_RLong_Organ$Organ), center = median)
-# cube root transformation not equal variance for Round or interaction
-#
-# Cube root is approx. normal-distributed, but variance not equal
-#
-# Two-way ANOVA
-PlantModel3 <- aov(logOrganRecovery ~ Round*Site*Organ, data = vegroot15N_RLong_Organ)
-Anova(PlantModel3, type ="III")
-
-# Multilevel linear model approach
-baseline_organ <- lme(logOrganRecovery ~ 1, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_Organ, method = "ML")
-organOrganModel <- update(baseline_organ, .~. + Organ)
-organRoundModel <- update(organOrganModel, .~. + Round)
-organSiteModel <- update(organRoundModel, .~. + Site)
-
-organIntactModel <- update(organSiteModel, .~. + Round:Site)
-
-
-#
-anova(baseline_organ, organRoundModel, organSiteModel, organIntactModel)
-anova(baseline_organ, organSiteModel, organRoundModel, organIntactModel)
-#
-summary(organIntactModel)
-
-vegroot15N_RLong_Organ %>%
-  ggplot(aes(x = reorder(Round, sort(as.numeric(Round))), OrganRecovery, colour = Site)) + stat_summary(fun.y = mean, geom = "point") + stat_summary(fun.y = mean, geom = "line", aes(group= Site)) + stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2) + labs(x = "Round", y = "Mean Recovery", colour = "Site")
-
-#
-#
-#summary(aov(logPlantRecovery ~ Round*Site + Error(Plot/Round/Site), data = vegroot15N_total_Plant))
-#
-# Posthoc test
-PostOrgan <- glht(organIntactModel, linfct = mcp(Round = "Tukey"))
-summary(PostOrgan)
-confint(PostOrgan)
-#
-OrganIntactModel_post <- lme(logOrganRecovery ~ 1 + Site_Round, random = ~1|Plot/Round/Site, data = vegroot15N_RLong_Organ, method = "ML")
-PostOrgan2 <- glht(OrganIntactModel_post, linfct = mcp(Site_Round = "Tukey"))
-summary(PostOrgan2)
-confint(PostOrgan2)
-#
-#
-#
-# From Signe
-#model:
+# model:
 lme1a<-lme(cubeOrganRecovery ~ Round*Site*Organ,
-          random = ~1|Site/Plot,
-          data = vegroot15N_RLong_Organ, na.action = na.exclude , method = "REML")
+          random = ~1|Plot/Site,
+          data = vegroot15N_Organ, na.action = na.exclude , method = "REML")
 
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -307,105 +222,9 @@ plot(lme1a)
 par(mfrow = c(1,1))
 
 #model output
-Anova(lme1a, type=2)
+Anova(lme1a, type=3)
 summary(lme1a)
-# Highly significant for Round, Organm Round*Organ and significant for three-way interaction
-#
-#
-#
-# From: https://www.datanovia.com/en/lessons/repeated-measures-anova-in-r/
-# Check data
-# Summary statistics
-vegroot15N_RLong_Organ %>%
-  group_by(Site, Organ, Round) %>%
-  get_summary_stats(cubeOrganRecovery, type = "mean_sd")
-#
-#
-OrganBoxP <- ggboxplot(vegroot15N_RLong_Organ, x = "Round", y = "OrganRecovery", color = "Site", palette = "jco", facet.by = "Organ", short.panel.labs = FALSE) + guides(x = guide_axis(n.dodge = 2))
-OrganBoxP
-#
-# Identify outliers
-vegroot15N_RLong_Organ %>%
-  group_by(Site, Round, Organ) %>%
-  identify_outliers(cubeOrganRecovery)
-# Several extreme outliers
-#
-# Normality
-print(
-  vegroot15N_RLong_Organ %>%
-    group_by(Site, Round, Organ) %>%
-    shapiro_test(cubeOrganRecovery), n = 90)
-ggqqplot(vegroot15N_RLong_Organ, "cubeOrganRecovery", ggtheme = theme_bw()) + facet_grid(Site + Round ~ Organ, labeller = "label_both")
-# Not normally distributed at each Round-Site: at least 3 significantly different, log-transformed: 2, arcsin: 1 (always Vassi MP15)
-# 
-#
-# ANOVA
-organ_aov <- anova_test(data = vegroot15N_RLong_Organ, dv = "cubeOrganRecovery", wid = "Plot", within = c("Site", "Round", "Organ"))
-organ_aov
-get_anova_table(organ_aov)
-#
-# Post-hoc tests
-# Two-way ANOVA at each diet level
-organTwoWay <- vegroot15N_RLong_Organ %>%
-  group_by(Organ) %>%
-  anova_test(dv = cubeOrganRecovery, wid = Plot, within = c(Site, Round)) %>%
-  adjust_pvalue(method = "bonferroni")
-organTwoWay
-# Extract anova table
-get_anova_table(organTwoWay)
-# One-way ANOVA
-organOneWay <- vegroot15N_RLong_Organ %>%
-  group_by(Organ, Site) %>%
-  anova_test(dv = cubeOrganRecovery, wid = Plot, within = Round) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-organOneWay
-#
-# Pair-wise comparison: paired t-test # Unbalanced setup as missing some organs at some time-points
-organPWC <- vegroot15N_RLong_Organ %>%
-  group_by(Organ, Round) %>%
-  pairwise_t_test(cubeOrganRecovery ~ Site, 
-    paired = TRUE, p.adjust.method = "bonferroni"
-  )
-organPWC
-#
-# Visualization: box plots with p-values
-organPWC_plot <- organPWC %>% add_xy_position(x = "Round", y.trans = function(x){(x)^5})
-OrganBoxP + 
-  stat_pvalue_manual(organPWC_plot, tip.length = 0, hide.ns = TRUE) +
-  labs(
-    subtitle = get_test_label(organ_aov, detailed = TRUE),
-    caption = get_pwc_label(organPWC_plot)
-  )
-
-
-#
-# Different plot # not working :(
-#                                                     #1                                    #2                                   #3
-OrganBoxP2 <- ggboxplot(vegroot15N_RLong_Organ, x = "Organ", y = "OrganRecovery", color = "Round", palette = "jco", facet.by = "Site", short.panel.labs = FALSE) + guides(x = guide_axis(n.dodge = 2))
-OrganBoxP2
-# Pair-wise
-organPWC <- vegroot15N_RLong_Organ %>%
-  #         #3     #1
-  group_by(Site, Organ) %>% #          #2
-  pairwise_t_test(cubeOrganRecovery ~ Round, 
-                  paired = TRUE, p.adjust.method = "bonferroni"
-  )
-# Visualization: box plots with p-values
-organPWC_plot2 <- organPWC %>% add_xy_position(x = "exercises", y.trans = function(x){(x)^5})
-OrganBoxP2 + 
-  stat_pvalue_manual(organPWC_plot2, tip.length = 0, hide.ns = TRUE) +
-  labs(
-    subtitle = get_test_label(organ_aov, detailed = TRUE),
-    caption = get_pwc_label(organPWC_plot2)
-  )
-#
-
-
-#
-#
-#
-#
+# Highly significant for Round, Organ Round*Organ and significant for three-way interaction
 #
 #
 #
@@ -421,7 +240,7 @@ OrganBoxP2 +
 #
 # Load data from excel instead of calculated combined
 Mic15N_RLong <- Mic15N %>%
-  dplyr::select("Site", "Plot", "MP", "Round", "R_MBN")
+  select("Site", "Plot", "MP", "Round", "R_MBN")
 Mic15N_RLong <- Mic15N_RLong %>%
   dplyr::filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
   mutate(across(c("Plot", "Round"), as.character))%>%
@@ -446,16 +265,6 @@ AvsV<-c(1,-1)
 contrasts(Mic15N_RLong$Site)<-AvsV
 contrasts(Mic15N_RLong$Round)<-cbind(SummervsWinter_Mic,SpringvsAutumn_Mic,SnowvsNot_Mic, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
 #contrasts(Mic15N_RLong$Round)<-contr.helmert
-#
-# Check for missing values in data set. See esp. Plot vs Round vs Site
-ezDesign(Mic15N_RLong, x = Round, y = Plot)
-ezDesign(Mic15N_RLong, x = Site, y = Plot)
-ezDesign(Mic15N_RLong, x = Round, y = Site)
-ezDesign(Mic15N_RLong, x = Plot, y = R_MBN)
-ezDesign(Mic15N_RLong, x = Site, y = R_MBN)
-#
-# Still not working. See comment above
-Mic_Model <-ezANOVA(data = Mic15N_RLong, dv = .(sqrtR_MBN), wid = .(Plot), within = .(Round, Site), type = 3, detailed = TRUE)
 #
 # Alternative: Two-way ANOVA
 # have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design

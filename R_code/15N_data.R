@@ -188,7 +188,7 @@ contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
 #
 # Check if contrasts work, by using a two-way ANOVA
 OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
-Anova(OrganModel_alias, type ="II")
+Anova(OrganModel_alias, type ="III")
 # alias checks dependencies
 alias(OrganModel_alias)
 #
@@ -228,8 +228,6 @@ summary(lme1a)
 #
 #
 #
-#
-#
 #-------  ### Statistics ### -------
 #-------   ##     Q2     ##  -------
 #
@@ -239,12 +237,12 @@ summary(lme1a)
 # Most important factor: Time
 #
 # Load data from excel instead of calculated combined
-Mic15N_RLong <- Mic15N %>%
+Mic15N_R <- Mic15N %>%
   select("Site", "Plot", "MP", "Round", "R_MBN")
-Mic15N_RLong <- Mic15N_RLong %>%
-  dplyr::filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
-  mutate(across(c("Plot", "Round"), as.character))%>%
-  mutate(across(c("Site", "Round"), as.factor))
+Mic15N_R <- Mic15N_R %>%
+  filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Contrasts - MBN recovery
 # Month                (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
@@ -262,118 +260,29 @@ Cont9_Mic          <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the l
 Cont10_Mic         <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Cont11_Mic         <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0)
 AvsV<-c(1,-1)
-contrasts(Mic15N_RLong$Site)<-AvsV
-contrasts(Mic15N_RLong$Round)<-cbind(SummervsWinter_Mic,SpringvsAutumn_Mic,SnowvsNot_Mic, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
-#contrasts(Mic15N_RLong$Round)<-contr.helmert
+contrasts(Mic15N_R$Site)<-AvsV
+contrasts(Mic15N_R$Round)<-cbind(SummervsWinter_Mic,SpringvsAutumn_Mic,SnowvsNot_Mic, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
+#contrasts(Mic15N_R$Round)<-contr.helmert
 #
 # Alternative: Two-way ANOVA
 # have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
-MicModel3 <- aov(R_MBN ~ Round*Site, data = Mic15N_RLong)
+MicModel3 <- aov(R_MBN ~ Round*Site, data = Mic15N_R)
 Anova(MicModel3, type ="III")
-
-qqplot(PlantModel3, main = "Normal Q-Q Plot")
-
-# Test Homogeneity of variance
-leveneTest(Mic15N_RLong$R_MBN, Mic15N_RLong$Round, center = median)
-leveneTest(Mic15N_RLong$R_MBN, Mic15N_RLong$Site, center = median)
-leveneTest(Mic15N_RLong$R_MBN, interaction(Mic15N_RLong$Round, Mic15N_RLong$Site), center = median)
-# No transformation necessary
 #
-# Check distribution
-Mic15N_RLong %>% 
-  ggplot(aes(R_MBN), color = Site) + geom_histogram()
-qqnorm(Mic15N_RLong$R_MBN, main = "Normal Q-Q Plot")
-qqline(Mic15N_RLong$R_MBN)
-shapiro.test(Mic15N_RLong$R_MBN)
-# Not normally distributed, but close
 #
-# transform data
-Mic15N_RLong <- Mic15N_RLong %>%
+# Transform data
+Mic15N_R <- Mic15N_R %>%
   mutate(sqrtR_MBN = sqrt(R_MBN+10)) %>%
   mutate(logR_MBN = log(R_MBN+10)) %>%
   mutate(cubeR_MBN = (R_MBN+10)^(1/3)) %>%
-  mutate(arcR_MBN = asin(sqrt(((R_MBN+10)/max(R_MBN))/100)))
-  
-#
-# Check distribution of transformed data
-Mic15N_RLong %>% 
-  ggplot(aes(sqrtR_MBN), color = Site) + geom_histogram()
-hist(Mic15N_RLong$sqrtR_MBN)
-Mic15N_RLong %>% 
-  ggplot(aes(logR_MBN), color = Site) + geom_histogram()
-hist(Mic15N_RLong$cubeR_MBN)
-hist(Mic15N_RLong$arcR_MBN)
-#
-# Check qq-plot of transformations
-# sqrt transformation best
-qqnorm(Mic15N_RLong$logR_MBN, main = "Log Q-Q Plot")
-qqline(Mic15N_RLong$logR_MBN)
-qqnorm(Mic15N_RLong$sqrtR_MBN, main = "sqrt Q-Q Plot")
-qqline(Mic15N_RLong$sqrtR_MBN)
-qqnorm(Mic15N_RLong$cubeR_MBN, main = "cube Q-Q Plot")
-qqline(Mic15N_RLong$cubeR_MBN)
-qqnorm(Mic15N_RLong$arcR_MBN, main = "angular transformation Q-Q Plot")
-qqline(Mic15N_RLong$arcR_MBN)
-#
-# Shapiro-Wilk test for normal distribution
-shapiro.test(Mic15N_RLong$sqrtR_MBN)
-# sqrt transformation is normally distributed
-#
-# Check homogeneity of variance
-leveneTest(Mic15N_RLong$sqrtR_MBN, Mic15N_RLong$Round, center = median)
-leveneTest(Mic15N_RLong$sqrtR_MBN, Mic15N_RLong$Site, center = median)
-leveneTest(Mic15N_RLong$sqrtR_MBN, interaction(Mic15N_RLong$Round, Mic15N_RLong$Site), center = median)
-# sqrt is homogeneous
-#
-# sqrt is normal-distributed, and variance is equal
-#
-# Two-way ANOVA
-MicModel3 <- aov(sqrtR_MBN ~ Round*Site, data = Mic15N_RLong)
-Anova(MicModel3, type ="II")
-
-alias(MicModel3)
-# contrasts have no conflicts
-
-# Multilevel linear model approach
-baseline_Mic <- lme(sqrtR_MBN ~ 1, random = ~1|Plot/Round/Site, data = Mic15N_RLong, method = "ML")
-micRoundModel <- update(baseline_Mic, .~. + Round)
-micSiteModel <- update(micRoundModel, .~. + Site)
-micIntactModel <- update(micSiteModel, .~. + Round:Site)
-#
-anova(baseline_Mic, micRoundModel, micSiteModel, micIntactModel)
-anova(baseline_Mic, micSiteModel, micRoundModel, micIntactModel)
-#
-
-summary(micIntactModel)
-
-Mic15N_RLong %>%
-  ggplot(aes(x = reorder(Round, sort(as.numeric(Round))), R_MBN, colour = Site)) + stat_summary(fun.y = mean, geom = "point") + stat_summary(fun.y = mean, geom = "line", aes(group= Site)) + stat_summary(fun.data = mean_cl_boot, geom = "errorbar", width = 0.2) + labs(x = "Round", y = "Mean Recovery", colour = "Site")
-
+  mutate(arcR_MBN = asin(sqrt(((R_MBN+10)/max(R_MBN))/10))) # Standardised as proportion of max microbial recovery
 #
 #
-#summary(aov(logR_MBN ~ Round*Site + Error(Plot/Round/Site), data = Mic15N_RLong))
-#
-# Posthoc test
-PostPlant <- glht(plantIntactModel, linfct = mcp(Round = "Tukey"))
-summary(PostPlant)
-confint(PostPlant)
-#
-plantIntactModel_post <- lme(logR_MBN ~ 1 + Site_Round, random = ~1|Plot/Round/Site, data = Mic15N_RLong, method = "ML")
-PostPlant2 <- glht(plantIntactModel_post, linfct = mcp(Site_Round = "Tukey"))
-summary(PostPlant2)
-confint(PostPlant2)
-#
-
-by(Mic15N_RLong$logR_MBN, list(Mic15N_RLong$Round, Mic15N_RLong$Site), stat.desc)
-#
-#
-#
-# From Signe
 #model:
-lme2<-lme(sqrtR_MBN ~ Site*Round,
+lme2<-lme(arcR_MBN ~ Site*Round,
           random = ~1|Plot/Site,
-          data = Mic15N_RLong, na.action = na.exclude , method = "REML")
-
+          data = Mic15N_R, na.action = na.exclude , method = "REML")
+#
 #Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme2), resid(lme2), 
@@ -387,156 +296,6 @@ par(mfrow = c(1,1))
 Anova(lme2, type=2)
 summary(lme2)
 # Highly significant for Round
-#
-#
-#
-# To get a idea of nested vs crossed design:
-# https://stats.stackexchange.com/questions/228800/crossed-vs-nested-random-effects-how-do-they-differ-and-how-are-they-specified
-#
-#
-# From: https://www.datanovia.com/en/lessons/repeated-measures-anova-in-r/
-# Check data
-# Summary statistics
-Mic15N_RLong %>%
-  group_by(Round, Site) %>%
-  get_summary_stats(R_MBN, type = "mean_sd")
-#
-#
-micBoxP <- ggboxplot(Mic15N_RLong, x = "Round", y = "R_MBN", color = "Site", palette = "jco")
-micBoxP
-micBoxP_sqrt <- ggboxplot(Mic15N_RLong, x = "Round", y = "sqrtR_MBN", color = "Site", palette = "jco")
-micBoxP_sqrt
-#
-# Identify outliers
-Mic15N_RLong %>%
-  group_by(Round, Site) %>%
-  identify_outliers(sqrtR_MBN)
-# Several extreme outliers
-#
-# Normality
-print(
-  Mic15N_RLong %>%
-    group_by(Round, Site) %>%
-    shapiro_test(sqrtR_MBN), n = 30)
-ggqqplot(Mic15N_RLong, "sqrtR_MBN", ggtheme = theme_bw()) + facet_grid(Round ~ Site, labeller = "label_both")
-# Not normally distributed at each Round-Site
-# 
-#
-# ANOVA
-mic_aov <- anova_test(data = Mic15N_RLong, dv = "sqrtR_MBN", wid = "Plot", within = c("Site", "Round"))
-mic_aov
-get_anova_table(mic_aov)
-#
-# Post-hoc tests
-# One-way ANOVA
-micOneWay <- Mic15N_RLong %>%
-  group_by(Round) %>%
-  anova_test(dv = sqrtR_MBN, wid = Plot, within = Site) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-micOneWay
-# Pair-wise comparison: paired t-test
-micPWC <- Mic15N_RLong %>%
-  group_by(Round) %>%
-  pairwise_t_test(
-    sqrtR_MBN ~ Site, paired = TRUE,
-    p.adjust.method = "bonferroni"
-  )
-micPWC
-#
-# Similarly for Round
-micOneWay2 <- Mic15N_RLong %>%
-  group_by(Site) %>%
-  anova_test(dv = sqrtR_MBN, wid = Plot, within = Round) %>%
-  get_anova_table() %>%
-  adjust_pvalue(method = "bonferroni")
-micOneWay2
-# Pair-wise comparison: paired t-test
-micPWC2 <- Mic15N_RLong %>%
-  group_by(Site) %>%
-  pairwise_t_test(
-    sqrtR_MBN ~ Round, paired = TRUE,
-    p.adjust.method = "bonferroni"
-  )
-micPWC2
-#
-# When no interaction effect
-# comparisons for Site variable
-Mic15N_RLong %>%
-  pairwise_t_test(
-    sqrtR_MBN ~ Site, paired = TRUE, 
-    p.adjust.method = "bonferroni"
-  )
-# comparisons for Round variable
-print(
-  Mic15N_RLong %>%
-    pairwise_t_test(
-      sqrtR_MBN ~ Round, paired = TRUE, 
-      p.adjust.method = "bonferroni"
-    ), n = 105)
-# Visualization: box plots with p-values
-micPWC_plot <- micPWC %>% add_xy_position(x = "Round", y.trans = function(x){x^2-10})
-micBoxP + 
-  stat_pvalue_manual(micPWC_plot, tip.length = 0, hide.ns = TRUE) +
-  labs(
-    subtitle = get_test_label(mic_aov, detailed = TRUE),
-    caption = get_pwc_label(micPWC_plot)
-  )
-
-#
-#
-#
-#
-# # Trying a few different things
-# For this method check link:
-# https://stats.stackexchange.com/questions/58435/repeated-measures-error-in-r-ezanova-using-more-levels-than-subjects-balanced-d
-set.seed(123)  ## make reproducible
-N  <- 5 #18       ## number of subjects
-P  <- 2 #3        ## number of conditions
-Q  <- 12 #29       ## number of sites
-voltage <- matrix(round(rnorm(N*P*Q), 2), nrow=N)   ## (N x (PxQ))-matrix with voltages
-fit  <- lm(voltage ~ 1)   ## between-subjects design (here: no between factors)
-inDf <- expand.grid(channel=gl(P, 1), electrode=gl(Q, 1))  ## within design
-library(car)              ## for Anova()
-AnRes <- Anova(fit, idata=inDf, idesign=~channel*electrode)
-summary(AnRes, multivariate=FALSE, univariate=TRUE)
-# With sphericity test
-anova(fit, M=~channel, X=~1, idata=inDf, test="Spherical")
-anova(fit, M=~channel + electrode, X=~channel, idata=inDf, test="Spherical")
-anova(fit, M=~channel + electrode + channel:electrode, X=~channel + electrode, idata=inDf, test="Spherical")
-#
-#
-#
-Mic15N_RLong_wideData <- Mic15N_RLong %>%
-  dplyr::select("Site", "Plot", "Round", "R_MBN") %>%
-  mutate(Site_Round = str_c(Site, Round, sep = "_")) %>%
-  dplyr::select(!c("Site", "Round")) %>%
-  pivot_wider(names_from = "Site_Round", values_from = "R_MBN")
-Mic15N_RLong_wideData1 <- Mic15N_RLong_wideData %>%
-  dplyr::select(!c("Plot"))
-Mic15N_RLong_wideData2 <- Mic15N_RLong %>%
-  dplyr::select("Site", "Round") %>%
-  mutate(across(c("Site", "Round"), as.factor))
-#
-fitMic <- lm(Mic15N_RLong_wideData1 ~ 1)
-
-#
-
-
-#
-# Trying the way described by Peter Dalgaard here:
-# https://cran.r-project.org/doc/Rnews/Rnews_2007-2.pdf
-MicModel4_base <- lm(R_MBN ~ Round, data = Mic15N_RLong)
-mauchly.test(MicModel4_base, X=~1)
-# But not working
-#
-reacttime <- matrix(c(420, 420, 480, 480, 600, 780, 420, 480, 480, 360, 480, 600, 480, 480, 540, 660, 780, 780, 420, 540, 540, 480, 780, 900, 540, 660, 540, 480, 660, 720, 360, 420, 360, 360, 480, 540, 480, 480, 600, 540, 720, 840, 480, 600, 660, 540, 720, 900, 540, 600, 540, 480, 720, 780, 480, 420, 540, 540, 660, 780), ncol = 6, byrow = TRUE, dimnames=list(subj=1:10, cond=c("deg0NA", "deg4NA", "deg8NA", "deg0NP", "deg4NP", "deg8NP")))
-mlmfit <- lm(reacttime~1)
-mauchly.test(mlmfit, X=~1)
-#
-#
-#
-#
 #
 #
 #

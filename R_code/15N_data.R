@@ -4,21 +4,12 @@
 #------- ### Libraries ### -------
 library(plyr)
 library(tidyverse)
-library(readxl)
-library(gridExtra)
-library(viridis)
-#library(ggpubr)
-#library(rstatix)
 library(car)
-library(pastecs)
 library(nlme)
-#library(multcomp)
-#library(WRS)
-#library(ez)
 #
 #
 #
-#------- ### Load data ### -------
+#-------  ###   Load data    ### -------
 #
 DataName <- "raw_data/15N vegetation and roots v0.35.xlsx"
 #
@@ -49,7 +40,7 @@ K_EN = 0.4
 #
 #
 #
-#------- ### Functions ### -------
+#-------  ###   Functions    ### -------
 # From http://www.cookbook-r.com/Manipulating_data/Summarizing_data/
 ## Summarizes data.
 ## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
@@ -60,13 +51,11 @@ K_EN = 0.4
 ##   conf.interval: the percent range of the confidence interval (default is 95%)
 summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                       conf.interval=.95, .drop=TRUE) {
-  
   # New version of length which can handle NA's: if na.rm==T, don't count them
   length2 <- function (x, na.rm=FALSE) {
     if (na.rm) sum(!is.na(x))
     else       length(x)
   }
-  
   # This does the summary. For each group's data frame, return a vector with
   # N, mean, and sd
   datac <- ddply(data, groupvars, .drop=.drop,
@@ -78,21 +67,16 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                  },
                  measurevar
   )
-  
   # Rename the "mean" column    
   datac <- plyr::rename(datac, c("mean" = measurevar))
-  
   datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
-  
   # Confidence interval multiplier for standard error
   # Calculate t-statistic for confidence interval: 
   # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
   ciMult <- qt(conf.interval/2 + .5, datac$N-1)
   datac$ci <- datac$se * ciMult
-  
   return(datac)
 }
-#
 #
 # Plot recovery proportional to total recovery. Split in Abisko and Vassijaure
 # dataF: dataframe
@@ -123,29 +107,7 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
 #
 #
 #
-#------- ### Main data ### -------
-#
-# Calculate recovery
-#
-# Transform numbered months to another format
-Month_yr <- tribble(~MP, ~Round,
-  01,	"01_Jul_19",
-  02,	"02_Aug_19",
-  03,	"03_Sep_19",
-  04,	"04_Oct_19",
-  05,	"05_Nov_19",
-  06,	"06_Dec_19",
-  07,	"07_Jan_20",
-  08,	"08_Feb_20",
-  09,	"09_Mar_20",
-  10,	"10_Apr_20",
-  11,	"11_Apr_20",
-  12,	"12_May_20",
-  13,	"13_Jun_20",
-  14,	"14_Jul_20",
-  15,	"15_Aug_20"
-)
-#
+#-------  ###   Main data    ### -------
 #
 # Calculate recovery for plant partition
 vegroot15N <- vegroot15N %>%
@@ -175,8 +137,8 @@ Rec15N <- vegroot15N_total_Plant %>%
 #
 #
 #
-#-------  ### Statistics ### -------
-#-------   ##     Q1     ## -------
+#-------  ###   Statistics   ### -------
+#-------   ##       Q1       ## -------
 #
 # Model
 # Response variable: whole plant recovery of 15N (% of combined functional groups and plant organs)
@@ -221,12 +183,12 @@ vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
   mutate(invPlantRecovery = 1/PlantRecovery) %>%
   mutate(logPlantRecovery = log(PlantRecovery+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
   mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this for general percentages!!
-
+#
 #model:
 lme1<-lme(logPlantRecovery ~ Round*Site,
           random = ~1|Plot/Site,
           data = vegroot15N_total_Plant, na.action = na.exclude, method = "REML")
-
+#
 #Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme1), resid(lme1), 
@@ -235,7 +197,7 @@ qqnorm(resid(lme1), main = "Normally distributed?")
 qqline(resid(lme1), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme1)
 par(mfrow = c(1,1))
-
+#
 #model output
 Anova(lme1, type=2)
 summary(lme1)
@@ -243,8 +205,8 @@ summary(lme1)
 #
 #
 #
-#-------  ### Statistics ### -------
-#-------   ##     Q1a    ##  -------
+#-------  ###   Statistics   ### -------
+#-------   ##       Q1a      ##  -------
 #
 # Model
 # Response variable: plant recovery of 15N (% of combined functional groups particitioned into organs)
@@ -294,7 +256,7 @@ vegroot15N_Organ <- vegroot15N_Organ %>%
 lme1a<-lme(cubeOrganRecovery ~ Round*Site*Organ,
           random = ~1|Plot/Site,
           data = vegroot15N_Organ, na.action = na.exclude , method = "REML")
-
+#
 #Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme1a), resid(lme1a), 
@@ -303,7 +265,7 @@ qqnorm(resid(lme1a), main = "Normally distributed?")
 qqline(resid(lme1a), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme1a)
 par(mfrow = c(1,1))
-
+#
 #model output
 Anova(lme1a, type=3)
 summary(lme1a)
@@ -311,8 +273,8 @@ summary(lme1a)
 #
 #
 #
-#-------  ### Statistics ### -------
-#-------   ##     Q2     ##  -------
+#-------  ###   Statistics   ### -------
+#-------   ##       Q2       ##  -------
 #
 # Model
 # Response variable: Microbial recovery of 15N (%), MBN
@@ -374,7 +336,7 @@ qqnorm(resid(lme2), main = "Normally distributed?")
 qqline(resid(lme2), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme2)
 par(mfrow = c(1,1))
-
+#
 #model output
 Anova(lme2, type=2)
 summary(lme2)
@@ -384,14 +346,14 @@ summary(lme2)
 #
 #
 #
-#------- ####   Plotting   ####-------
-#-------   ## Plant Biomass ## -------
-
+#-------  ###    Plotting    ### -------
+#-------   ## Plant Biomass  ## -------
+#
 vegroot15N_bio <- vegroot15N %>%
   group_by(across(c("Site", "Plot", "Round"))) %>%
   summarise(TotalBiomass = sum(Biomass, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
-
+#
 # Plant biomass total +/- SE
 vegroot15N_bio %>%
   group_by(across(c("Site", "Round"))) %>%
@@ -440,7 +402,7 @@ vegroot15N %>%
 #
 #
 #
-#-------   ##   Recovery   ## -------
+#-------   ##    Recovery    ## -------
 #
 # Sum recovery and calculate average
 # This means combining
@@ -555,45 +517,4 @@ plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp =
 #
 #
 #
-#------- ### Checking data ### -------
-#
-library("outliers") 
-library("VIM") # For matrixplot
-#
-# Outliers
-#
-hist(log(Rec15N$TotalRecovery+1), main = "Histogram")
-# Cleveland plot
-dotchart(log(Rec15N$TotalRecovery+1), 
-         main="Cleveland plot", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = Rec15N$Round, 
-         groups = Rec15N$Plot,
-         gdata = tapply(Rec15N$TotalRecovery, Rec15N$Plot, mean),
-         gpch = 12, gcolor = 1)
-#
-# Missing values
-aggr(vegroot15N[56:70])
-matrixplot(vegroot15N[56:70])
-aggr(Rec15N)
-matrixplot(Rec15N)
-#
-# Outliers
-# Grubb's test for single outliers
-grubbs.test(log(Rec15N$TotalRecovery+1))
-grubbs.test(log(Rec15N$TotalRecovery+1), opposite = TRUE)
-# Data log transformed to meet normality
-# Both highest and lowest values are outliers
-#
-# Rosner's test for multiple (k) outliers (generalized ESD many-outliers)
-EnvStats::rosnerTest(log(Rec15N$TotalRecovery+1), k = 2)$all.stats
-# No outliers!
-#
-# Duplicate IRMS numbers
-IRMS_dupli <- IRMS %>%
-  group_by(ID) %>%
-  filter(n()>1)
-
-#
-#
-#------- The End -------
+#=======  ###  { The End }   ### =======

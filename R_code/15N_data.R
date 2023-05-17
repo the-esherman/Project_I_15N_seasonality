@@ -385,14 +385,15 @@ summary(lme2)
 #
 #
 #------- ####   Plotting   ####-------
-#-------   ## Plot Biomass ## -------
-vegroot15N_bioLong_one <- vegroot15N_bioLong %>%
+#-------   ## Plant Biomass ## -------
+
+vegroot15N_bio <- vegroot15N %>%
   group_by(across(c("Site", "Plot", "Round"))) %>%
   summarise(TotalBiomass = sum(Biomass, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 
-# Plant biomass total
-vegroot15N_bioLong_one %>%
+# Plant biomass total +/- SE
+vegroot15N_bio %>%
   group_by(across(c("Site", "Round"))) %>%
   summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
   ggplot() + 
@@ -407,23 +408,23 @@ vegroot15N_bioLong_one %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-# Plant biomass by organ
-vegroot15N_bioLong %>%
-  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
+# Plant biomass by organ +/- SE
+vegroot15N %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
   summarise(TotalBiomass = sum(Biomass, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
   summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
-  mutate(avgBiomass = if_else(Part == "S", avgBiomass, -avgBiomass),
-         se = if_else(Part == "S", se, -se),
-         avgR_SE = if_else(Part == "CR", avgBiomass, 0)) %>%
+  mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
+         se = if_else(Organ == "S", se, -se),
+         avgR_SE = if_else(Organ == "CR", avgBiomass, 0)) %>%
   group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Part == "FR", cumsum(avgR_SE)+avgBiomass, avgBiomass)) %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
+  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgBiomass, avgBiomass)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
   #
   # Plot 
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgBiomass, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
   coord_cartesian(ylim = c(-18,3)) +
   scale_fill_viridis_d() +
   #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Biomass") +
@@ -437,170 +438,6 @@ vegroot15N_bioLong %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-#
-#
-#-------   ##    Nconc     ## -------
-#
-Nconc_one <- Nconc %>%
-  select(Site, Plot, MP, Round, 6:8) %>%
-  rename("Plant_S" = "Plant_S_N",
-                "Plant_CR" = "Plant_CR_N",
-                "Plant_FR" = "Plant_FR_N"
-  ) %>%
-  pivot_longer(cols = 5:7, names_to = "Type", values_to = "Nconc")
-Nconc_one <- Nconc_one %>%
-  add_column(Part = str_split_fixed(Nconc_one$Type,"\\w+_",n=2)[,2]) %>%
-  add_column(Species = str_split_fixed(Nconc_one$Type,"_\\w+",n=2)[,1])
-#
-#
-# Total N
-Nconc %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgNconc = mean(Plant_total_N, na.rm = TRUE), se = sd(Plant_total_N)/sqrt(length(Plant_total_N)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgNconc, ymin=avgNconc-se, ymax=avgNconc+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgNconc),color = "black") +
-  #ylim(0,20) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("[N] % (g "*g^-1*" DW)"), title = expression("Plant N concentration")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# Plant N by organ
-Nconc_one %>%
-  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
-  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
-  mutate(avgNconc = if_else(Part == "S", avgNconc, -avgNconc),
-         se = if_else(Part == "S", se, -se),
-         avgR_SE = if_else(Part == "CR", avgNconc, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Part == "FR", cumsum(avgR_SE)+avgNconc, avgNconc)) %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgNconc, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-1.5,1.5)) +
-  scale_fill_viridis_d() +
-  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Nconc") +
-  geom_errorbar(aes(x = Round, y = avgNconc, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-1.5, -1, -0.5, 0, 0.5, 1, 1.5), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("[N] % (g "*g^-1*" DW)"), title = expression("Plant N concentration")) +
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# For each species
-# (Change the filter of species and the plot title)
-vegroot15N_NLong1 %>%
-  filter(Species == "ES") %>%
-  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
-  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
-  mutate(avgNconc = if_else(Part == "S", avgNconc, -avgNconc),
-         se = if_else(Part == "S", se, -se),
-         avgR_SE = if_else(Part == "CR", avgNconc, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Part == "FR", cumsum(avgR_SE)+avgNconc, avgNconc)) %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgNconc, fill = factor(Part, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-2,2)) +
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = avgNconc, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2), labels = abs) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("[N] % (g "*g^-1*" DW)"), 
-       title = expression("Evergreen N concentration")) + # <--------- Title
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# Inorganic N content
-# NO3 in SE
-inorgN %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgN = mean(NO3_SE, na.rm = TRUE), se = sd(NO3_SE)/sqrt(length(NO3_SE)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgN, ymin=avgN-se, ymax=avgN+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgN),color = "black") +
-  coord_cartesian(ylim = c(0,250)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("["*NO[3]*"] (µg "*L^-1*")"), 
-       title = expression(NO[3]*" concentration in extract, non-fumigated")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# NO3 in SEF
-inorgN %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgN = mean(NO3_SEF, na.rm = TRUE), se = sd(NO3_SEF)/sqrt(length(NO3_SEF)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgN, ymin=avgN-se, ymax=avgN+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgN),color = "black") +
-  coord_cartesian(ylim = c(0,250)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("["*NO[3]*"] (µg "*L^-1*")"), 
-       title = expression(NO[3]*" concentration in extract, fumigated")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# NH4 in SE
-inorgN %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgN = mean(NH4_SE, na.rm = TRUE), se = sd(NH4_SE)/sqrt(length(NH4_SE)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgN, ymin=avgN-se, ymax=avgN+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgN),color = "black") +
-  coord_cartesian(ylim = c(0,1000)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("["*NH[4]*"] (µg "*L^-1*")"), 
-       title = expression(NH[4]*" concentration in extract, non-fumigated")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# NH4 in SEF
-inorgN %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgN = mean(NH4_SEF, na.rm = TRUE), se = sd(NH4_SEF)/sqrt(length(NH4_SEF)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgN, ymin=avgN-se, ymax=avgN+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgN),color = "black") +
-  coord_cartesian(ylim = c(0,6000)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("["*NH[4]*"] (µg "*L^-1*")"), 
-       title = expression(NH[4]*" concentration in extract, fumigated")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #-------   ##   Recovery   ## -------

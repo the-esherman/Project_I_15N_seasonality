@@ -108,7 +108,7 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
     # Plot the columns
     geom_col(aes(Round, plotvar), color = "black") +
     # Limit the graph to the range 0-100
-    coord_cartesian(ylim=c(0,100)) +
+    #coord_cartesian(ylim=c(0,100)) +
     # Change the x-axis labels
     scale_x_discrete(labels = measuringPeriod) +
     # Split into Abisko and Vassijaure. Each with their own y-axis
@@ -664,10 +664,11 @@ vegroot15N %>%
 #
 #
 #
-# Abisko and Vassijaure plant recovery faceted
-# Add 95% CI
+# Abisko and Vassijaure plant and microbial recovery faceted
+# Calculate means and 95% CI
 vegroot15N_total_Plant_sum <- summarySE(vegroot15N_total_Plant, measurevar="PlantRecovery", groupvars=c("Site", "Round"))
-
+Mic15N_sum <- summarySE(Mic15N, measurevar="R_MBN", groupvars=c("Site", "Round"), na.rm=TRUE)
+#
 # Same calculations as with the summarySE function, but less flexible and would need to write code each place
 # vegroot15N_total_Plant %>%
 #   group_by(across(c("Site", "Round"))) %>%
@@ -677,7 +678,8 @@ vegroot15N_total_Plant_sum <- summarySE(vegroot15N_total_Plant, measurevar="Plan
 #                    N = length(PlantRecovery), # 5 replicates
 #                    ci = qt(0.95/2 + .5, length(PlantRecovery)-1) * (sd(PlantRecovery)/sqrt(length(PlantRecovery))), # t-distribution of 95% (97.5% as 2.5% each end) for N-1 times standard error
 #                    .groups = "keep")
-
+#
+# Plant total recovery +/- 95% CI
 vegroot15N_total_Plant_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
@@ -686,101 +688,33 @@ vegroot15N_total_Plant_sum %>%
   coord_cartesian(ylim=c(0,30)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + #, title = "15N recovery in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Microbial total recovery +/- 95% CI
+Mic15N_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = R_MBN, ymin=R_MBN, ymax=R_MBN+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, R_MBN),color = "black") +
+  #coord_cartesian(ylim=c(0,30)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 # Proportional to total recovery
+# Calculate means and 95% CI
 Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
 Rec15N_TDN_sum <- summarySE(Rec15N, measurevar = "R_TDN_frac", groupvars = c("Site", "Round"))
 Rec15N_MBN_sum <- summarySE(Rec15N, measurevar = "R_MBN_frac", groupvars = c("Site", "Round"))
-#
-# Plot
+# Plot values using function
 plot_prop_Recovery(Rec15N_Plant_sum, plotvar=Rec15N_Plant_sum$PlantR_frac, titleExp = expression("Plant "*{}^15*"N tracer recovery"))
 plot_prop_Recovery(Rec15N_TDN_sum, plotvar=Rec15N_TDN_sum$R_TDN_frac, titleExp = expression("TDN "*{}^15*"N tracer recovery"))
 plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp = expression("Microbial "*{}^15*"N tracer recovery"))
-
-
-# Plant recover fraction
-Rec15N_Plant_sum %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantR_frac, ymin=PlantR_frac, ymax=PlantR_frac+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, PlantR_frac)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period", y = expression("% of total recovered "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) +
-  theme_classic(base_size = 20)  +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# Mic - MBN fraction
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(R_MBN_frac, na.rm = TRUE), se = sd(R_MBN_frac)/sqrt(length(R_MBN_frac)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period", y = expression("% of total recovered "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) +
-  theme_classic(base_size = 20)  +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
-#
-#
-# Microbial and soil part
-# MBN
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgR = mean(R_MBN, na.rm = TRUE), 
-            se = sd(R_MBN)/sqrt(length(R_MBN)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgR),color = "black") +
-  coord_cartesian(ylim = c(0,120)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("% of added "*{}^15*"N"), 
-       title = expression("Microbial "*{}^15*"N tracer recovery")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# Soil
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgR = mean(R_TDN, na.rm = TRUE), 
-            se = sd(R_TDN)/sqrt(length(R_TDN)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgR, ymin=avgR-se, ymax=avgR+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgR),color = "black") +
-  coord_cartesian(ylim = c(0,0.8)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("% of added "*{}^15*"N"), 
-       title = expression("Soil "*{}^15*"N tracer recovery")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# System recovery
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(sysRec, na.rm = TRUE), se = sd(sysRec)/sqrt(length(sysRec)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery)) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", 
-       y = expression("% of added "*{}^15*"N"), 
-       title = expression("Total "*{}^15*"N tracer recovery")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
 #
 #
 #

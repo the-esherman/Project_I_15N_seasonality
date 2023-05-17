@@ -1,7 +1,7 @@
 # 15N vegetation and root data
 # By Emil A.S. Andersen
 # 
-#------- ### Libraries ### -------
+#=======  ###   Libraries    ### =======
 library(plyr)
 library(tidyverse)
 library(car)
@@ -9,7 +9,7 @@ library(nlme)
 #
 #
 #
-#-------  ###   Load data    ### -------
+#=======  ###   Load data    ### =======
 #
 DataName <- "raw_data/15N vegetation and roots v0.35.xlsx"
 #
@@ -40,7 +40,7 @@ K_EN = 0.4
 #
 #
 #
-#-------  ###   Functions    ### -------
+#=======  ###   Functions    ### =======
 # From http://www.cookbook-r.com/Manipulating_data/Summarizing_data/
 ## Summarizes data.
 ## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
@@ -107,7 +107,7 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
 #
 #
 #
-#-------  ###   Main data    ### -------
+#=======  ###   Main data    ### =======
 #
 # Calculate recovery for plant partition
 vegroot15N <- vegroot15N %>%
@@ -123,7 +123,7 @@ vegroot15N_total_Plant <- vegroot15N %>%
 # Calculate recovery for microbial partition
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
-  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF_NatAb*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE_NatAb*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
+  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
@@ -137,7 +137,7 @@ Rec15N <- vegroot15N_total_Plant %>%
 #
 #
 #
-#-------  ###   Statistics   ### -------
+#=======  ###   Statistics   ### =======
 #-------   ##       Q1       ## -------
 #
 # Model
@@ -205,7 +205,7 @@ summary(lme1)
 #
 #
 #
-#-------  ###   Statistics   ### -------
+#=======  ###   Statistics   ### =======
 #-------   ##       Q1a      ##  -------
 #
 # Model
@@ -273,7 +273,7 @@ summary(lme1a)
 #
 #
 #
-#-------  ###   Statistics   ### -------
+#=======  ###   Statistics   ### =======
 #-------   ##       Q2       ##  -------
 #
 # Model
@@ -282,7 +282,7 @@ summary(lme1a)
 # Most important factor: Time
 #
 # Load data from excel instead of calculated combined
-Mic15N_R <- Mic15N %>%
+Mic15N_R <- Rec15N %>%
   select("Site", "Plot", "MP", "Round", "R_MBN")
 Mic15N_R <- Mic15N_R %>%
   filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
@@ -317,10 +317,10 @@ Anova(MicModel3, type ="III")
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
-  mutate(sqrtR_MBN = sqrt(R_MBN+10)) %>%
-  mutate(logR_MBN = log(R_MBN+10)) %>%
-  mutate(cubeR_MBN = (R_MBN+10)^(1/3)) %>%
-  mutate(arcR_MBN = asin(sqrt(((R_MBN+10)/max(R_MBN))/10))) # Standardised as proportion of max microbial recovery
+  mutate(sqrtR_MBN = sqrt(R_MBN)) %>%
+  mutate(logR_MBN = log(R_MBN)) %>%
+  mutate(cubeR_MBN = (R_MBN)^(1/3)) %>%
+  mutate(arcR_MBN = asin(sqrt(R_MBN/max(Mic15N_R$R_MBN))))
 #
 #
 #model:
@@ -346,7 +346,7 @@ summary(lme2)
 #
 #
 #
-#-------  ###    Plotting    ### -------
+#=======  ###    Plotting    ### =======
 #-------   ## Plant Biomass  ## -------
 #
 vegroot15N_bio <- vegroot15N %>%

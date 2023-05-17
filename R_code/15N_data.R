@@ -2,6 +2,7 @@
 # By Emil A.S. Andersen
 # 
 #------- ### Libraries ### -------
+library(plyr)
 library(tidyverse)
 library(readxl)
 library(gridExtra)
@@ -45,6 +46,80 @@ N_add <- 1.084
 # Extraction correction factor
 K_EN = 0.4
 # See https://climexhandbook.w.uib.no/2019/11/06/soil-microbial-biomass-c-n-and-p/ and UCPH bio lab protocol (where K_EN = 0.4)
+#
+#
+#
+#------- ### Functions ### -------
+# From http://www.cookbook-r.com/Manipulating_data/Summarizing_data/
+## Summarizes data.
+## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+  
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  
+  # Rename the "mean" column    
+  datac <- plyr::rename(datac, c("mean" = measurevar))
+  
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+  
+  return(datac)
+}
+#
+#
+# Plot recovery proportional to total recovery. Split in Abisko and Vassijaure
+# dataF: dataframe
+# plotvar: variable to plot on y-axis. Needs to be in format dataF$plotvar
+# titleExp: the title of the plot
+plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
+  dataF %>%
+    ggplot() + 
+    # Plot the snow covered period. This is fixed for all samples
+    geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+    # Plot errorbars as 95% confidence interval. The 
+    geom_errorbar(aes(x = Round, y = plotvar, ymin=plotvar, ymax=plotvar+ci), position=position_dodge(.9)) +
+    # Plot the columns
+    geom_col(aes(Round, plotvar), color = "black") +
+    # Limit the graph to the range 0-100
+    coord_cartesian(ylim=c(0,100)) +
+    # Change the x-axis labels
+    scale_x_discrete(labels = measuringPeriod) +
+    # Split into Abisko and Vassijaure. Each with their own y-axis
+    facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+    # Labeling of axis and title
+    labs(x = "Measuring period (MP)", y = expression("% of total recovered "*{}^15*"N"), title = titleExp) + 
+    # General size of text and lines
+    theme_classic(base_size = 20) + 
+    # Angle the x-axis and space the two graphs
+    theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+}
 #
 #
 #
@@ -367,8 +442,8 @@ vegroot15N_bioLong %>%
 #-------   ##    Nconc     ## -------
 #
 Nconc_one <- Nconc %>%
-  dplyr::select(Site, Plot, MP, Round, 6:8) %>%
-  dplyr::rename("Plant_S" = "Plant_S_N",
+  select(Site, Plot, MP, Round, 6:8) %>%
+  rename("Plant_S" = "Plant_S_N",
                 "Plant_CR" = "Plant_CR_N",
                 "Plant_FR" = "Plant_FR_N"
   ) %>%
@@ -428,7 +503,7 @@ Nconc_one %>%
 # For each species
 # (Change the filter of species and the plot title)
 vegroot15N_NLong1 %>%
-  dplyr::filter(Species == "ES") %>%
+  filter(Species == "ES") %>%
   group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
   summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
   group_by(across(c("Site", "Round", "Part"))) %>%
@@ -528,9 +603,6 @@ inorgN %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-#-------   ##     d15N     ##-------
-#
-
 #-------   ##   Recovery   ## -------
 #
 # Sum recovery and calculate average
@@ -593,14 +665,25 @@ vegroot15N %>%
 #
 #
 # Abisko and Vassijaure plant recovery faceted
-vegroot15N_total_Plant %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(PlantRecovery, na.rm = TRUE), se = sd(PlantRecovery)/sqrt(length(PlantRecovery)), .groups = "keep") %>%
+# Add 95% CI
+vegroot15N_total_Plant_sum <- summarySE(vegroot15N_total_Plant, measurevar="PlantRecovery", groupvars=c("Site", "Round"))
+
+# Same calculations as with the summarySE function, but less flexible and would need to write code each place
+# vegroot15N_total_Plant %>%
+#   group_by(across(c("Site", "Round"))) %>%
+#   summarise(avgRecovery = mean(PlantRecovery, na.rm = TRUE), 
+#                    sd = sd(PlantRecovery),
+#                    se = sd(PlantRecovery)/sqrt(length(PlantRecovery)), 
+#                    N = length(PlantRecovery), # 5 replicates
+#                    ci = qt(0.95/2 + .5, length(PlantRecovery)-1) * (sd(PlantRecovery)/sqrt(length(PlantRecovery))), # t-distribution of 95% (97.5% as 2.5% each end) for N-1 times standard error
+#                    .groups = "keep")
+
+vegroot15N_total_Plant_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery-se, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgRecovery),color = "black") +
-  ylim(0,20) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, PlantRecovery),color = "black") +
+  coord_cartesian(ylim=c(0,30)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + #, title = "15N recovery in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
@@ -609,14 +692,22 @@ vegroot15N_total_Plant %>%
 #
 #
 # Proportional to total recovery
+Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
+Rec15N_TDN_sum <- summarySE(Rec15N, measurevar = "R_TDN_frac", groupvars = c("Site", "Round"))
+Rec15N_MBN_sum <- summarySE(Rec15N, measurevar = "R_MBN_frac", groupvars = c("Site", "Round"))
+#
+# Plot
+plot_prop_Recovery(Rec15N_Plant_sum, plotvar=Rec15N_Plant_sum$PlantR_frac, titleExp = expression("Plant "*{}^15*"N tracer recovery"))
+plot_prop_Recovery(Rec15N_TDN_sum, plotvar=Rec15N_TDN_sum$R_TDN_frac, titleExp = expression("TDN "*{}^15*"N tracer recovery"))
+plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp = expression("Microbial "*{}^15*"N tracer recovery"))
+
+
 # Plant recover fraction
-Rec15N %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgRecovery = mean(PlantR_frac, na.rm = TRUE), se = sd(PlantR_frac)/sqrt(length(PlantR_frac)), .groups = "keep") %>%
+Rec15N_Plant_sum %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgRecovery, ymax=avgRecovery+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgRecovery)) +
+  geom_errorbar(aes(x = Round, y = PlantR_frac, ymin=PlantR_frac, ymax=PlantR_frac+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, PlantR_frac)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period", y = expression("% of total recovered "*{}^15*"N"), title = expression({}^15*"N recovery in plants, proportional to total recovery")) +
@@ -690,11 +781,6 @@ Rec15N %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-
-
-margin <- qt()
-
-
 #
 #
 #

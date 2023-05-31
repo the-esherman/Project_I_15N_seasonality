@@ -11,8 +11,6 @@ library(nlme)
 #
 #=======  ###   Load data    ### =======
 #
-DataName <- "raw_data/15N vegetation and roots v0.35.xlsx"
-#
 # Biomass, d15N, atom% 15N, and N concentration for enriched and natural abundance samples
 vegroot15N <- read_csv("clean_data/Plant_15N_data.csv", col_names = TRUE)
 #
@@ -246,14 +244,15 @@ vegroot15N_Organ <- vegroot15N_Organ %>%
   mutate(invOrganRecovery = 1/OrganRecovery+1) %>%
   mutate(logOrganRecovery = log(OrganRecovery+1)) %>%
   mutate(expOrganRecovery = exp(OrganRecovery+1)) %>%
-  mutate(cubeOrganRecovery = (OrganRecovery^2)^(1/9)) %>%
+  mutate(rootOrganRecovery = (OrganRecovery^2)^(1/9)) %>%
   mutate(sqOrganRecovery = OrganRecovery^2) %>%
-  mutate(arcOrganRecovery = asin(sqrt((OrganRecovery+1)/100)))
+  mutate(arcOrganRecovery = asin(sqrt((OrganRecovery+1)/100))) %>%
+  mutate(logsqrtOrganRecovery = sqrt(log(OrganRecovery+1)))
 # BoxCox transformation?
 #
 #
 # model:
-lme1a<-lme(cubeOrganRecovery ~ Round*Site*Organ,
+lme1a<-lme(arcOrganRecovery ~ Round*Site*Organ,
           random = ~1|Plot/Site,
           data = vegroot15N_Organ, na.action = na.exclude , method = "REML")
 #
@@ -267,7 +266,7 @@ plot(lme1a)
 par(mfrow = c(1,1))
 #
 #model output
-Anova(lme1a, type=3)
+Anova(lme1a, type=2)
 summary(lme1a)
 # Highly significant for Round, Organ Round*Organ and significant for three-way interaction
 #

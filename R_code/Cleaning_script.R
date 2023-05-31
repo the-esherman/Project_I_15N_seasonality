@@ -4,6 +4,7 @@
 # By Emil A.S. Andersen
 # 
 #------- ### Libraries ### -------
+library(ggpubr)
 library(tidyverse)
 library(readxl)
 #
@@ -11,7 +12,10 @@ library(readxl)
 #
 #------- ### Load data ### -------
 #
-DataName <- "raw_data/15N vegetation and roots v0.35.xlsx"
+DataName <- "raw_data/15N vegetation and roots v0.36.xlsx"
+#
+# Core data; Snow, soil mass, DW/FW of soil
+core15N <- read_xlsx(DataName, sheet = "Core", skip = 1, col_names = TRUE)
 #
 # Biomass, d15N, atom% 15N, and recovery ("R_") (discard later)
 vegroot15N <- read_xlsx(DataName, sheet = "15N", skip = 1, col_names = TRUE)
@@ -26,7 +30,10 @@ vegroot15Nlong <- read_xlsx(DataName, sheet = "Long", col_names = TRUE)
 IRMS <- read_xlsx("raw_data/IRMS_data v0.9.xlsx", col_names = TRUE)
 #
 Nconc <- read_xlsx(DataName, sheet = "Nconc", skip = 1, col_names = TRUE)
-inorgN <- read_xlsx(DataName, sheet = "InorgN", skip = 1, col_names = TRUE)
+#
+# To format inorganic N
+#inorgN <- read_xlsx("raw_data/Inorganic N v1.xlsx", sheet = "InorgN", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
+soilExtr <- read_xlsx("raw_data/Inorganic N v1.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
 #
 # Table data for N concentrations and snow
 table_dat_N_atom <- read_xlsx(DataName, sheet = "Table", skip = 1, col_names = TRUE)
@@ -40,28 +47,8 @@ Nair_Rst = 1/272
 N_add <- 1.084
 #
 #
-# Transform numbered months to another format
-Month_yr <- tribble(~MP, ~Round,
-                    01,	"01_July_19",
-                    02,	"02_Aug_19",
-                    03,	"03_Sep_19",
-                    04,	"04_Oct_19",
-                    05,	"05_Nov_19",
-                    06,	"06_Dec_19",
-                    07,	"07_Jan_20",
-                    08,	"08_Feb_20",
-                    09,	"09_Mar_20",
-                    10,	"10_Apr_20",
-                    11,	"11_Apr_20",
-                    12,	"12_May_20",
-                    13,	"13_Jun_20",
-                    14,	"14_Jul_20",
-                    15,	"15_Aug_20"
-)
-#
-#
-#
-# Transform to long format - 15N enriched data 
+# Plant 15N data ----
+# Transform to long format - 15N enriched data and natural abundance
 #
 # Biomass
 vegroot15N_bioLong <- vegroot15N %>%
@@ -263,16 +250,43 @@ vegroot_long <- left_join(vegroot15N_long, vegrootsNatAbu_long, by = join_by(Sit
 vegroot_long <- vegroot_long %>%
   mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
   left_join(vegroot15N_RLong, by = join_by(Site, Plot, MP, Round, Type))
-ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point()
+ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = ..eq.label..)) + stat_regline_equation(label.y = 9, aes(label = ..rr.label..)) # Perfect fit, almost
 #
 #
 #
 # Save 15N enriched data and Natural abundance to a data file
 write_csv(vegroot_long, "clean_data/Plant_15N_data.csv", na = "NA")
+#
+#
+#
+# 
+# Microbial 15N data ----
+# Transform to long format - 15N enriched data and natural abundance
+
+
+#
+# Inorganic N ----
+soilExtr_2 <- soilExtr %>%
+  mutate(DW_FW_frac = DW_soil_m_g/FW_soil_m_g) %>%
+  mutate(NO3_µg_L)
+
+soilExtr %>% 
+  ggplot(aes(MP, NO3_µg_L)) + geom_boxplot() + facet_wrap(vars(Site,SE_SEF))
+soilExtr %>% 
+  ggplot(aes(MP, NH4_µg_L)) + geom_boxplot() + facet_wrap(vars(Site,SE_SEF))
+soilExtr %>% 
+  ggplot(aes(MP, NO3_µg_L_corr)) + geom_boxplot() + facet_wrap(vars(Site,SE_SEF))
+soilExtr %>% 
+  ggplot(aes(MP, NH4_µg_L_corr)) + geom_boxplot() + facet_wrap(vars(Site,SE_SEF))
 
 
 
 
+
+
+
+#
+# Combine data ----
 
 
 # Combine all types of recovery into one:

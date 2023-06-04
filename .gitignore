@@ -13,3 +13,6 @@ export/*
 
 # Removed code
 R_code/15N_data_removed.R
+
+# Clean data
+clean_data/*

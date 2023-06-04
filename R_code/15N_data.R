@@ -17,6 +17,12 @@ vegroot15N <- read_csv("clean_data/Plant_15N_data.csv", col_names = TRUE)
 # Microbial biomass, d15N, atom% 15N, and recovery ("R_")
 Mic15N <- read_csv("clean_data/Mic_15N_data.csv", skip = 1, col_names = TRUE)
 #
+# Inorganic N concentration (NH4 and NO3)
+inorgN <- read_csv("clean_data/Soil_inorganic_N.csv", col_names = TRUE)
+#
+# Long formated Mic15N data
+soil15N <- read_csv("clean_data/Soil_15N.csv", col_names = TRUE)
+#
 #
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
@@ -132,6 +138,49 @@ Rec15N <- vegroot15N_total_Plant %>%
   mutate(PlantR_frac = PlantRecovery/sysRec*100,
          R_TDN_frac = R_TDN/sysRec*100,
          R_MBN_frac = R_MBN/sysRec*100)
+#
+#
+#
+#=======  ### Mineralization ### =======
+#
+#
+# Info needed:
+# Calculate at every harvest point the inorganic atom% (or d15N):
+# [N]_inorganic = [NH4] + [NO3]                                     inorgN$NH4_µg_DW & inorgN$NO3_µg_DW
+# [N]_total (total of extract, found along Mic15N data)             soil15N$Nconc
+# [N]_org = [N]_total - [N]_inorganic (organic N concentration)
+# atom%_organic (Organic 15N ratio, equal to background)            soil15N$atom_pc_NatAb
+# atom%_inorganic = ?
+# atom%_total (the total extracted N's 15N ratio)                   soil15N$atom_pc
+#
+# Thus
+# atom%_tot = (atom%_org * [N]_org + atom%_inorg * [N]_inorg) / [N]_tot
+# =>
+# atom%_tot * [N]_tot = atom%_org * [N]_org + atom%_inorg * [N]_inorg
+# =>
+# atom%_tot * [N]_tot - atom%_org * [N]_org = atom%_inorg * [N]_inorg
+# =>
+# atom%_inorg = (atom%_tot * [N]_tot - atom%_org * [N]_org) / [N]_inorg
+#
+# New data set with needed information
+soil15N <- soil15N %>%
+  mutate(across(c(Plot, MP), as.character))
+inorgN <- inorgN %>%
+  mutate(across(c(Plot, MP), as.character))
+#
+mineral <- inorgN %>%
+  select(1:4, NH4_µg_DW, NO3_µg_DW) %>%
+  left_join(soil15N, by = join_by(Site, Plot, MP, SE_SEF)) %>%
+  relocate(Round, .after = MP)
+#
+# Calculate
+mineral <- mineral %>%
+  mutate(Nconc_inorg = NH4_µg_DW + NO3_µg_DW) %>%
+  mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>%
+  mutate(atom_pc_inorg = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg)
+#
+# Extrapolate via linear change the following for labeling point (1/4 from one harvest to the next):
+
 #
 #
 #

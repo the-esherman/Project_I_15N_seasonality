@@ -23,9 +23,10 @@ vegroot15N <- read_xlsx(DataName, sheet = "15N", skip = 1, col_names = TRUE)
 vegrootsNatAbu <- read_xlsx(DataName, sheet = "NatAbu", col_names = TRUE)
 #
 # Microbial biomass, d15N, atom% 15N, and recovery ("R_") (discard later)
-Mic15N <- read_xlsx(DataName, sheet = "MBN", skip = 1, col_names = TRUE)
+#Mic15N <- read_xlsx(DataName, sheet = "MBN", skip = 1, col_names = TRUE)
+Mic15N <- read_csv("clean_data/Mic_15N_data.csv", skip = 1, col_names = TRUE)
 #
-vegroot15Nlong <- read_xlsx(DataName, sheet = "Long", col_names = TRUE)
+#vegroot15Nlong <- read_xlsx(DataName, sheet = "Long", col_names = TRUE)
 #
 IRMS <- read_xlsx("raw_data/IRMS_data v0.9.xlsx", col_names = TRUE)
 #
@@ -33,11 +34,15 @@ Nconc <- read_xlsx(DataName, sheet = "Nconc", skip = 1, col_names = TRUE)
 #
 # To format inorganic N
 #inorgN <- read_xlsx("raw_data/Inorganic N v1.xlsx", sheet = "InorgN", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
-soilExtr <- read_xlsx("raw_data/Inorganic N v1.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+#soilExtr <- read_xlsx("raw_data/Inorganic N v1.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
 #
 # Table data for N concentrations and snow
-table_dat_N_atom <- read_xlsx(DataName, sheet = "Table", skip = 1, col_names = TRUE)
+#table_dat_N_atom <- read_xlsx(DataName, sheet = "Table", skip = 1, col_names = TRUE)
 #
+#
+# Inorganic N
+inorgN <- read_xlsx("raw_data/Inorganic N v1.7.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+Blanks <- read_xlsx("raw_data/Inorganic N v1.7.xlsx", sheet = "Blanks", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
 #
 # Reference atmospheric Nitrogen
 # Either 0.003676 or 1/272 (more decimals)
@@ -262,10 +267,133 @@ write_csv(vegroot_long, "clean_data/Plant_15N_data.csv", na = "NA")
 # 
 # Microbial 15N data ----
 # Transform to long format - 15N enriched data and natural abundance
-
-
+#
+# d15N values
+Mic15N_d15N <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, d15N_SE, d15N_SEF) %>%
+  dplyr::rename("SE" = d15N_SE,
+                "SEF" = d15N_SEF) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "d15N_soil")
+#
+# atom% 15N
+Mic15N_atom <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, atom_pc_SE, atom_pc_SEF) %>%
+  dplyr::rename("SE" = atom_pc_SE,
+                "SEF" = atom_pc_SEF) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "atom_pc_soil")
+#
+# N concentration
+Mic15N_Nconc <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, Nconc_SE, Nconc_SEF) %>%
+  dplyr::rename("SE" = Nconc_SE,
+                "SEF" = Nconc_SEF) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "Nconc_soil")
+#
+# Also for natural abundance
+# d15N values
+Mic15N_d15N_NatAb <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, d15N_SE_NatAb, d15N_SEF_NatAb) %>%
+  dplyr::rename("SE" = d15N_SE_NatAb,
+                "SEF" = d15N_SEF_NatAb) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "d15N_soil_NatAb")
+#
+# atom% 15N
+Mic15N_atom_NatAb <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, atom_pc_SE_NatAb, atom_pc_SEF_NatAb) %>%
+  dplyr::rename("SE" = atom_pc_SE_NatAb,
+                "SEF" = atom_pc_SEF_NatAb) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "atom_pc_soil_NatAb")
+#
+# N concentration
+Mic15N_Nconc_NatAb <- Mic15N %>%
+  dplyr::select(Site, Plot, MP, Round, Nconc_SE_NatAb, Nconc_SEF_NatAb) %>%
+  dplyr::rename("SE" = Nconc_SE_NatAb,
+                "SEF" = Nconc_SEF_NatAb) %>%
+  pivot_longer(cols = 5:6, names_to = "SE_SEF", values_to = "Nconc_soil_NatAb")
+#
+# Combine
+Mic15N_long <- Mic15N_d15N %>%
+  left_join(Mic15N_atom, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  left_join(Mic15N_Nconc, by = join_by(Site, Plot, MP, Round, SE_SEF))
+Mic15N_long <- Mic15N_long %>%
+  left_join(Mic15N_d15N_NatAb, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  left_join(Mic15N_atom_NatAb, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  left_join(Mic15N_Nconc_NatAb, by = join_by(Site, Plot, MP, Round, SE_SEF))
+#
+# Save
+write_csv(Mic15N_long, "clean_data/Soil_15N.csv", na = "NA")
+#
+#
 #
 # Inorganic N ----
+#
+# Blanks filtered from all data
+Blanks <- Blanks %>%
+  filter(Site == "Blank" | Site == "Water")
+#
+# Calculating averages of blanks
+Blanks_avg <- Blanks %>%
+  group_by(MP, SE_SEF) %>%
+  summarise(across(c(NO3_µg_L, NH4_µg_L), ~ mean(.x, na.rm = TRUE))) %>%
+  rename("Blank_NO3_1" = NO3_µg_L,
+         "Blank_NH4_1" = NH4_µg_L) %>%
+  ungroup()
+#
+# Join blanks to inorganic N values
+inorgN_1 <- left_join(inorgN, Blanks_avg, by = join_by(MP, SE_SEF))
+#
+# Replace the missing SEF blanks with the average from SE
+inorgN_1 <- inorgN_1 %>%
+  mutate(Blank_NO3_1 = case_when(is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 1 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 2 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 3 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 4 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 5 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 TRUE ~ Blank_NO3_1),
+         Blank_NH4_1 = case_when(is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 1 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 2 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 3 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 4 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 5 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+                                 TRUE ~ Blank_NH4_1))
+#
+# Correct values for blanks and calculate concentration per g DW
+inorgN_1 <- inorgN_1 %>%
+  mutate(NO3_µg_L_corr = if_else(NO3_µg_L - Blank_NO3_1 <= 0, NA, NO3_µg_L - Blank_NO3_1, missing = NO3_µg_L),
+         NH4_µg_L_corr = if_else(NH4_µg_L - Blank_NH4_1 <= 0, NA, NH4_µg_L - Blank_NH4_1, missing = NH4_µg_L),
+         Soil_extr_g_DW = DW_soil_m_g/FW_soil_m_g * Soil_extr_g_FW) %>%
+  mutate(SW_mL = Soil_extr_g_FW - Soil_extr_g_DW) %>%
+  mutate(NO3_µg_DW = (NO3_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW,
+         NH4_µg_DW = (NH4_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW) # 40mL MilliQ water added to the extraction
+#
+# Save inorganic concentrations
+write_csv(inorgN_1, "clean_data/Soil_inorganic_N.csv", na = "NA")
+
+
+
+
+
+
+
+
+#Plot Blanks and uncorrected inorganic values. Box-plots
+b1 <- Blanks %>%
+  ggplot(aes(MP, NO3_µg_L)) + geom_boxplot() + facet_wrap(vars(SE_SEF))
+b2 <- Blanks %>%
+  ggplot(aes(MP, NH4_µg_L)) + geom_boxplot() + facet_wrap(vars(SE_SEF))
+n1 <- inorgN %>%
+  ggplot(aes(MP, NO3_µg_L)) + geom_boxplot() + facet_wrap(vars(Site, SE_SEF), scales = "free")
+n2 <- inorgN %>%
+  ggplot(aes(MP, NH4_µg_L)) + geom_boxplot() + facet_wrap(vars(Site, SE_SEF), scales = "free")
+grid.arrange(b1, b2, n1, n2, ncol = 2)
+
+
+inorgN_1 %>%
+  ggplot(aes(MP, NO3_µg_DW)) + geom_boxplot() + facet_wrap(vars(Site, SE_SEF), scales = "free") + labs(x = "Measuring period (MP)", y = expression(NO[3]*" "*µg^-1*" DW"), title = expression(NO[3]*" "*µg^-1*" DW with correction"))
+
+
+
+
 soilExtr_2 <- soilExtr %>%
   mutate(DW_FW_frac = DW_soil_m_g/FW_soil_m_g) %>%
   mutate(NO3_µg_L)

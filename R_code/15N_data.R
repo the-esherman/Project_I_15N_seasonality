@@ -143,7 +143,24 @@ Rec15N <- vegroot15N_total_Plant %>%
 #
 #=======  ### Mineralization ### =======
 #
+# To calculate mineralization and immobilization
+# See Wessel & Tietema 1992, Soil Biol. Biochem. Vol. 24, No. 10, pp. 931-942
+# As well as see Bengtson et al. 2005, OIKOS 111: 81-90
+# For production
+# p = (ln((f_t-k)/(f_0-k)) / ln(W_t/W_0)) * (W_0-W_t)/t
+# For consumption
+# c = (1 + ln((f_t-k)/(f_0-k)) / ln(W_t/W_0)) * (W_0-W_t)/t
 #
+# Where
+# f is atom%
+# k is atom% for natural pool/background
+# W is N concentration, mg N pr g
+# t is time
+#
+# except in cases where production and consumption is equal, then
+# p = c = - W/t * ln((f_t-k)/(f_0-k))
+#
+# For mineralization and immobilization the atom% of the inorganic N is needed.
 # Info needed:
 # Calculate at every harvest point the inorganic atom% (or d15N):
 # [N]_inorganic = [NH4] + [NO3]                                     inorgN$NH4_µg_DW & inorgN$NO3_µg_DW

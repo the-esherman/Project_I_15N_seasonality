@@ -31,6 +31,14 @@ winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20
 # List of Measuring periods as they should appear in graphs
 measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
 #
+# Days between periods. Will need adjusting as not always 21 days from labeling to harvest and at some point Abisko and Vassijaure shifted which was done first = a few days difference!
+# Days between labeling and harvest
+dayLH <- 21
+#
+# Days between harvests
+dayHH <- 28
+dayHL <- dayHH - dayLH
+#
 # Reference atmospheric Nitrogen
 # Either 0.003676 or 1/272 (more decimals)
 Nair_Rst = 1/272
@@ -127,6 +135,7 @@ vegroot15N_total_Plant <- vegroot15N %>%
 # Calculate recovery for microbial partition
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
+  mutate(atom_pc_MBN = ((atom_pc_SEF/100 * Nconc_SEF - atom_pc_SE/100 * Nconc_SE) - (atom_pc_SEF_NatAb/100 * Nconc_SEF - atom_pc_SE_NatAb/100 * Nconc_SE))/(Nconc_SEF - Nconc_SE)*100) %>%
   mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
 #
 # Calculate recovery as a proportion of total recovered in each plot
@@ -192,13 +201,94 @@ mineral <- inorgN %>%
 #
 # Calculate
 mineral <- mineral %>%
-  mutate(Nconc_inorg = NH4_µg_DW + NO3_µg_DW) %>%
-  mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>%
-  mutate(atom_pc_inorg = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg)
+  filter(SE_SEF == "SE") %>%
+  filter(MP != "EX (w)") %>%
+  mutate(Nconc_inorg = NH4_µg_DW + NO3_µg_DW) %>% # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3]
+  mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>% # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in
+  mutate(atom_pc_in_h = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg) # Assuming organic atom% does not change considerably from natural abundance (!!!)
+  
+  #mutate(atom_pc_inorg0 = (atom_pc_soil_NatAb * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg, # Atom% of inorganic at label
+  #       atom_pc_in_h = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg) #     # Atom% at harvest
 #
-# Extrapolate via linear change the following for labeling point (1/4 from one harvest to the next):
+# Extrapolate linearly the following for labeling point (1/4 from one harvest to the next):
+# Make subset of data for Abisko and Vassijaure
+mineral_A <- mineral %>%
+  select(Site, Plot, MP, Round, SE_SEF) %>%
+  filter(Site == "Abisko")
+mineral_A["Nconc_in0.A"] <- NA
+mineral_V <- mineral %>%
+  select(Site, Plot, MP, Round, SE_SEF) %>%
+  filter(Site == "Vassijaure")
+mineral_V["Nconc_in0.V"] <- NA
+# Double check I can count
+mt<- vector("double")
+# Loop over each to calculate rate from one round to the next for the same plot and then around 7 days if when labeling happens
+for (i in 2:15) {
+  for (j in 1:5) {
+    mt[5*(i-1)+j] <- 5*(i-1)+j
+    mineral_A$Nconc_in0.A[5*(i-1)+j] <- (mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == (i))] - 
+                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == (i-1))])/dayHH * dayHL + 
+                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == (i-1))]
+    mineral_V$Nconc_in0.V[5*(i-1)+j] <- (mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == i)] - 
+                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == (i-1))])/dayHH * dayHL + 
+                                          mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
+                                                                     mineral$Plot == j & 
+                                                                     mineral$MP == (i-1))]
+  }
+}
+# Combine Abisko and Vassijaure and join the values
+mineral_test <- mineral %>%
+  left_join(mineral_A, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  left_join(mineral_V, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>%
+  select(!c(Nconc_in0.A, Nconc_in0.V))
+#
+# Add core mass in DW
+mic_mass <- Mic15N %>%
+  select(Site, Plot, MP, Round, Mic_mass) %>%
+  mutate(across(c(Plot, MP), as.character))
+#
+mineral_test <- mineral_test %>%
+  left_join(mic_mass, by = join_by(Site, Plot, MP, Round)) %>%
+  relocate(Mic_mass, .after = SE_SEF)
+#
+# calculate how much 15N was added and add it to the inorganic pool at labeling
+mineral_test <- mineral_test %>%
+  mutate(inj_15N = (N_add*1000)/Mic_mass) %>% # µg N added pr g DW
+  mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
+  mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
+  mutate(atom_pc_in0_l = (1*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! assuming 100% atom% for label
+#
+# Now the mineralization can be calculated
+mineral_test <- mineral_test %>%
+  mutate(gross_p = (log((atom_pc_in_h - atom_pc_soil_NatAb # ft - k
+                         ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
+                        ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
+                    ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
+                          ) / dayLH), 
+         # gross production
+         gross_c = (1 + log((atom_pc_in_h - atom_pc_soil_NatAb # ft - k
+                           ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
+                          ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
+                    ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
+                        ) / dayLH)
+         ) # gross consumption
+#
+mineral_test %>%
+  ggplot(aes(Round, gross_p)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_test %>%
+  ggplot(aes(Round, gross_c)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
-#
 #
 #
 #=======  ###   Statistics   ### =======
@@ -249,7 +339,7 @@ vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
   mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this for general percentages!!
 #
 #model:
-lme1<-lme(logPlantRecovery ~ Round*Site,
+lme1<-lme(arcPlantRecovery ~ Round*Site,
           random = ~1|Plot/Site,
           data = vegroot15N_total_Plant, na.action = na.exclude, method = "REML")
 #
@@ -547,8 +637,9 @@ Mic15N_sum <- summarySE(Mic15N, measurevar="R_MBN", groupvars=c("Site", "Round")
 vegroot15N_total_Plant_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, PlantRecovery),color = "black") +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery-ci, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  geom_point(aes(Round, PlantRecovery)) +
+  #geom_col(aes(Round, PlantRecovery),color = "black") +
   coord_cartesian(ylim=c(0,30)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
@@ -556,6 +647,9 @@ vegroot15N_total_Plant_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+vegroot15N_total_Plant %>%
+  ggplot() +
+  geom_boxplot(aes(Round, PlantRecovery))
 # Microbial total recovery +/- 95% CI
 Mic15N_sum %>%  
   ggplot() + 

@@ -7,6 +7,7 @@
 library(ggpubr)
 library(tidyverse)
 library(readxl)
+library(gridExtra)
 #
 #
 #
@@ -41,8 +42,8 @@ Nconc <- read_xlsx(DataName, sheet = "Nconc", skip = 1, col_names = TRUE)
 #
 #
 # Inorganic N
-inorgN <- read_xlsx("raw_data/Inorganic N v1.7.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-Blanks <- read_xlsx("raw_data/Inorganic N v1.7.xlsx", sheet = "Blanks", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
+inorgN <- read_xlsx("raw_data/Inorganic N v1.8.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+Blanks <- read_xlsx("raw_data/Inorganic N v1.8.xlsx", sheet = "Blanks", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
 #
 # Reference atmospheric Nitrogen
 # Either 0.003676 or 1/272 (more decimals)
@@ -359,12 +360,14 @@ inorgN_1 <- inorgN_1 %>%
 #
 # Correct values for blanks and calculate concentration per g DW
 inorgN_1 <- inorgN_1 %>%
-  mutate(NO3_µg_L_corr = if_else(NO3_µg_L - Blank_NO3_1 <= 0, NA, NO3_µg_L - Blank_NO3_1, missing = NO3_µg_L),
-         NH4_µg_L_corr = if_else(NH4_µg_L - Blank_NH4_1 <= 0, NA, NH4_µg_L - Blank_NH4_1, missing = NH4_µg_L),
+  mutate(NO3_µg_L_corr = if_else(NO3_µg_L - Blank_NO3_1 <= 0, 0, NO3_µg_L - Blank_NO3_1, missing = NO3_µg_L),
+         NH4_µg_L_corr = if_else(NH4_µg_L - Blank_NH4_1 <= 0, 0, NH4_µg_L - Blank_NH4_1, missing = NH4_µg_L),
          Soil_extr_g_DW = DW_soil_m_g/FW_soil_m_g * Soil_extr_g_FW) %>%
   mutate(SW_mL = Soil_extr_g_FW - Soil_extr_g_DW) %>%
   mutate(NO3_µg_DW = (NO3_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW,
-         NH4_µg_DW = (NH4_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW) # 40mL MilliQ water added to the extraction
+         NH4_µg_DW = (NH4_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW) %>% # 40mL MilliQ water added to the extraction
+  mutate(NO3_µg_DW = replace_na(NO3_µg_DW, 0),
+         NH4_µg_DW = replace_na(NH4_µg_DW, 0))
 #
 # Save inorganic concentrations
 write_csv(inorgN_1, "clean_data/Soil_inorganic_N.csv", na = "NA")

@@ -256,7 +256,11 @@ vegroot_long <- left_join(vegroot15N_long, vegrootsNatAbu_long, by = join_by(Sit
 vegroot_long <- vegroot_long %>%
   mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
   left_join(vegroot15N_RLong, by = join_by(Site, Plot, MP, Round, Type))
-ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = after_stat(eq.label))) + stat_regline_equation(label.y = 9, aes(label = after_stat(rr.label))) # Perfect fit, almost
+ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = after_stat(eq.label))) + stat_regline_equation(label.y = 9, aes(label = after_stat(rr.label))) # Perfect fit
+#
+vegroot_long <- vegroot_long %>%
+  select(-(Recovery.x)) %>%
+  rename(Recovery = Recovery.y)
 #
 #
 #

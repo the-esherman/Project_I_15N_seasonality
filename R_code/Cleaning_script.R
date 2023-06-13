@@ -13,7 +13,7 @@ library(gridExtra)
 #
 #------- ### Load data ### -------
 #
-DataName <- "raw_data/15N vegetation and roots v0.36.xlsx"
+DataName <- "raw_data/15N vegetation and roots v0.38.xlsx"
 #
 # Core data; Snow, soil mass, DW/FW of soil
 core15N <- read_xlsx(DataName, sheet = "Core", skip = 1, col_names = TRUE)
@@ -42,8 +42,8 @@ Nconc <- read_xlsx(DataName, sheet = "Nconc", skip = 1, col_names = TRUE)
 #
 #
 # Inorganic N
-inorgN <- read_xlsx("raw_data/Inorganic N v1.8.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-Blanks <- read_xlsx("raw_data/Inorganic N v1.8.xlsx", sheet = "Blanks", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
+inorgN <- read_xlsx("raw_data/Inorganic N v1.9.xlsx", sheet = "Soil_extr", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
+Blanks <- read_xlsx("raw_data/Inorganic N v1.9.xlsx", sheet = "Blanks", col_names = TRUE, col_types = c("text", "text", "text","text", "numeric", "numeric"))
 #
 # Reference atmospheric Nitrogen
 # Either 0.003676 or 1/272 (more decimals)
@@ -256,7 +256,7 @@ vegroot_long <- left_join(vegroot15N_long, vegrootsNatAbu_long, by = join_by(Sit
 vegroot_long <- vegroot_long %>%
   mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
   left_join(vegroot15N_RLong, by = join_by(Site, Plot, MP, Round, Type))
-ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = ..eq.label..)) + stat_regline_equation(label.y = 9, aes(label = ..rr.label..)) # Perfect fit, almost
+ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = after_stat(eq.label))) + stat_regline_equation(label.y = 9, aes(label = after_stat(rr.label))) # Perfect fit, almost
 #
 #
 #
@@ -345,17 +345,47 @@ inorgN_1 <- left_join(inorgN, Blanks_avg, by = join_by(MP, SE_SEF))
 #
 # Replace the missing SEF blanks with the average from SE
 inorgN_1 <- inorgN_1 %>%
-  mutate(Blank_NO3_1 = case_when(is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 1 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 2 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 3 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 4 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 5 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+  mutate(Blank_NO3_1 = case_when(is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 1 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 2 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 3 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 4 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NO3_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NO3_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 5 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
                                  TRUE ~ Blank_NO3_1),
-         Blank_NH4_1 = case_when(is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 1 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 2 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 3 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 4 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
-                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & inorgN_1$MP == 5 & inorgN_1$Plot == 1 & inorgN_1$SE_SEF == "SE")],
+         Blank_NH4_1 = case_when(is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 1 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 1 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 2 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 2 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 3 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 3 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 4 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 4 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
+                                 is.na(Blank_NH4_1) & SE_SEF == "SEF" & MP == 5 ~ inorgN_1$Blank_NH4_1[which(inorgN_1$Site == "Abisko" & 
+                                                                                                               inorgN_1$MP == 5 & 
+                                                                                                               inorgN_1$Plot == 1 & 
+                                                                                                               inorgN_1$SE_SEF == "SE")],
                                  TRUE ~ Blank_NH4_1))
 #
 # Correct values for blanks and calculate concentration per g DW
@@ -369,13 +399,139 @@ inorgN_1 <- inorgN_1 %>%
   mutate(NO3_µg_DW = replace_na(NO3_µg_DW, 0),
          NH4_µg_DW = replace_na(NH4_µg_DW, 0))
 #
+inorgN_2 <- inorgN_1 %>%
+  mutate(NO3_µg_L_corr = if_else(NO3_µg_L <= 0, 0, NO3_µg_L, missing = NO3_µg_L),
+         NH4_µg_L_corr = if_else(NH4_µg_L <= 0, 0, NH4_µg_L, missing = NH4_µg_L),
+         Soil_extr_g_DW = DW_soil_m_g/FW_soil_m_g * Soil_extr_g_FW) %>%
+  mutate(SW_mL = Soil_extr_g_FW - Soil_extr_g_DW) %>%
+  mutate(NO3_µg_DW = (NO3_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW,
+         NH4_µg_DW = (NH4_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW) %>% # 40mL MilliQ water added to the extraction
+  mutate(NO3_µg_DW = replace_na(NO3_µg_DW, 0),
+         NH4_µg_DW = replace_na(NH4_µg_DW, 0))
+
+
+#
 # Save inorganic concentrations
 write_csv(inorgN_1, "clean_data/Soil_inorganic_N.csv", na = "NA")
 
+#
+#
+#
+# Plotting Blanks and results to find outliers or odd values
+#
+#
+# Plot blanks as Cleveland plot
+# Transform numbered months to another format
+Month_yr <- tribble(~MP, ~Round,
+                    01,	"01_July_19",
+                    02,	"02_Aug_19",
+                    03,	"03_Sep_19",
+                    04,	"04_Oct_19",
+                    05,	"05_Nov_19",
+                    06,	"06_Dec_19",
+                    07,	"07_Jan_20",
+                    08,	"08_Feb_20",
+                    09,	"09_Mar_20",
+                    10,	"10_Apr_20",
+                    11,	"11_Apr_20",
+                    12,	"12_May_20",
+                    13,	"13_Jun_20",
+                    14,	"14_Jul_20",
+                    15,	"15_Aug_20"
+)
+# Make MP character
+Month_yr <- Month_yr %>%
+  mutate(across(MP, as.character))
+
+# combine to have blanks by Round
+Blanks_plot <- Blanks %>%
+  left_join(Month_yr, by = join_by(MP)) %>%
+  relocate(Round, .after = MP) %>%
+  mutate(Round = if_else(is.na(Round), MP, Round))
+
+# Plot
+bc1 <- Blanks_plot %>%
+  #filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NH4_µg_L)) +
+  labs(x = "NH4 µg pr L in blank samples",
+       y = "Measuring period (MP)")  #+ facet_wrap(vars(SE_SEF), scales = "free")
+
+bc2 <- Blanks_plot %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NO3_µg_L)) +
+  labs(x = "NO3 µg pr L in blank samples",
+       y = "Measuring period (MP)")  #+ facet_wrap(vars(SE_SEF), scales = "free")
 
 
+# Cleveland plot of uncorrected inorganic values
+
+# combine to have blanks by Round
+inorgN_plot <- inorgN_1 %>%
+  left_join(Month_yr, by = join_by(MP)) %>%
+  relocate(Round, .after = MP) %>%
+  mutate(Round = if_else(is.na(Round), MP, Round))
+inorgN_plot2 <- inorgN_2 %>%
+  left_join(Month_yr, by = join_by(MP)) %>%
+  relocate(Round, .after = MP) %>%
+  mutate(Round = if_else(is.na(Round), MP, Round))
 
 
+# Plot
+nc1 <- inorgN_plot %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NH4_µg_L)) +
+  labs(x = "NH4 µg pr L",
+       y = "Measuring period (MP)") #+ facet_wrap(vars(SE_SEF), scales = "free")
+
+nc2 <- inorgN_plot %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NO3_µg_L)) +
+  labs(x = "NO3 µg pr L",
+       y = "Measuring period (MP)") #+ facet_wrap(vars(SE_SEF), scales = "free")
+
+# Combine
+grid.arrange(bc1, bc2, nc1, nc2, ncol = 2)
+
+
+bc1
+nc1
+inorgN_plot %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NH4_µg_L_corr)) +
+  labs(x = "NH4 µg pr L corrected",
+       y = "Measuring period (MP)") #+ facet_wrap(vars(SE_SEF), scales = "free")
+inorgN_plot %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NH4_µg_DW)) +
+  labs(x = "NH4 µg pr g DW",
+       y = "Measuring period (MP)") #+ facet_wrap(vars(SE_SEF), scales = "free")
+inorgN_plot2 %>%
+  filter(SE_SEF == "SE") %>%
+  ggplot() +
+  geom_point(aes(y = Round,
+                 x = NH4_µg_DW)) +
+  labs(x = "NH4 µg pr g DW",
+       y = "Measuring period (MP)") #+ facet_wrap(vars(SE_SEF), scales = "free")
+
+
+dotchart(Blanks$NH4_µg_L,
+         main="Cleveland plot - soil subsample", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = Blanks$MP, 
+         groups = Blanks$Plot,
+         gpch = 12, gcolor = 1)
 
 
 

@@ -255,12 +255,13 @@ vegroot_long <- left_join(vegroot15N_long, vegrootsNatAbu_long, by = join_by(Sit
 # Calculate recovery and add as column the other recovered R check that they match
 vegroot_long <- vegroot_long %>%
   mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
+  mutate(Recovery = if_else(Recovery < 0, 0, Recovery)) %>%
   left_join(vegroot15N_RLong, by = join_by(Site, Plot, MP, Round, Type))
 ggplot(vegroot_long, aes(Recovery.x, Recovery.y)) + geom_point() + geom_smooth(method = "lm", se=FALSE) + stat_regline_equation(label.y = 10, aes(label = after_stat(eq.label))) + stat_regline_equation(label.y = 9, aes(label = after_stat(rr.label))) # Perfect fit
 #
 vegroot_long <- vegroot_long %>%
-  select(-(Recovery.x)) %>%
-  rename(Recovery = Recovery.y)
+  select(-(Recovery.y)) %>%
+  rename(Recovery = Recovery.x)
 #
 #
 #
@@ -393,9 +394,9 @@ inorgN_1 <- inorgN_1 %>%
                                  TRUE ~ Blank_NH4_1))
 #
 # Correct values for blanks and calculate concentration per g DW
-inorgN_1 <- inorgN_1 %>%
-  mutate(NO3_µg_L_corr = if_else(NO3_µg_L - Blank_NO3_1 <= 0, 0, NO3_µg_L - Blank_NO3_1, missing = NO3_µg_L),
-         NH4_µg_L_corr = if_else(NH4_µg_L - Blank_NH4_1 <= 0, 0, NH4_µg_L - Blank_NH4_1, missing = NH4_µg_L),
+inorgN_2 <- inorgN_1 %>%
+  mutate(NO3_µg_L_corr = if_else(NO3_µg_L - Blank_NO3_1 <= 0, NA, NO3_µg_L - Blank_NO3_1, missing = NO3_µg_L),
+         NH4_µg_L_corr = if_else(NH4_µg_L - Blank_NH4_1 <= 0, NA, NH4_µg_L - Blank_NH4_1, missing = NH4_µg_L),
          Soil_extr_g_DW = DW_soil_m_g/FW_soil_m_g * Soil_extr_g_FW) %>%
   mutate(SW_mL = Soil_extr_g_FW - Soil_extr_g_DW) %>%
   mutate(NO3_µg_DW = (NO3_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW,
@@ -403,9 +404,9 @@ inorgN_1 <- inorgN_1 %>%
   mutate(NO3_µg_DW = replace_na(NO3_µg_DW, 0),
          NH4_µg_DW = replace_na(NH4_µg_DW, 0))
 #
-inorgN_2 <- inorgN_1 %>%
-  mutate(NO3_µg_L_corr = if_else(NO3_µg_L <= 0, 0, NO3_µg_L, missing = NO3_µg_L),
-         NH4_µg_L_corr = if_else(NH4_µg_L <= 0, 0, NH4_µg_L, missing = NH4_µg_L),
+inorgN_3 <- inorgN_1 %>%
+  mutate(NO3_µg_L_corr = if_else(NO3_µg_L <= 0, NA, NO3_µg_L, missing = NO3_µg_L),
+         NH4_µg_L_corr = if_else(NH4_µg_L <= 0, NA, NH4_µg_L, missing = NH4_µg_L),
          Soil_extr_g_DW = DW_soil_m_g/FW_soil_m_g * Soil_extr_g_FW) %>%
   mutate(SW_mL = Soil_extr_g_FW - Soil_extr_g_DW) %>%
   mutate(NO3_µg_DW = (NO3_µg_L_corr/1000 * (SW_mL + 40)) / Soil_extr_g_DW,

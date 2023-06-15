@@ -51,6 +51,10 @@ Abisko_Tair <- Abisko_Tair %>%
   mutate(across(c("Tair_A39_1", "Tair_C1", "Tair_31", "Tair_39_2", "Tair_A", "Tair_A2"), as.numeric)) %>%
   mutate(across(c(Date_A, Time_A39_1, Time_C1, Time_31, Time_39_2), ymd_hms))
 #
+Abisko_Tair_long <- Abisko_Tair %>%
+  dplyr::select(1,3,5,7,9,11) %>%
+  pivot_longer(cols = 2:6, names_to = "Sensor", values_to = "Air_temp")
+#
 Vassijaure_Tair <- Vassijaure_Tair %>%
   dplyr::select(1:4, "Tair_C7", 8, "Tair_38", 12, "Tair_C1", "Tair_V", "Tair_V2") %>%
   rename("Time_B3" = "...2",
@@ -61,6 +65,10 @@ Vassijaure_Tair <- Vassijaure_Tair %>%
   mutate(across(where(is.character), ~na_if(.,"NaN"))) %>%
   mutate(across(c("Tair_B3", "Tair_C7", "Tair_38", "Tair_C1", "Tair_V", "Tair_V2"), as.numeric)) %>%
   mutate(across(c(Date_V, Time_B3, Time_C7, Time_38, Time_C1), ymd_hms))
+#
+Vassijaure_Tair_long <- Vassijaure_Tair %>%
+  dplyr::select(1,3,5,7,9,11) %>%
+  pivot_longer(cols = 2:6, names_to = "Sensor", values_to = "Air_temp")
 #
 # Mean diel temperature
 Abisko_avgTair <- Abisko_Tair %>%

@@ -121,9 +121,10 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
 #
 #=======  ###   Main data    ### =======
 #
-# Calculate recovery for plant partition
-vegroot15N <- vegroot15N %>%
-  mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100)
+# Calculate recovery for plant partition - Is now calculated in cleaning script?
+#vegroot15N <- vegroot15N %>%
+#  mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
+#  mutate(Recovery = if_else(Recovery < 0, 0, Recovery))
 #
 # Vegetation recovery for total core
 vegroot15N_total_Plant <- vegroot15N %>%
@@ -135,8 +136,10 @@ vegroot15N_total_Plant <- vegroot15N %>%
 # Calculate recovery for microbial partition
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
+  mutate(R_TDN = if_else(R_TDN < 0, 0, R_TDN)) %>%
   mutate(atom_pc_MBN = ((atom_pc_SEF/100 * Nconc_SEF - atom_pc_SE/100 * Nconc_SE) - (atom_pc_SEF_NatAb/100 * Nconc_SEF - atom_pc_SE_NatAb/100 * Nconc_SE))/(Nconc_SEF - Nconc_SE)*100) %>%
-  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100)
+  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100) %>%
+  mutate(R_MBN = if_else(R_MBN < 0, 0, R_MBN))
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
@@ -204,11 +207,12 @@ mineral <- mineral %>%
   filter(SE_SEF == "SE") %>%
   filter(MP != "EX (w)") %>%
   mutate(Nconc_inorg = NH4_µg_DW + NO3_µg_DW) %>% # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3]
+  mutate(Nconc_soil = if_else(Nconc_soil - Nconc_inorg < 0, Nconc_inorg, Nconc_soil)) %>%
   mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>% # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in
-  mutate(atom_pc_in_h = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg) # Assuming organic atom% does not change considerably from natural abundance (!!!)
-  
-  #mutate(atom_pc_inorg0 = (atom_pc_soil_NatAb * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg, # Atom% of inorganic at label
-  #       atom_pc_in_h = (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg) #     # Atom% at harvest
+  mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg)) %>% # Assuming organic atom% does not change considerably from natural abundance (!!!)
+  mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
+  mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - (atom_pc_soil+0.1) * Nconc_org)/Nconc_inorg))
+
 #
 # Extrapolate linearly the following for labeling point (1/4 from one harvest to the next):
 # Make subset of data for Abisko and Vassijaure
@@ -267,17 +271,17 @@ mineral_test <- mineral_test %>%
   mutate(inj_15N = (N_add*1000)/Mic_mass) %>% # µg N added pr g DW
   mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
   mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
-  mutate(atom_pc_in0_l = (1*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! assuming 100% atom% for label
+  mutate(atom_pc_in0_l = (100*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! assuming 100% atom% for label
 #
 # Now the mineralization can be calculated
 mineral_test <- mineral_test %>%
-  mutate(gross_p = (log((atom_pc_in_h - atom_pc_soil_NatAb # ft - k
+  mutate(gross_p = (log((atom_pc_in_harvest_low - atom_pc_soil_NatAb # ft - k
                          ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
                         ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
                           ) / dayLH), 
          # gross production
-         gross_c = (1 + log((atom_pc_in_h - atom_pc_soil_NatAb # ft - k
+         gross_c = (1 + log((atom_pc_in_harvest_low - atom_pc_soil_NatAb # ft - k
                            ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
                           ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
@@ -288,6 +292,10 @@ mineral_test %>%
   ggplot(aes(Round, gross_p)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 mineral_test %>%
   ggplot(aes(Round, gross_c)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+
+mineral_test %>%
+  ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 #
 #
@@ -373,7 +381,11 @@ vegroot15N_Organ <- vegroot15N %>%
   summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   ungroup() %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
-  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
+  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
+  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:7) %>%
+  mutate(OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
+  select(1:6)
 #
 # Contrasts - plant organs
 # For contrasts of Round see Q1
@@ -386,7 +398,7 @@ contrasts(vegroot15N_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot
 contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
 #
 # Check if contrasts work, by using a two-way ANOVA
-OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
+OrganModel_alias <- aov(OrganRecovery_frac ~ Round*Site, data = vegroot15N_Organ)
 Anova(OrganModel_alias, type ="III")
 # alias checks dependencies
 alias(OrganModel_alias)
@@ -395,17 +407,20 @@ alias(OrganModel_alias)
 #
 # transform data
 vegroot15N_Organ <- vegroot15N_Organ %>%
+  # select(1:5,7) %>%
+  # rename(OrganRecovery = OrganRecovery_frac) %>%
   #dplyr::filter(OrganRecovery > 0) %>% 
-  mutate(sqrtOrganRecovery = sqrt(OrganRecovery+1)) %>%
-  mutate(invOrganRecovery = 1/OrganRecovery+1) %>%
+  mutate(sqrtOrganRecovery = sqrt(OrganRecovery)) %>%
+  mutate(invOrganRecovery = 1/OrganRecovery) %>%
   mutate(logOrganRecovery = log(OrganRecovery+1)) %>%
   mutate(expOrganRecovery = exp(OrganRecovery+1)) %>%
   mutate(rootOrganRecovery = (OrganRecovery^2)^(1/9)) %>%
   mutate(sqOrganRecovery = OrganRecovery^2) %>%
-  mutate(arcOrganRecovery = asin(sqrt((OrganRecovery+1)/100))) %>%
-  mutate(logsqrtOrganRecovery = sqrt(log(OrganRecovery+1)))
+  mutate(arcOrganRecovery = asin(sqrt((OrganRecovery)/100))) %>%
+  mutate(logsqrtOrganRecovery = sqrt(log(OrganRecovery+1))) %>%
+  mutate(logarcOrganRecovery = log(asin(sqrt((OrganRecovery)/100))+1)) %>%
+  mutate(funOrganRecovery = (OrganRecovery/100)^(1/9))
 # BoxCox transformation?
-#
 #
 # model:
 lme1a<-lme(arcOrganRecovery ~ Round*Site*Organ,
@@ -425,8 +440,8 @@ par(mfrow = c(1,1))
 Anova(lme1a, type=2)
 summary(lme1a)
 # Highly significant for Round, Organ Round*Organ and significant for three-way interaction
-#
-#
+# For organ recovery as fraction of whole plant recovery:
+# Highly significant for organ and all interactions except Round:Site
 #
 #=======  ###   Statistics   ### =======
 #-------   ##       Q2       ##  -------
@@ -479,7 +494,7 @@ Mic15N_R <- Mic15N_R %>%
 #
 #
 #model:
-lme2<-lme(arcR_MBN ~ Site*Round,
+lme2<-lme(R_MBN ~ Site*Round,
           random = ~1|Plot/Site,
           data = Mic15N_R, na.action = na.exclude , method = "REML")
 #
@@ -592,6 +607,36 @@ vegroot15N %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+# Same as above, but Recovery proportional to total plant recovery
+# organRecovery / PlantRecovery
+vegroot15N %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
+  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
+  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery),
+         se = if_else(Organ == "S", se, -se),
+         avgR_SE = if_else(Organ == "CR", avgRecovery, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgRecovery, avgRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(-15,3)) +
+  scale_fill_viridis_d() +
+  #  scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
+  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-15, -12, -9, -6, -3, 0, 3), labels = abs) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
 #
 # Each species or part separated. For a quick overview of where patterns might come from
 vegroot15N %>%
@@ -622,6 +667,7 @@ vegroot15N %>%
 # Calculate means and 95% CI
 vegroot15N_total_Plant_sum <- summarySE(vegroot15N_total_Plant, measurevar="PlantRecovery", groupvars=c("Site", "Round"))
 Mic15N_sum <- summarySE(Mic15N, measurevar="R_MBN", groupvars=c("Site", "Round"), na.rm=TRUE)
+TDN15N_sum <- summarySE(Mic15N, measurevar="R_TDN", groupvars=c("Site", "Round"), na.rm=TRUE)
 #
 # Same calculations as with the summarySE function, but less flexible and would need to write code each place
 # vegroot15N_total_Plant %>%
@@ -638,8 +684,8 @@ vegroot15N_total_Plant_sum %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery-ci, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
-  geom_point(aes(Round, PlantRecovery)) +
-  #geom_col(aes(Round, PlantRecovery),color = "black") +
+  #geom_point(aes(Round, PlantRecovery)) +
+  geom_col(aes(Round, PlantRecovery),color = "black") +
   coord_cartesian(ylim=c(0,30)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
@@ -650,6 +696,7 @@ vegroot15N_total_Plant_sum %>%
 vegroot15N_total_Plant %>%
   ggplot() +
   geom_boxplot(aes(Round, PlantRecovery))
+#
 # Microbial total recovery +/- 95% CI
 Mic15N_sum %>%  
   ggplot() + 
@@ -663,6 +710,19 @@ Mic15N_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+# TDN total recovery +/- 95% CI 
+TDN15N_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = R_TDN, ymin=R_TDN, ymax=R_TDN+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, R_TDN),color = "black") +
+  #coord_cartesian(ylim=c(0,30)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("TDN "*{}^15*"N tracer recovery")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
 #
 # Proportional to total recovery
 # Calculate means and 95% CI
@@ -673,6 +733,48 @@ Rec15N_MBN_sum <- summarySE(Rec15N, measurevar = "R_MBN_frac", groupvars = c("Si
 plot_prop_Recovery(Rec15N_Plant_sum, plotvar=Rec15N_Plant_sum$PlantR_frac, titleExp = expression("Plant "*{}^15*"N tracer recovery"))
 plot_prop_Recovery(Rec15N_TDN_sum, plotvar=Rec15N_TDN_sum$R_TDN_frac, titleExp = expression("TDN "*{}^15*"N tracer recovery"))
 plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp = expression("Microbial "*{}^15*"N tracer recovery"))
+#
+#
+vegroot15N_Organ_sum <- summarySE(vegroot15N_Organ, measurevar = "OrganRecovery", groupvars = c("Site", "Round", "Organ"))
+#
+vegroot15N_Organ_sum %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
+         ci = if_else(Organ == "S", ci, -ci),
+         avgR_CI = if_else(Organ == "CR", OrganRecovery, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(-125,75)) +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = OrganRecovery, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+vegroot15N_Organ_sum %>%
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(0,100)) +
+  scale_fill_viridis_d() +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #

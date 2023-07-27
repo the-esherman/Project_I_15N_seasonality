@@ -417,7 +417,7 @@ inorgN_3 <- inorgN_1 %>%
 
 #
 # Save inorganic concentrations
-write_csv(inorgN_1, "clean_data/Soil_inorganic_N.csv", na = "NA")
+write_csv(inorgN_2, "clean_data/Soil_inorganic_N.csv", na = "NA")
 
 #
 #

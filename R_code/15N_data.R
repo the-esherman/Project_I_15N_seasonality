@@ -210,7 +210,8 @@ mineral <- mineral %>%
   mutate(Nconc_soil = if_else(Nconc_soil - Nconc_inorg < 0, Nconc_inorg, Nconc_soil)) %>%
   mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>% # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in
   mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg)) %>% # Assuming organic atom% does not change considerably from natural abundance (!!!)
-  mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
+  mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, atom_pc_soil_NatAb),
+         atom_pc_in_harvest_low2 = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
   mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - (atom_pc_soil+0.1) * Nconc_org)/Nconc_inorg))
 
 #
@@ -271,17 +272,34 @@ mineral_test <- mineral_test %>%
   mutate(inj_15N = (N_add*1000)/Mic_mass) %>% # µg N added pr g DW
   mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
   mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
-  mutate(atom_pc_in0_l = (100*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! assuming 100% atom% for label
+#  mutate(Nconc_in0_l_2 = (Nconc_in0*Mic_mass + N_add*1000)/Mic_mass) %>% # Same as above but made explicit
+  mutate(atom_pc_in0_l = (98.7*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! 98.7% atom% for label
 #
+# Calculate isotope ratio at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
+mineral_test <- mineral_test %>%
+  mutate(R_inj = if_else(is.na(atom_pc_in0_l), NA, atom_pc_in0_l/100 / (1 - atom_pc_in0_l/100)),
+         R_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, atom_pc_in_harvest_high/100 / (1 - atom_pc_in_harvest_high/100)),
+         R_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100))) %>%
+  # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
+  mutate(R_avg_high = if_else(is.na(R_inj), NA, if_else(is.na(R_harv_high), R_inj, (R_inj - R_harv_high)/2)),
+         R_avg_low = if_else(is.na(R_inj), NA, if_else(is.na(R_harv_low), R_inj, (R_inj - R_harv_low)/2))) %>%
+  # Calculate atom% from the ratio
+  mutate(AP_avg_high = if_else(is.na(R_avg_high), NA, R_avg_high/(1 + R_avg_high)*100),
+         AP_avg_low = if_else(is.na(R_avg_low), NA, R_avg_low/(1 + R_avg_low)*100))
+
+
+
+
+
 # Now the mineralization can be calculated
 mineral_test <- mineral_test %>%
-  mutate(gross_p = (log((atom_pc_in_harvest_low - atom_pc_soil_NatAb # ft - k
+  mutate(gross_p = (log((atom_pc_in_harvest_low2 - atom_pc_soil_NatAb # ft - k
                          ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
                         ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
                           ) / dayLH), 
          # gross production
-         gross_c = (1 + log((atom_pc_in_harvest_low - atom_pc_soil_NatAb # ft - k
+         gross_c = (1 + log((atom_pc_in_harvest_low2 - atom_pc_soil_NatAb # ft - k
                            ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
                           ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
@@ -296,6 +314,147 @@ mineral_test %>%
 
 mineral_test %>%
   ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+# How does the 15N/14N ratio change
+mineral_test %>%
+  ggplot(aes(Round, R_avg_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_test %>%
+  ggplot(aes(Round, R_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+
+
+# Testing on plant uptake
+vegroot15N_format <- vegroot15N %>%
+  mutate(across(c("Plot", "MP"), as.character))
+vegMineral <- vegroot15N_format %>%
+  left_join(mineral_test, by = join_by(Site, Plot, MP, Round)) %>%
+  dplyr::select(1:15, 34, 39:42)
+
+vegMineral <- vegMineral %>%
+  mutate(ext14N_high = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/R_avg_high,
+         ext14N_low = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/R_avg_low) %>%
+  mutate(NtotRec_high = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(AP_avg_high/100),
+         NtotRec_low = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(AP_avg_low)/100) %>%
+  mutate(frac15Nstart = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/Nconc_in0_l,
+         Ntot_stand_high = NtotRec_high/Nconc_in0_l,
+         Ntot_stand_low = NtotRec_low/Nconc_in0_l,
+         Recov_stand = Recovery/Nconc_in0_l)
+
+
+vegMineral_total_0 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_1 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantExt14N_high = sum(ext14N_high, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_2 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantExt14N_low = sum(ext14N_low, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_3 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantN_high = sum(NtotRec_high, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_4 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantN_low = sum(NtotRec_low, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_5 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(Plantstd_high = sum(Ntot_stand_high, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_6 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(Plantstd_low = sum(Ntot_stand_low, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_7 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(Plantstd_15N = sum(frac15Nstart, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_8 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantRecovstd = sum(Recov_stand, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+
+vegMineral_total <- vegMineral_total_0 %>%
+  left_join(vegMineral_total_1, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_2, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_3, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_4, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_5, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_6, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_7, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_8, by = join_by(Site, Plot, MP, Round))
+
+
+vegMineral_total %>%
+  ggplot(aes(Round, PlantRecovery)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+vegMineral_total %>%
+  ggplot(aes(Round, PlantExt14N_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, PlantExt14N_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+vegMineral_total %>%
+  ggplot(aes(Round, PlantN_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, PlantN_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+vegMineral_total %>%
+  ggplot(aes(Round, Plantstd_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, Plantstd_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, Plantstd_15N)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+vegMineral_total %>%
+  ggplot(aes(Plantstd_low, Plantstd_high)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(PlantRecovstd, Plantstd_low)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
+
+vegMineral_total %>%
+  ggplot(aes(PlantN_low, PlantN_high)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(PlantN_low, PlantN_high)) + geom_point() + facet_wrap(vars(Site), scales = "free")
+
+
+vegMineral_total %>%
+  dplyr::select(1:4, 8,9) %>%
+  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake") %>%
+  mutate(across("MP", as.numeric)) %>%
+  ggplot(aes(Round, PlantN_uptake, color = Site)) + geom_boxplot() + facet_wrap(vars(Estimate), scales = "free")
+
+vegMineral_total %>%
+  dplyr::select(1:4, 10,11) %>%
+  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
+  mutate(across("MP", as.numeric)) %>%
+  ggplot(aes(MP, PlantN_uptake_std, color = Site)) + geom_point() + facet_wrap(vars(Estimate), scales = "free")
+vegMineral_total %>%
+  dplyr::select(1:4, 10,11) %>%
+  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
+  mutate(across("MP", as.numeric)) %>%
+  ggplot(aes(Round, PlantN_uptake_std, color = Site)) + geom_boxplot() + facet_wrap(vars(Estimate), scales = "free")
+vegMineral_total %>%
+  dplyr::select(1:4, 10,11) %>%
+  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
+  mutate(across("MP", as.numeric)) %>%
+  ggplot(aes(Round, PlantN_uptake_std, color = Estimate)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+
+vegMineral_total %>%
+  ggplot(aes(PlantRecovery, PlantRecovstd)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
+
+
+vegMineral_total %>%
+  ggplot(aes(Round, PlantRecovstd)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+
+
+
+vegroot15N_total_Plant %>%
+  ggplot(aes(Round, PlantRecovery)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 #
 #

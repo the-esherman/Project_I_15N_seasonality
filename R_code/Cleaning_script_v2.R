@@ -7,6 +7,7 @@
 # By Emil A.S. Andersen
 # 
 #------- ### Libraries ### -------
+library(data.table)
 library(tidyverse)
 library(readxl)
 #
@@ -14,7 +15,7 @@ library(readxl)
 #
 #------- ### Load data ### -------
 #
-DataName <- "raw_data/base data v1.0_R.xlsx"
+DataName <- "raw_data/base data v1.2_R.xlsx"
 #
 # Core data:
 # Harvest information, snow measurements, core diameter, soil depth and mass (and sub-mass), label values, soil moisture, sub-sample root mass
@@ -33,7 +34,7 @@ extrMass <- read_xlsx(DataName, sheet = "Extracts", skip = 1, col_names = TRUE, 
 extr15N <- read_xlsx(DataName, sheet = "Extr_15N", skip = 1, col_names = TRUE, na = "NA")
 #
 # Soil extraction inorganic N concentrations and for blanks
-extrInorgN <- read_xlsx(DataName, sheet = "Extr_inorgN", skip = 1, col_names = TRUE, na = "NA")
+extrInorgN <- read_xlsx(DataName, sheet = "Extr_inorgN_raw", skip = 1, col_names = TRUE, na = "NA")
 extrInorgN_blanks <- read_xlsx(DataName, sheet = "Extr_inorgN_blanks", skip = 1, col_names = TRUE, na = "NA")
 #
 # Soil extractions TDN and blanks
@@ -63,7 +64,7 @@ Label_atom_pc <- 0.987 # 98.7% double labelled 15N-NH4NO3
 Atom_mass_14N_NH4NO3 <- 2*14.007+4*1.008+3*15.999 # The atomic mass of 14N NH4NO3
 Atom_mass_15N_NH4NO3 <- 2*15+4*1.008+3*15.999 # The atomic mass of double 15N NH4NO3
 
-(2*15*Label_atom_pc)/(2*14.007*(1-Label_atom_pc)+2*15*Label_atom_pc+4*1.008+3*15.999)
+#(2*15*Label_atom_pc)/(2*14.007*(1-Label_atom_pc)+2*15*Label_atom_pc+4*1.008+3*15.999)
 
 Label_15N_frac <- (2*15*Label_atom_pc)/(Atom_mass_14N_NH4NO3*(1-Label_atom_pc)+Atom_mass_15N_NH4NO3*Label_atom_pc) # The atom mass of the 15N to the total label NH4NO3
 # In the numerator: 2 15N per molecule, but only 98.7%
@@ -81,6 +82,52 @@ Core2 <- Core %>%
          Injection_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_15N_frac, # Actual added amount of labelled 15N, assuming 19mL vol of solution per plot, 1mL per hole
          Soil_RF_FW_g = Soil_subRF_mass_g/Soil_sub_mass_g) %>% # Mass of root free soil in FW
   mutate(Soil_RF_DW_g = Soil_RF_FW_g*Soil_mass_g*DW_FW_frac) # Mass of root free soil in DW
+
+#
+Core3 <- Core2 %>%
+  filter(MP != "EX") %>%
+  mutate(across(c(Day_of_label, Day_of_harvest), ymd)) %>%
+  mutate(DaysLH = Day_of_harvest - Day_of_label) %>%
+  mutate(across(c(MP, DaysLH), as.numeric))
+# Calculate days between harvests
+Core3_A <- Core3 %>%
+  select(Site, Plot, MP) %>%
+  filter(Site == "Abisko")
+Core3_V <- Core3 %>%
+  select(Site, Plot, MP) %>%
+  filter(Site == "Vassijaure")
+Core3_A["DaysHH"] <- NA
+Core3_V["DaysHH"] <- NA
+# Double check I can count
+ct<- vector("double")
+# Loop over each to calculate rate from one round to the next for the same plot and then around 7 days if when labeling happens
+for (i in 2:15) {
+  for (j in 1:5) {
+    ct[5*(i-1)+j] <- 5*(i-1)+j
+    Core3_A$DaysHH[5*(i-1)+j] <- (Core3$Day_of_harvest[which(Core3$Site == "Abisko" & 
+                                                            Core3$Plot == j & 
+                                                            Core3$MP == (i))] - 
+                                    Core3$Day_of_harvest[which(Core3$Site == "Abisko" & 
+                                                              Core3$Plot == j & 
+                                                              Core3$MP == (i-1))])
+    Core3_V$DaysHH[5*(i-1)+j] <- (Core3$Day_of_harvest[which(Core3$Site == "Vassijaure" & 
+                                                            Core3$Plot == j & 
+                                                            Core3$MP == i)] - 
+                                    Core3$Day_of_harvest[which(Core3$Site == "Vassijaure" & 
+                                                              Core3$Plot == j & 
+                                                              Core3$MP == (i-1))])
+  }
+}
+Core3_AV <- Core3_A %>%
+  bind_rows(Core3_V)
+
+Core4 <- Core3 %>%
+  left_join(Core3_AV, by = join_by(Site, Plot, MP)) %>%
+  relocate(c(DaysLH, DaysHH), .after = Day_of_harvest)
+
+# Save as csv
+write_csv(Core4, "clean_data/Core_data.csv")
+
 #
 #
 #
@@ -213,8 +260,66 @@ extr15N_TDN_essential <- extr15N_TDN %>%
 #
 # » Inorganic N « ----
 #
-extrInorgN_blanks <- extrInorgN_blanks %>%
-  filter(Site == "Blank" | Site == "Water")
+# Inorganic N values - 
+# raw data cleaned by changing certain wrong or missing names and removing SEF_old
+extrInorgN_clean_0 <- extrInorgN %>%
+  mutate(MP = case_when(Site == "Water" ~ "1",
+                        MP == "EX (w)" ~ "EX",
+                        TRUE ~ MP),
+         Extr_type = case_when(Site == "Blank" & MP == "9" & is.na(Extr_type) ~ "SE",
+                               Site == "Blank" & MP == "13" & is.na(Extr_type) ~ "SEF",
+                               Site == "Blank" & MP == "15" & is.na(Extr_type) ~ "SE",
+                               Site == "Water" ~ "SE",
+                               TRUE ~ Extr_type)) %>%
+  mutate(across(NO3_sample_microg_pr_L, na_if, "n.d.")) %>%
+  mutate(across(NO3_sample_microg_pr_L, as.numeric)) %>%
+  mutate(Site = if_else(Site == "Water", "Blank", Site)) %>%
+  filter(Extr_type != "SEF_old")
+
+# Check duplicates
+extrInorgN_clean_1 <- extrInorgN_clean_0 %>%
+  unite("ID", 1:4, remove = FALSE)
+duplicated_IDS_inorgN <- extrInorgN_clean_1[duplicated(extrInorgN_clean_1$ID),]  
+duplicate_subset_inorgN <- extrInorgN_clean_1[extrInorgN_clean_1$ID %in% duplicated_IDS_inorgN$ID, ]
+
+test <- extrInorgN_clean_0 %>%
+  filter(Site != "Blank")
+test %>%
+  ggplot(aes(MP)) + geom_bar()
+
+# V_1_4_SE and V_4_6_SEF have true duplicates. An average value should be taken as their value (as values are very similar this should not change much)
+# A_2_13_SEF is a duplicate where one is A_1_13_SEF
+# The remaining duplicates are blanks. But with very different values since they were done one "Abisko" or "Vassijaure" samples.
+
+# Average V_1_4_SE and V_4_6_SEF duplicates. Change one A_2_13_SEF to A_1_13_SEF
+# Blanks have been removed
+extrInorgN_clean_2 <- extrInorgN_clean_0 %>%
+  filter(Site != "Blank") %>%
+  mutate(Plot = if_else(Site == "Abisko" & MP == "13" & Extr_type == "SEF" & NH4_sample_microg_pr_L >= 8000, 1, Plot)) %>%
+  group_by(Site, Plot, MP, Extr_type) %>%
+  mutate(NO3_sample_microg_pr_L = mean(NO3_sample_microg_pr_L),
+         NH4_sample_microg_pr_L = mean(NH4_sample_microg_pr_L)) %>%
+  slice(1) %>%
+  ungroup()
+
+dotchart(extrInorgN_clean_2$NH4_sample_microg_pr_L, 
+         main="Cleveland plot - NH4", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_clean_2$MP, 
+         groups = extrInorgN_clean_2$Plot,
+         gpch = 12, gcolor = 1)
+dotchart(extrInorgN_clean_2$NO3_sample_microg_pr_L, 
+         main="Cleveland plot - NO3", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_clean_2$MP, 
+         groups = extrInorgN_clean_2$Plot,
+         gpch = 12, gcolor = 1)
+
+# A few outliers of very high values, but uncorrected for blanks
+
+# Blanks
+extrInorgN_blanks <- extrInorgN_clean_0 %>%
+  filter(Site == "Blank")
 
 # Calculating averages of blanks
 extrInorgN_blanks_avg <- extrInorgN_blanks %>%
@@ -231,8 +336,13 @@ extrInorgN_blanks_avg_label <- extrInorgN_blanks_avg %>%
 extrInorgN_blanks_avg_control <- extrInorgN_blanks_avg %>%
   filter(MP == "EX")
 
+# 
+extrInorgN_clean <- extrInorgN_clean_2 %>%
+  filter(MP != "EX") %>%
+  mutate(across(MP, as.numeric))
+
 # Join blanks to inorganic N values
-extrInorgN_1 <- extrInorgN %>%
+extrInorgN_1 <- extrInorgN_clean %>%
   left_join(extrMass2, by = join_by(Site, Plot, MP, Extr_type)) %>%
   left_join(extrInorgN_blanks_avg_label, by = join_by(MP, Extr_type))
 
@@ -290,7 +400,24 @@ extrInorgN_1 <- extrInorgN_1 %>%
   mutate(NO3_microg_pr_gDW = replace_na(NO3_microg_pr_gDW, 0),
          NH4_microg_pr_gDW = replace_na(NH4_microg_pr_gDW, 0))
 extrInorgN_essential <- extrInorgN_1 %>%
-  select(1:4, 18:19)
+  select(1:4, NO3_microg_pr_gDW, NH4_microg_pr_gDW)
+
+# Outliers
+dotchart(extrInorgN_essential$NH4_microg_pr_gDW, 
+         main="Cleveland plot - NH4", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_essential$MP, 
+         groups = extrInorgN_essential$Plot,
+         gpch = 12, gcolor = 1)
+dotchart(extrInorgN_essential$NO3_microg_pr_gDW, 
+         main="Cleveland plot - NO3", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_essential$MP, 
+         groups = extrInorgN_essential$Plot,
+         gpch = 12, gcolor = 1)
+
+# Outliers have changed for NH4, where only 1 value is a bit further out. The NO3 outlier is still present
+
 
 # Save inorganic N to csv
 #write_csv(extrInorgN_output, "clean_data/Soil_inorganic_N.csv", na = "NA")

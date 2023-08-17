@@ -7,7 +7,6 @@
 # By Emil A.S. Andersen
 # 
 #------- ### Libraries ### -------
-library(data.table)
 library(tidyverse)
 library(readxl)
 #
@@ -271,8 +270,8 @@ extrInorgN_clean_0 <- extrInorgN %>%
                                Site == "Blank" & MP == "15" & is.na(Extr_type) ~ "SE",
                                Site == "Water" ~ "SE",
                                TRUE ~ Extr_type)) %>%
-  mutate(across(NO3_sample_microg_pr_L, na_if, "n.d.")) %>%
-  mutate(across(NO3_sample_microg_pr_L, as.numeric)) %>%
+  mutate(across(NO3_sample_microg_pr_L, ~ na_if(.x, "n.d."))) %>%
+  mutate(across(NO3_sample_microg_pr_L, ~ as.numeric(.x))) %>%
   mutate(Site = if_else(Site == "Water", "Blank", Site)) %>%
   filter(Extr_type != "SEF_old")
 

@@ -217,8 +217,9 @@ extrTDN_blanks_avg <- extrTDN_blanks %>%
   summarise(Blank_TDN = mean(TDN_sample_mg_pr_L, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 
-# Add mass and blanks and calculat TDN as µg pr g DW
+# Add mass and blanks and calculate TDN as µg pr g DW
 extrTDN_1 <- extrTDN %>%
+  mutate(Plot = if_else(Site == "Abisko" & MP == "13" & Extr_type == "SEF" & TDN_sample_mg_pr_L >= 20, 1, Plot)) %>% #  # # # OBS!!!
   left_join(extrMass2, by = join_by(Site, Plot, MP, Extr_type)) %>%
   left_join(extrTDN_blanks_avg, by = join_by(MP, Extr_type)) %>%
   mutate(TDN_sample_mg_pr_L_corr = if_else(TDN_sample_mg_pr_L - Blank_TDN <= 0, NA, TDN_sample_mg_pr_L - Blank_TDN, missing = TDN_sample_mg_pr_L)) %>%
@@ -294,7 +295,7 @@ test %>%
 # Blanks have been removed
 extrInorgN_clean_2 <- extrInorgN_clean_0 %>%
   filter(Site != "Blank") %>%
-  mutate(Plot = if_else(Site == "Abisko" & MP == "13" & Extr_type == "SEF" & NH4_sample_microg_pr_L >= 8000, 1, Plot)) %>%
+  mutate(Plot = if_else(Site == "Abisko" & MP == "13" & Extr_type == "SEF" & NH4_sample_microg_pr_L >= 8000, 1, Plot)) %>% #  # # # OBS!!!
   group_by(Site, Plot, MP, Extr_type) %>%
   mutate(NO3_sample_microg_pr_L = mean(NO3_sample_microg_pr_L),
          NH4_sample_microg_pr_L = mean(NH4_sample_microg_pr_L)) %>%

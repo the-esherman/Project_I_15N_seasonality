@@ -117,12 +117,14 @@ for (i in 2:15) {
                                                               Core3$MP == (i-1))])
   }
 }
+
 Core3_AV <- Core3_A %>%
   bind_rows(Core3_V)
 
 Core4 <- Core3 %>%
   left_join(Core3_AV, by = join_by(Site, Plot, MP)) %>%
-  relocate(c(DaysLH, DaysHH), .after = Day_of_harvest)
+  relocate(c(DaysLH, DaysHH), .after = Day_of_harvest) %>%
+  mutate(DaysHL = DaysHH - DaysLH)
 
 # Save as csv
 write_csv(Core4, "clean_data/Core_data.csv")

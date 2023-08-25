@@ -541,6 +541,10 @@ contrasts(vegroot15N_total_Plant$Site)<-AvsV
 contrasts(vegroot15N_total_Plant$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
 #contrasts(vegroot15N_total_Plant$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
 #
+# Check contrasts are orthogonal
+crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot))#, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
+
+
 # Check if contrasts work, by using a two-way ANOVA
 PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_total_Plant)
 Anova(PlantModel_alias, type ="III")
@@ -669,28 +673,27 @@ Mic15N_R <- Mic15N_R %>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Contrasts - MBN recovery
-# First few contrasts are same as for plant recovery:
-# SummervsWinter, SpringvsAutumn, SnowvsNot
-# Month                (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP                   (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-Cont4_Mic          <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0) # July vs July
-Cont5_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # 2 times april
-Cont6_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
-Cont7_Mic          <- c(0, 0, 0, 0, 2,-1,-1, 0, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
-Cont8_Mic          <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
-Cont9_Mic          <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
-Cont10_Mic         <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Cont11_Mic         <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Month           (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP              (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Cont4_Mic     <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0) # July vs July
+Cont5_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # 2 times april
+Cont6_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
+Cont7_Mic     <- c(0, 0, 0, 0, 2,-1,-1, 0, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
+Cont8_Mic     <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
+Cont9_Mic     <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
+Cont10_Mic    <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Cont11_Mic    <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 AvsV<-c(1,-1)
 contrasts(Mic15N_R$Site)<-AvsV
-contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
+# Same contrasts as for plant recovery:
+# SummervsWinter, SpringvsAutumn, SnowvsNot
+contrasts(Mic15N_R$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
 #contrasts(Mic15N_R$Round)<-contr.helmert
 #
-# Check if contrasts work, by using a two-way ANOVA
-MicModel_alias <- aov(R_MBN ~ Round*Site, data = Mic15N_R)
-Anova(MicModel_alias, type ="III")
-# alias checks dependencies
-alias(MicModel_alias)
+# Check if contrasts work
+# Check contrasts are orthogonal
+crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh))#, cont11, cont12, cont13, cont14))
 #
 # Alternative: Two-way ANOVA
 # have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
@@ -734,7 +737,7 @@ summary(lme2)
 #
 vegroot15N_bio <- vegroot15N %>%
   group_by(across(c("Site", "Plot", "Round"))) %>%
-  summarise(TotalBiomass = sum(Biomass, na.rm = TRUE), .groups = "keep") %>%
+  summarise(TotalBiomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 #
 # Plant biomass total +/- SE
@@ -756,7 +759,7 @@ vegroot15N_bio %>%
 # Plant biomass by organ +/- SE
 vegroot15N %>%
   group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
-  summarise(TotalBiomass = sum(Biomass, na.rm = TRUE), .groups = "keep") %>%
+  summarise(TotalBiomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
   summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
   mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
@@ -986,6 +989,32 @@ vegroot15N_Organ_sum %>%
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+Rec15N_sum <- Rec15N_Plant_sum %>%
+  left_join(Rec15N_MBN_sum, by = join_by(Site, Round)) %>%
+  left_join(Rec15N_TDN_sum, by = join_by(Site, Round)) %>%
+  select(Site, Round, PlantR_frac, ci.x, R_MBN_frac, ci.y, R_TDN_frac, ci) %>%
+  rename("ci_plant" = ci.x,
+         "ci_MBN" = ci.y,
+         "ci_TDN" = ci)
+Rec15N_sum <- Rec15N_sum %>%
+  select(Site, Round, PlantR_frac, R_MBN_frac, R_TDN_frac) %>%
+  pivot_longer(cols = 3:5, names_to = "Type", values_to = "Recovery")
+#
+Rec15N_sum %>%
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, Recovery, fill = factor(Type, levels=c("PlantR_frac","R_MBN_frac","R_TDN_frac"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(0,100)) +
+  scale_fill_viridis_d() +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "System part")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #

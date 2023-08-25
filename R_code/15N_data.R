@@ -11,17 +11,14 @@ library(nlme)
 #
 #=======  ###   Load data    ### =======
 #
-# Biomass, d15N, atom% 15N, and N concentration for enriched and natural abundance samples
-vegroot15N <- read_csv("clean_data/Plant_15N_data.csv", col_names = TRUE)
+# Core data on soils and days of labelling and harvest as well as snowdepth
+coreData <- read_csv("clean_data/Core_data.csv", col_names = TRUE)
 #
-# Microbial biomass, d15N, atom% 15N, and recovery ("R_")
-Mic15N <- read_csv("clean_data/Mic_15N_data.csv", skip = 1, col_names = TRUE)
+# Biomass, N concentration, d15N, atom% 15N for enriched and natural abundance samples, and Recovery
+vegroot15N <- read_csv("clean_data/Plant_15N_data_v2.csv", col_names = TRUE)
 #
-# Inorganic N concentration (NH4 and NO3)
-inorgN <- read_csv("clean_data/Soil_inorganic_N.csv", col_names = TRUE)
-#
-# Long formated Mic15N data
-soil15N <- read_csv("clean_data/Soil_15N.csv", col_names = TRUE)
+# Long formatted soil extraction data (SE/SEF): [N] (TDN), d15N, atom% 15N for enriched and natural abundance samples, inorganic [N] (NH4 and NO3), and root free soil mass
+soil15N <- read_csv("clean_data/Soil_N.csv", col_names = TRUE)
 #
 #
 # Define the winter period as snow covered period
@@ -121,11 +118,13 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
 #
 #=======  ###   Main data    ### =======
 #
-# Calculate recovery for plant partition - Is now calculated in cleaning script?
-#vegroot15N <- vegroot15N %>%
-#  mutate(Recovery = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(N_add/1000) * 100) %>%
-#  mutate(Recovery = if_else(Recovery < 0, 0, Recovery))
-#
+# Add Round to vegetation data as well as other relevant information
+vegroot15N <- vegroot15N %>%
+  left_join(coreData, by = join_by(Site, Plot, MP)) %>%
+  select(1:13, Round) %>%
+  relocate(Round, .after = MP)
+
+
 # Vegetation recovery for total core
 vegroot15N_total_Plant <- vegroot15N %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
@@ -134,16 +133,25 @@ vegroot15N_total_Plant <- vegroot15N %>%
 #
 #
 # Calculate recovery for microbial partition
+# Pivot wide to get SE and SEF separated
+Mic15N <- soil15N %>%
+  pivot_wider(names_from = "Extr_type", values_from = c(Nconc_microg_pr_gDW, d15N, Atom_pc, NO3_microg_pr_gDW, NH4_microg_pr_gDW, Atom_pc_NatAb))
+
+
 Mic15N <- Mic15N %>%
-  mutate(R_TDN = ((atom_pc_SE - atom_pc_SE_NatAb)/100 * Nconc_SE*10^(-6) * Mic_mass)/(N_add/1000)* 100) %>%
+  mutate(R_TDN = ((Atom_pc_SE - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
   mutate(R_TDN = if_else(R_TDN < 0, 0, R_TDN)) %>%
-  mutate(atom_pc_MBN = ((atom_pc_SEF/100 * Nconc_SEF - atom_pc_SE/100 * Nconc_SE) - (atom_pc_SEF_NatAb/100 * Nconc_SEF - atom_pc_SE_NatAb/100 * Nconc_SE))/(Nconc_SEF - Nconc_SE)*100) %>%
-  mutate(R_MBN = (((atom_pc_SEF/100 * Nconc_SEF*10^(-6) - atom_pc_SE/100 * Nconc_SE*10^(-6)) - (atom_pc_SEF_NatAb/100 * Nconc_SEF*10^(-6) - atom_pc_SE_NatAb/100 * Nconc_SE*10^(-6)))/K_EN * Mic_mass)/(N_add/1000) * 100) %>%
+  mutate(atom_pc_MBN = ((Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE) - 
+                          (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE))/
+           (Nconc_microg_pr_gDW_SEF - Nconc_microg_pr_gDW_SE)*100) %>%
+  mutate(R_MBN = (((Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)) - 
+                     (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)))/
+                    K_EN * Soil_RF_DW_g)/(N_add/1000) * 100) %>%
   mutate(R_MBN = if_else(R_MBN < 0, 0, R_MBN))
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
-  left_join(Mic15N, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(Mic15N, by = join_by(Site, Plot, MP)) %>%
   select(Site, Plot, MP, Round, PlantRecovery, R_TDN, R_MBN) %>%
   rowwise() %>%
   mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
@@ -192,37 +200,50 @@ Rec15N <- vegroot15N_total_Plant %>%
 # atom%_inorg = (atom%_tot * [N]_tot - atom%_org * [N]_org) / [N]_inorg
 #
 # New data set with needed information
-soil15N <- soil15N %>%
-  mutate(across(c(Plot, MP), as.character))
-inorgN <- inorgN %>%
-  mutate(across(c(Plot, MP), as.character))
+
+soil15N_2 <- soil15N %>%
+  left_join(coreData, by = join_by(Site, Plot, MP)) %>%
+  select(1:11, DaysLH, DaysHH, Round, Injection_mg_pr_patch) %>%
+  mutate(DaysHL = DaysHH - DaysLH) %>%
+  relocate(c(Round, DaysLH, DaysHH, DaysHL), .after = MP) %>%
+  rename(Soil_RF_DW_g = Soil_RF_DW_g.x)
+
+# soil15N <- soil15N %>%
+#   mutate(across(c(Plot, MP), as.character))
+#inorgN <- inorgN %>%
+#  mutate(across(c(Plot, MP), as.character))
 #
-mineral <- inorgN %>%
-  select(1:4, NH4_µg_DW, NO3_µg_DW) %>%
-  left_join(soil15N, by = join_by(Site, Plot, MP, SE_SEF)) %>%
-  relocate(Round, .after = MP)
+# mineral <- inorgN %>%
+#   select(1:4, NH4_µg_DW, NO3_µg_DW) %>%
+#   left_join(soil15N, by = join_by(Site, Plot, MP, SE_SEF)) %>%
+#   relocate(Round, .after = MP)
 #
 # Calculate
-mineral <- mineral %>%
-  filter(SE_SEF == "SE") %>%
+mineral <- soil15N_2 %>%
+  filter(Extr_type == "SE") %>%
   filter(MP != "EX (w)") %>%
-  mutate(Nconc_inorg = NH4_µg_DW + NO3_µg_DW) %>% # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3]
-  mutate(Nconc_soil = if_else(Nconc_soil - Nconc_inorg < 0, Nconc_inorg, Nconc_soil)) %>%
+  mutate(Nconc_inorg = NH4_microg_pr_gDW + NO3_microg_pr_gDW) %>% # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3]
+  mutate(Nconc_soil = if_else(Nconc_microg_pr_gDW - Nconc_inorg < 0, Nconc_inorg, Nconc_microg_pr_gDW)) %>%
   mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>% # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in
-  mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil_NatAb * Nconc_org)/Nconc_inorg)) %>% # Assuming organic atom% does not change considerably from natural abundance (!!!)
-  mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, atom_pc_soil_NatAb),
-         atom_pc_in_harvest_low2 = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - atom_pc_soil * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
-  mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (atom_pc_soil * Nconc_soil - (atom_pc_soil+0.1) * Nconc_org)/Nconc_inorg))
-
+  mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc_NatAb * Nconc_org)/Nconc_inorg)) %>% # Assuming organic atom% does not change considerably from natural abundance (!!!)
+  mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, Atom_pc_NatAb),
+         atom_pc_in_harvest_low2 = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
+  mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.1) * Nconc_org)/Nconc_inorg))
+#
+# arrange values in order of MP so that the following loop works correctly
+mineral <- mineral %>%
+  arrange(Plot) %>%
+  arrange(Site) %>%
+  arrange(MP)
 #
 # Extrapolate linearly the following for labeling point (1/4 from one harvest to the next):
 # Make subset of data for Abisko and Vassijaure
 mineral_A <- mineral %>%
-  select(Site, Plot, MP, Round, SE_SEF) %>%
+  select(Site, Plot, MP, Round, Extr_type) %>%
   filter(Site == "Abisko")
 mineral_A["Nconc_in0.A"] <- NA
 mineral_V <- mineral %>%
-  select(Site, Plot, MP, Round, SE_SEF) %>%
+  select(Site, Plot, MP, Round, Extr_type) %>%
   filter(Site == "Vassijaure")
 mineral_V["Nconc_in0.V"] <- NA
 # Double check I can count
@@ -236,7 +257,11 @@ for (i in 2:15) {
                                                                      mineral$MP == (i))] - 
                                           mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
                                                                      mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))])/dayHH * dayHL + 
+                                                                     mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Abisko" & 
+                                                                                                                   mineral$Plot == j &
+                                                                                                                   mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Abisko" &
+                                                                                                                                                                  mineral$Plot == j &
+                                                                                                                                                                  mineral$MP == (i))] +
                                           mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
                                                                      mineral$Plot == j & 
                                                                      mineral$MP == (i-1))]
@@ -245,35 +270,53 @@ for (i in 2:15) {
                                                                      mineral$MP == i)] - 
                                           mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
                                                                      mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))])/dayHH * dayHL + 
+                                                                     mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Abisko" & 
+                                                                                                                   mineral$Plot == j &
+                                                                                                                   mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Abisko" &
+                                                                                                                                                                  mineral$Plot == j &
+                                                                                                                                                                  mineral$MP == (i))] + 
                                           mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
                                                                      mineral$Plot == j & 
                                                                      mineral$MP == (i-1))]
   }
 }
+
+
+(mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 6)] - mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 5)])/mineral$DaysHH[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))] * mineral$DaysHL[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))] + mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))]
+
+(mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 2)] - mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 5)])/dayHH * dayHL + mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (2-1))]
+
+
+
+test <- mineral %>%
+  left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
+  left_join(mineral_V, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
+  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>%
+  select(!c(Nconc_in0.A, Nconc_in0.V))
+
 # Combine Abisko and Vassijaure and join the values
 mineral_test <- mineral %>%
-  left_join(mineral_A, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
-  left_join(mineral_V, by = join_by(Site, Plot, MP, Round, SE_SEF)) %>%
+  left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
+  left_join(mineral_V, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
   mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>%
   select(!c(Nconc_in0.A, Nconc_in0.V))
 #
 # Add core mass in DW
 mic_mass <- Mic15N %>%
-  select(Site, Plot, MP, Round, Mic_mass) %>%
+  select(Site, Plot, MP, Soil_RF_DW_g)# %>%
   mutate(across(c(Plot, MP), as.character))
 #
 mineral_test <- mineral_test %>%
-  left_join(mic_mass, by = join_by(Site, Plot, MP, Round)) %>%
-  relocate(Mic_mass, .after = SE_SEF)
+  left_join(mic_mass, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
+  relocate(Soil_RF_DW_g, .after = Extr_type)
 #
 # calculate how much 15N was added and add it to the inorganic pool at labeling
 mineral_test <- mineral_test %>%
-  mutate(inj_15N = (N_add*1000)/Mic_mass) %>% # µg N added pr g DW
+  mutate(inj_15N = (N_add*1000)/Soil_RF_DW_g) %>% # µg N added pr g DW
   mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
   mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
 #  mutate(Nconc_in0_l_2 = (Nconc_in0*Mic_mass + N_add*1000)/Mic_mass) %>% # Same as above but made explicit
-  mutate(atom_pc_in0_l = (98.7*inj_15N + atom_pc_soil_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! 98.7% atom% for label
+  mutate(atom_pc_in0_l = (98.7*inj_15N + Atom_pc_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! 98.7% atom% for label
 #
 # Calculate isotope ratio at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
 mineral_test <- mineral_test %>%
@@ -293,14 +336,14 @@ mineral_test <- mineral_test %>%
 
 # Now the mineralization can be calculated
 mineral_test <- mineral_test %>%
-  mutate(gross_p = (log((atom_pc_in_harvest_low2 - atom_pc_soil_NatAb # ft - k
-                         ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
+  mutate(gross_p = (log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
+                         ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
                         ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
                           ) / dayLH), 
          # gross production
-         gross_c = (1 + log((atom_pc_in_harvest_low2 - atom_pc_soil_NatAb # ft - k
-                           ) / (atom_pc_in0_l - atom_pc_soil_NatAb) # f0 - k
+         gross_c = (1 + log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
+                           ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
                           ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
                         ) / dayLH)
@@ -325,17 +368,18 @@ mineral_test %>%
 
 # Testing on plant uptake
 vegroot15N_format <- vegroot15N %>%
-  mutate(across(c("Plot", "MP"), as.character))
+  #mutate(across(c("Plot", "MP"), as.character)) %>%
+  rename("Atom_pc_plant" = Atom_pc)
 vegMineral <- vegroot15N_format %>%
   left_join(mineral_test, by = join_by(Site, Plot, MP, Round)) %>%
   dplyr::select(1:15, 34, 39:42)
 
 vegMineral <- vegMineral %>%
-  mutate(ext14N_high = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/R_avg_high,
-         ext14N_low = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/R_avg_low) %>%
-  mutate(NtotRec_high = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(AP_avg_high/100),
-         NtotRec_low = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/(AP_avg_low)/100) %>%
-  mutate(frac15Nstart = ((atom_pc - atom_pc_NatAb)/100 * Nconc/100 * Biomass)/Nconc_in0_l,
+  mutate(ext14N_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/R_avg_high,
+         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/R_avg_low) %>%
+  mutate(NtotRec_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/(AP_avg_high/100),
+         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/(AP_avg_low)/100) %>%
+  mutate(frac15Nstart = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/Nconc_in0_l,
          Ntot_stand_high = NtotRec_high/Nconc_in0_l,
          Ntot_stand_low = NtotRec_low/Nconc_in0_l,
          Recov_stand = Recovery/Nconc_in0_l)
@@ -530,12 +574,12 @@ summary(lme1)
 #-------   ##       Q1a      ##  -------
 #
 # Model
-# Response variable: plant recovery of 15N (% of combined functional groups particitioned into organs)
+# Response variable: plant recovery of 15N (% of combined functional groups partitioned into organs)
 # Factors: Time, Site, Organ, Time*Organ, Time*Site, Site*Organ, Time*Site*Organ
 # Most important factors: Organ, Time*Organ, Time*Site*Organ
 #
 vegroot15N_Organ <- vegroot15N %>%
-  select(1:4,6,7,15) %>%
+  select(1:4,Species,Organ,Recovery) %>%
   group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
   summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   ungroup() %>%
@@ -543,8 +587,9 @@ vegroot15N_Organ <- vegroot15N %>%
   mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
   left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
   select(1:7) %>%
-  mutate(OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
-  select(1:6)
+  mutate(OrganRecovery_ofTotal = OrganRecovery, 
+         OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
+  select(1:5,OrganRecovery)
 #
 # Contrasts - plant organs
 # For contrasts of Round see Q1
@@ -557,7 +602,7 @@ contrasts(vegroot15N_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot
 contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
 #
 # Check if contrasts work, by using a two-way ANOVA
-OrganModel_alias <- aov(OrganRecovery_frac ~ Round*Site, data = vegroot15N_Organ)
+OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
 Anova(OrganModel_alias, type ="III")
 # alias checks dependencies
 alias(OrganModel_alias)
@@ -598,9 +643,10 @@ par(mfrow = c(1,1))
 #model output
 Anova(lme1a, type=2)
 summary(lme1a)
-# Highly significant for Round, Organ Round*Organ and significant for three-way interaction
 # For organ recovery as fraction of whole plant recovery:
 # Highly significant for organ and all interactions except Round:Site
+#
+#
 #
 #=======  ###   Statistics   ### =======
 #-------   ##       Q2       ##  -------

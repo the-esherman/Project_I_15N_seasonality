@@ -14,7 +14,7 @@ library(readxl)
 #
 #------- ### Load data ### -------
 #
-DataName <- "raw_data/base data v1.2_R.xlsx"
+DataName <- "raw_data/base data v1.3_R.xlsx"
 #
 # Core data:
 # Harvest information, snow measurements, core diameter, soil depth and mass (and sub-mass), label values, soil moisture, sub-sample root mass
@@ -31,6 +31,7 @@ extrMass <- read_xlsx(DataName, sheet = "Extracts", skip = 1, col_names = TRUE, 
 #
 # Soil extraction 15N data: delta15N, [N], Atom%
 extr15N <- read_xlsx(DataName, sheet = "Extr_15N", skip = 1, col_names = TRUE, na = "NA")
+extr15N_last <- read_xlsx(DataName, sheet = "Extr_15N_last", skip = 1, col_names = TRUE, na = "")
 #
 # Soil extraction inorganic N concentrations and for blanks
 extrInorgN <- read_xlsx(DataName, sheet = "Extr_inorgN_raw", skip = 1, col_names = TRUE, na = "NA")
@@ -209,6 +210,7 @@ extrMass2 <- extrMass_DW %>%
 # Add mass to extraction and calculate the [N] (TDN from IRMS)
 extr15N_Nconc <- extr15N %>%
   select(1:10) %>%
+  bind_rows(extr15N_last) %>% # Append the previously missing samples to the end
   left_join(extrMass2, by = join_by(Site, Plot, MP, Extr_type)) %>%
   mutate(Nconc_microg2 = ((Nconc_sample_microg/FreezeD_mL)*(MilliQ_mL+SW_mL))/Soil_DW_g)
 
@@ -232,11 +234,13 @@ extrTDN_1 <- extrTDN %>%
 # Select only parts that match [N] (TDN from IRMS) and rename to fit
 extrTDN_2 <- extrTDN_1 %>%
   select(1:4, Soil_FW_g, DW_FW_frac, Soil_DW_g, SW_mL, TDN_microg_pr_gDW) %>%
-  rename(Nconc_microg2 = TDN_microg_pr_gDW)
+  rename(Nconc_microg3 = TDN_microg_pr_gDW)
 
 # Combine all TDN [N]
 extr15N_Nconc_1 <- extr15N_Nconc %>%
-  bind_rows(extrTDN_2)
+  left_join(extrTDN_2, by = join_by(Site, Plot, MP, Extr_type, Soil_FW_g, DW_FW_frac, Soil_DW_g, SW_mL)) %>%
+  mutate(Nconc_microg2 = if_else(is.na(Nconc_microg), Nconc_microg3, Nconc_microg2)) %>% # We don't have exact values for the missing or last samples that were analysed with quAAtro instead of IRMS. So results are replaced there with TDN values
+  select(1:15)
 
 # Controls of TDN
 # Average the control atom% by site and type of extraction
@@ -428,7 +432,7 @@ dotchart(extrInorgN_essential$NO3_microg_pr_gDW,
 #
 # » TDN + inorganic N « ----
 #
-# Save extract data in one file (inorganic [N] and TDN 15N data)
+# Combine extract data in one file (inorganic [N] and TDN 15N data)
 extr15N_all <- extr15N_TDN_essential %>%
   left_join(extrInorgN_essential, by = join_by(Site, Plot, MP, Extr_type))
 

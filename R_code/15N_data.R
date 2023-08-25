@@ -137,6 +137,11 @@ vegroot15N_total_Plant <- vegroot15N %>%
 Mic15N <- soil15N %>%
   pivot_wider(names_from = "Extr_type", values_from = c(Nconc_microg_pr_gDW, d15N, Atom_pc, NO3_microg_pr_gDW, NH4_microg_pr_gDW, Atom_pc_NatAb))
 
+# Add Round to microbial data as well as other relevant information
+Mic15N <- Mic15N %>%
+  left_join(coreData, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
+  select(1:16, Round) %>%
+  relocate(Round, .after = MP)
 
 Mic15N <- Mic15N %>%
   mutate(R_TDN = ((Atom_pc_SE - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
@@ -660,29 +665,32 @@ summary(lme1a)
 Mic15N_R <- Rec15N %>%
   select("Site", "Plot", "MP", "Round", "R_MBN")
 Mic15N_R <- Mic15N_R %>%
-  filter(!(is.na(R_MBN))) %>% # remove empty rows, MP9, 13 and 15 as they are missing from either SE or SEF
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Contrasts - MBN recovery
+# First few contrasts are same as for plant recovery:
+# SummervsWinter, SpringvsAutumn, SnowvsNot
 # Month                (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# Month                (J, A, S, O, N, D, J, F,  , A, A, M,  , J,  ) # Missing March, June and August-20
-# Month                (J, A, S, O, N, D, J, F, A, A, M, J)
-SummervsWinter_Mic <- c(1, 1, 0, 0, 0,-1,-1,-1, 0, 0, 0, 1)
-SpringvsAutumn_Mic <- c(0, 0, 1, 1, 1, 0, 0, 0,-1,-1,-1, 0)
-SnowvsNot_Mic      <- c(7, 7, 7, 7,-5,-5,-5,-5,-5,-5,-5, 7)
-Cont4_Mic          <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1) # July vs July
-Cont5_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0) # 2 times april
-Cont6_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0) # Spring change
-Cont7_Mic          <- c(0, 0, 0, 0, 2,-1,-1, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
-Cont8_Mic          <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
-Cont9_Mic          <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
-Cont10_Mic         <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Cont11_Mic         <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0)
+# MP                   (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Cont4_Mic          <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0) # July vs July
+Cont5_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # 2 times april
+Cont6_Mic          <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
+Cont7_Mic          <- c(0, 0, 0, 0, 2,-1,-1, 0, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
+Cont8_Mic          <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
+Cont9_Mic          <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
+Cont10_Mic         <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Cont11_Mic         <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 AvsV<-c(1,-1)
 contrasts(Mic15N_R$Site)<-AvsV
-contrasts(Mic15N_R$Round)<-cbind(SummervsWinter_Mic,SpringvsAutumn_Mic,SnowvsNot_Mic, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
+contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
 #contrasts(Mic15N_R$Round)<-contr.helmert
+#
+# Check if contrasts work, by using a two-way ANOVA
+MicModel_alias <- aov(R_MBN ~ Round*Site, data = Mic15N_R)
+Anova(MicModel_alias, type ="III")
+# alias checks dependencies
+alias(MicModel_alias)
 #
 # Alternative: Two-way ANOVA
 # have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design

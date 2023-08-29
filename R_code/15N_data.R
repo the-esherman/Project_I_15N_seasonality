@@ -544,8 +544,8 @@ contrasts(vegroot15N_total_Plant$Round)<-cbind(SummervsWinter,SpringvsAutumn,Sno
 #
 # Check contrasts are orthogonal
 crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot))#, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
-
-
+# Not orthagonal
+#
 # Check if contrasts work, by using a two-way ANOVA
 PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_total_Plant)
 Anova(PlantModel_alias, type ="III")
@@ -1109,7 +1109,7 @@ Rec15N_sum2 %>%
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
+#
 Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Site)) +
   geom_line() +
@@ -1123,7 +1123,15 @@ Rec15N_sum2 %>%
 #
 # Recovery with all plots still available
 Rec15N_2 <- Rec15N %>%
-  pivot_longer(cols = c(PlantR_frac, R_MBN_frac, R_TDN_frac), names_to = "Type", values_to = "Recovery") %>%
+  rename(R_Plant_frac = "PlantR_frac") %>%
+  pivot_longer(cols = c(R_Plant_frac, R_MBN_frac, R_TDN_frac), names_to = "Type", values_to = "Recovery") %>%
+  select(1:4, Type, Recovery) %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x)))
+#
+Rec15N_3 <- Rec15N %>%
+  rename(R_Plant = "PlantRecovery") %>%
+  pivot_longer(cols = c(R_Plant, R_MBN, R_TDN), names_to = "Type", values_to = "Recovery") %>%
   select(1:4, Type, Recovery) %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x)))
@@ -1131,12 +1139,76 @@ Rec15N_2 <- Rec15N %>%
 # Plot with geom_smooth
 Rec15N_2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recovery, color = Type)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
   geom_point() +
-  geom_smooth(se = TRUE) +
-  facet_wrap( ~ Site)
-
-
-
+  geom_smooth(span = 0.3, se = TRUE, alpha = 0.6) +
+  scale_color_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) +
+  facet_wrap( ~ Site) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+Rec15N_3 %>%
+  ggplot(aes(x = Day_of_harvest, y = Recovery, color = Type)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
+  geom_point() +
+  geom_smooth(span = 0.3, se = TRUE, alpha = 0.6) +
+  scale_color_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +
+  facet_wrap( ~ Site) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+# Testing ##----
+#
+vegroot15N_Organ_sum2 <- vegroot15N_Organ_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, Organ, OrganRecovery, ci, Day_of_harvest)
+#
+vegroot15N_Organ_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill = Organ)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  #coord_cartesian(ylim = c(-110,75)) +
+  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
+  #scale_linetype(labels = c("Abisko", "Vassijaure")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") +
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  #guides(color = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+  
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs)
+#
+vegroot15N_Organ_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill=Organ, linetype=Site)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
+  scale_linetype(labels = c("Abisko", "Vassijaure")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+vegroot15N_Organ_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill=Organ, linetype=Organ)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
+  scale_linetype(labels = c("CR", "FR", "S")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+
+  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  facet_wrap( ~ Site, ncol = 2) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #

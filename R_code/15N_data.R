@@ -24,6 +24,7 @@ soil15N <- read_csv("clean_data/Soil_N.csv", col_names = TRUE)
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
 winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
+winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-27"),as.Date("2020-06-22")))
 #
 # List of Measuring periods as they should appear in graphs
 measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
@@ -156,7 +157,7 @@ Mic15N <- Mic15N %>%
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
-  left_join(Mic15N, by = join_by(Site, Plot, MP)) %>%
+  left_join(Mic15N, by = join_by(Site, Plot, MP, Round)) %>%
   select(Site, Plot, MP, Round, PlantRecovery, R_TDN, R_MBN) %>%
   rowwise() %>%
   mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
@@ -790,6 +791,18 @@ vegroot15N %>%
 #
 #-------   ##    Recovery    ## -------
 #
+# For species recovery, it is also possible to 
+vegroot15N_Species <- vegroot15N %>%
+  select(1:4,Species,Organ,Recovery) %>%
+  #group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
+  #summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  #ungroup() %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
+  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:8) %>%
+  mutate(SpOrganRecovery = Recovery/PlantRecovery*100)
+#
 # Sum recovery and calculate average
 # This means combining
 # Shoots: ES, DS, G, O, U
@@ -825,9 +838,9 @@ vegroot15N %>%
 #
 # Same as above, but Recovery proportional to total plant recovery
 # organRecovery / PlantRecovery
-vegroot15N %>%
+vegroot15N_Organ %>%
   group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
-  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  summarise(TotalRecovery = sum(OrganRecovery, na.rm = TRUE), .groups = "keep") %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
   summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
   mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery),
@@ -841,14 +854,14 @@ vegroot15N %>%
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-15,3)) +
+  coord_cartesian(ylim = c(-110,75)) +
   scale_fill_viridis_d() +
   #  scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
   geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
   scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-15, -12, -9, -6, -3, 0, 3), labels = abs) +
+  scale_y_continuous(breaks = c(-100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -856,10 +869,10 @@ vegroot15N %>%
 #
 # Each species or part separated. For a quick overview of where patterns might come from
 vegroot15N %>%
-  group_by(across(c("Site", "Plot", "Round", "Organ", "Species"))) %>%
-  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  #group_by(across(c("Site", "Plot", "Round", "Organ", "Species"))) %>%
+  #summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   group_by(across(c("Site", "Round", "Organ", "Species"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), .groups = "keep") %>%
+  summarise(avgRecovery = mean(Recovery, na.rm = TRUE), .groups = "keep") %>%
   mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery)) %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
   #
@@ -869,10 +882,34 @@ vegroot15N %>%
   geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack") +
   coord_cartesian(ylim = c(-8,3)) +
   scale_fill_viridis_d() +
+  scale_y_continuous(labels = abs) +
   #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
   #geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
   facet_wrap( ~ Site + Species, ncol = 5) +
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per species per organ")) +
+  guides(fill = guide_legend(title = "Plant organ")) + 
+  theme_light(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
+#
+# Species, excluding the belowground Bulk roots. Proportional to total recovered in plants
+vegroot15N_Species %>%
+  group_by(across(c("Site", "Round", "Organ", "Species"))) %>%
+  summarise(avgRecovery = mean(SpOrganRecovery, na.rm = TRUE), .groups = "keep") %>%
+  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  filter(Species != "Bulk" & Species != "BulkG") %>%
+  #
+  # Plot 
+  ggplot() +
+  #geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack") +
+  coord_cartesian(ylim = c(-20,40)) +
+  scale_fill_viridis_d() +
+  scale_y_continuous(labels = abs) +
+  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
+  #geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
+  facet_wrap( ~ Site + Species, ncol = 5) +
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per species per organ")) +
   guides(fill = guide_legend(title = "Plant organ")) + 
   theme_light(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
@@ -1008,15 +1045,98 @@ Rec15N_sum %>%
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_col(aes(Round, Recovery, fill = factor(Type, levels=c("PlantR_frac","R_MBN_frac","R_TDN_frac"))), position = "stack", color = "black") +
   coord_cartesian(ylim = c(0,100)) +
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d(labels = c("Plant", "Microbial", "TDN")) +
   scale_x_discrete(labels = measuringPeriod) +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "System part")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+# Attempting to add the 95% CI as smooth line
+test <- Rec15N %>%
+  left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:11, Day_of_harvest) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x)))
+
+# Extract date for sample. Here using Day of harvest
+DayOf <- coreData %>%
+  select(Site, Round, Day_of_harvest) %>%
+  distinct(Day_of_harvest, .keep_all = TRUE)
+#
+# Plant recovery fraction
+Rec15N_Plant_sum2 <- Rec15N_Plant_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, PlantR_frac, ci, Day_of_harvest) %>%
+  add_column(Type = "Plant_frac") %>%
+  rename(Recov_frac = "PlantR_frac")
+#
+# Microbial recovery fraction
+Rec15N_MBN_sum2 <- Rec15N_MBN_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, R_MBN_frac, ci, Day_of_harvest) %>%
+  add_column(Type = "MBN_frac") %>%
+  rename(Recov_frac = "R_MBN_frac")
+#
+# TDN recovery fraction
+Rec15N_TDN_sum2 <- Rec15N_TDN_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, R_TDN_frac, ci, Day_of_harvest) %>%
+  add_column(Type = "TDN_frac") %>%
+  rename(Recov_frac = "R_TDN_frac")
+#
+# Combine recovery types to one file
+Rec15N_sum2 <- Rec15N_Plant_sum2 %>%
+  bind_rows(Rec15N_MBN_sum2) %>%
+  bind_rows(Rec15N_TDN_sum2)
+#
+# Graph recovery by type and add 95% CI
+Rec15N_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
+  scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+
+  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system"))+# to wrap the title properly around use atop() ))) +
+  facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+Rec15N_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Site)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
+  scale_linetype(labels = c("Abisko", "Vassijaure")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+# Recovery with all plots still available
+Rec15N_2 <- Rec15N %>%
+  pivot_longer(cols = c(PlantR_frac, R_MBN_frac, R_TDN_frac), names_to = "Type", values_to = "Recovery") %>%
+  select(1:4, Type, Recovery) %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x)))
+#
+# Plot with geom_smooth
+Rec15N_2 %>%
+  ggplot(aes(x = Day_of_harvest, y = Recovery, color = Type)) +
+  geom_point() +
+  geom_smooth(se = TRUE) +
+  facet_wrap( ~ Site)
+
+
+
 #
 #
 #

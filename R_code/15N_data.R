@@ -1384,6 +1384,53 @@ test %>%
   #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
   facet_wrap( ~ Site)
 #
+# TDN concentration changes
+soil15N %>%
+  left_join(coreData, by = join_by(Site,Plot,MP)) %>%
+  select(1:11, Round) %>%
+  ggplot(aes(x = Round, y = Nconc_microg_pr_gDW, fill = Extr_type)) +
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = "TDN µg pr g DW", title = "TDN") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Soil mass
+coreData %>%
+  ggplot(aes(x = Round, y = Soil_RF_DW_g)) +
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = "Root free soil g DW", title = "Soil mass for microbial") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Core depth
+coreData %>%
+  ggplot(aes(x = Round, y = Soil_depth_cm)) +
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = "depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Snow cover
+coreData %>%
+  ggplot(aes(x = Round, y = Snow_depth_plot_cm)) +
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = "Snow depth (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Soil moisture
+coreData %>%
+  ggplot(aes(x = Round, y = (SM_FW_g - SM_DW_g)/SM_DW_g*100)) +
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = "Soil moisture (g pr g FW)", title = "Soil moisture") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
 #
 #
 #=======  ###  { The End }   ### =======

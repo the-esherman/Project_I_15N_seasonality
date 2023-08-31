@@ -163,7 +163,8 @@ Rec15N <- vegroot15N_total_Plant %>%
   mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
   mutate(PlantR_frac = PlantRecovery/sysRec*100,
          R_TDN_frac = R_TDN/sysRec*100,
-         R_MBN_frac = R_MBN/sysRec*100)
+         R_MBN_frac = R_MBN/sysRec*100) %>%
+  ungroup()
 #
 #
 #
@@ -845,17 +846,16 @@ Anova(MicModel3, type ="III")
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
-  mutate(Recov = R_MBN_frac) 
+  mutate(Recov = R_MBN) 
 Mic15N_R <- Mic15N_R %>%
-  mutate(t = max(100, max(Mic15N_R$Recov))) %>%
-  mutate(sqrtR_MBN = sqrt(Recov),
-         logR_MBN = log(Recov),
-         cubeR_MBN = (Recov)^(1/3),
-         arcR_MBN = asin(sqrt(Recov/max(100, max(Mic15N_R$Recov)))))
+  mutate(sqrtRecov = sqrt(Recov),
+         logRecov = log(Recov),
+         cubeRecov = (Recov)^(1/3),
+         arcRecov = asin(sqrt(Recov/max(100, max(Mic15N_R$Recov)))))
 #
 #
 #model:
-lme2<-lme(sqrtR_MBN ~ Site*Round,
+lme2<-lme(Recov ~ Site*Round,
           random = ~1|Plot/Site,
           data = Mic15N_R, na.action = na.exclude , method = "REML")
 #
@@ -963,7 +963,8 @@ test2 <- test %>%
   mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
   mutate(PlantR_frac = PlantRecovery/sysRec*100,
          R_TDN_frac = R_TDN/sysRec*100,
-         R_MBN_frac = R_MBN/sysRec*100)
+         R_MBN_frac = R_MBN/sysRec*100) %>%
+  ungroup()
 #
 test3 <- test2 %>%
   mutate(Recov = R_MBN_frac)
@@ -972,6 +973,13 @@ test3 <- test3 %>%
          logR_MBN = log(Recov),
          cubeR_MBN = (Recov)^(1/3),
          arcR_MBN = asin(sqrt(Recov/max(100, max(test3$Recov)))))
+#
+dotchart(test3$R_MBN,
+         main="Cleveland plot - Microbial", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = test3$Round, 
+         groups = test3$Plot,
+         gpch = 12, gcolor = 1)
 #
 lme2_2<-lme(arcR_MBN ~ Site*Round,
             random = ~1|Plot/Site,
@@ -990,6 +998,83 @@ par(mfrow = c(1,1))
 Anova(lme2_2, type=2)
 #
 #
+#
+#=======  ###   Statistics   ### =======
+#-------   ##       TDN       ##  -------
+#
+# Not a part of the direct questions, but still related
+# Model
+# Response variable: Dissolved Nitrogen 15N pool of injected. TDN
+# Factors: Time, Site, Time*Site
+# Most important factor: Time
+#
+TDN15N <- Rec15N %>%
+  select(1:4, R_TDN, R_TDN_frac) %>%
+  mutate(across(c("Plot", "MP"), ~as.character(.x))) %>%
+  mutate(across(c("Site", "MP", "Round"), ~as.factor(.x))) %>%
+  ungroup()
+#
+# Contrasts - TDN
+# Same contrasts as plants
+contrasts(TDN15N$Site)<-AvsV
+contrasts(TDN15N$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#
+# transform data
+TDN15N <- TDN15N %>%
+  mutate(Recov = R_TDN_frac)
+TDN15N <- TDN15N %>%
+  mutate(sqrtRecov = sqrt(Recov),
+         invRecov = 1/Recov,
+         logRecov = log(Recov),
+         cubeRecov = (Recov)^(1/3),
+         arcRecov = asin(sqrt(Recov/100)))
+#
+#model:
+lmeTDN<-lme(logRecov ~ Round*Site,
+          random = ~1|Plot/Site,
+          data = TDN15N, na.action = na.exclude, method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN), resid(lmeTDN), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN), main = "Normally distributed?")                 
+qqline(resid(lmeTDN), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lmeTDN, type=2)
+summary(lmeTDN)
+# Significant for Round and Site
+#
+TDN_season <- TDN15N %>%
+  select(1:4, Recov) %>%
+  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
+                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
+                              TRUE ~ NA),
+         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
+                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
+                              TRUE ~ NA),
+         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
+#
+# Significant for Summer vs Winter and Autumn vs Spring
+TDN_season %>%
+  filter(!is.na(SeasonSW)) %>%
+  summarise(Recov_season = mean(Recov), .by = c(SeasonSW))
+TDN_season %>%
+  filter(!is.na(SeasonAS)) %>%
+  summarise(Recov_season = mean(Recov), .by = c(SeasonAS))
+# Summer 0.124 and winter 0.171.
+# Autumn 0.114 and Spring 0.127.
+#
+# Significant for Snow covered season
+TDN_season %>%
+  summarise(Recov_season = mean(Recov), .by = c(Snow))
+# Snow covered period: 0.114 and outside: 0.155
+summarySE(TDN_season, measurevar = "Recov", groupvars = c("Snow"))
+summarySE(TDN_season, measurevar = "Recov", groupvars = c("SeasonSW"))
+summarySE(TDN_season, measurevar = "Recov", groupvars = c("SeasonAS"))
 #
 #
 #

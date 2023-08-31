@@ -522,10 +522,11 @@ vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
 #
 # Contrasts - whole plant recovery
 # Month            (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP               (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
 SummervsWinter <- c(1, 1, 0, 0,-1,-1,-1,-1,-1, 0, 0, 0, 1, 1, 1)
 SpringvsAutumn <- c(0, 0, 1, 1, 1, 0, 0, 0, 0,-1,-1,-1, 0, 0, 0)
 SnowvsNot      <- c(-8,-8,-8,-8,7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow from November to May, but June in Vassijaure!
-JulvsJan       <- c(1, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 0, 1)
+JulvsJan       <- c(1, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 1, 0)
 OctvsApr       <- c(0, 0, 1, 0, 0, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0)
 Summervs2      <- c(1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer '19 vs summer '20
 SpringChA      <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change in Abisko: April vs May
@@ -543,8 +544,8 @@ contrasts(vegroot15N_total_Plant$Round)<-cbind(SummervsWinter,SpringvsAutumn,Sno
 #contrasts(vegroot15N_total_Plant$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
 #
 # Check contrasts are orthogonal
-crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot))#, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
-# Not orthagonal
+crossprod(cbind(SummervsWinter, SpringvsAutumn, SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
+# Not orthogonal
 #
 # Check if contrasts work, by using a two-way ANOVA
 PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_total_Plant)
@@ -560,7 +561,7 @@ vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
   mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this for general percentages!!
 #
 #model:
-lme1<-lme(arcPlantRecovery ~ Round*Site,
+lme1<-lme(logPlantRecovery ~ Round*Site,
           random = ~1|Plot/Site,
           data = vegroot15N_total_Plant, na.action = na.exclude, method = "REML")
 #
@@ -578,8 +579,78 @@ Anova(lme1, type=2)
 summary(lme1)
 # Significant for Round
 #
+Q1_season <- vegroot15N_total_Plant %>%
+  select(1:4, PlantRecovery) %>%
+  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
+                            MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
+                            TRUE ~ NA),
+         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
+                            MP == 10 | MP == 11 | MP == 12 ~ "Spring",
+                            TRUE ~ NA),
+         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
+#
+# Significant for Summer vs Winter and Autumn vs Spring
+Q1_season %>%
+  filter(!is.na(SeasonSW)) %>%
+  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(SeasonSW))
+Q1_season %>%
+  filter(!is.na(SeasonAS)) %>%
+  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(SeasonAS))
+# Summer 5.72 and winter 7.14. But only really visible for Abisko
+# Autumn 6.56 and Spring 4.33, but larger for Abisko
+#
+# Significant for Snow covered season
+Q1_season %>%
+  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(Snow))
+# Snow covered period: 6.09 and outside: 5.96
+summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("Snow"))
+summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("SeasonSW"))
+summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("SeasonAS"))
+
+Q1_season %>%
+  ggplot(aes(x = Round, y = PlantRecovery, fill = Snow)) +
+  geom_boxplot() +
+  facet_wrap(~Site)
+
 #
 #
+#-------   ##       Q1 alternative      ##  -------
+test <- Rec15N %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round"), as.factor)) %>%
+  rename(Recov = "PlantR_frac") # ◄══════
+#
+contrasts(test$Site)<-AvsV
+contrasts(test$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#
+test <- test %>%
+  mutate(sqrtRecov = sqrt(Recov)) %>%
+  mutate(invRecov = 1/Recov) %>%
+  mutate(logRecov = log(Recov+1)) %>%
+  mutate(arcRecov = asin(sqrt(Recov/100))) %>%
+  mutate(loglogRecov = log(log(Recov+1)),
+         logarcRecov = log(asin(sqrt(Recov/100))))
+  
+#
+#model:
+lme1_2<-lme(logarcRecov ~ Round*Site, # ◄══════
+          random = ~1|Plot/Site,
+          data = test, na.action = na.exclude, method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1_2), resid(lme1_2), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1_2), main = "Normally distributed?")                 
+qqline(resid(lme1_2), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme1_2, type=2)
+summary(lme1_2)
+# Non-significant for anything
+
 #=======  ###   Statistics   ### =======
 #-------   ##       Q1a      ##  -------
 #
@@ -610,6 +681,10 @@ contrasts(vegroot15N_Organ$Site)<-AvsV
 contrasts(vegroot15N_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14) # Contrasts defined in Q1
 #contrasts(vegroot15N_Organ$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
 contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
+#
+# Check contrasts are orthogonal
+crossprod(cbind(SvsR,CRvsFR))
+# Orthogonal
 #
 # Check if contrasts work, by using a two-way ANOVA
 OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
@@ -656,6 +731,72 @@ summary(lme1a)
 # For organ recovery as fraction of whole plant recovery:
 # Highly significant for organ and all interactions except Round:Site
 #
+Q1a_season <- vegroot15N_Organ %>%
+  select(1:4, Organ, OrganRecovery) %>%
+  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
+                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
+                              TRUE ~ NA),
+         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
+                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
+                              TRUE ~ NA),
+         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
+#
+# Significant for Summer vs Winter and Autumn vs Spring
+Q1a_season %>%
+  filter(!is.na(SeasonSW)) %>%
+  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(Organ, SeasonSW))
+Q1a_season %>%
+  filter(!is.na(SeasonAS)) %>%
+  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(SeasonAS))
+# Summer 5.72 and winter 7.14. But only really visible for Abisko
+# Autumn 6.56 and Spring 4.33, but larger for Abisko
+#
+# Significant for Snow covered season
+Q1a_season %>%
+  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(Snow))
+# Snow covered period: 6.09 and outside: 5.96
+summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "Snow"))
+summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "SeasonSW"))
+summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("SeasonAS"))
+summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "Site"))
+summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Site", "MP", "Organ"))
+#
+Q1a_season %>%
+  ggplot(aes(x = Round, y = OrganRecovery, fill = SeasonAS)) +
+  geom_col() +
+  facet_wrap(~Site)
+#
+Q1a_season %>%
+  filter(Snow == "Clear") %>%
+  summarise(Snow_sum = sum(OrganRecovery),
+            Snow_count = length(OrganRecovery)) %>%
+  mutate(Snow_avg = Snow_sum/Snow_count)
+#
+# Test correlation of biomass vs organ proportional recovery
+vegroot15N_bio_organ <- vegroot15N %>%
+  select(1:4,Species,Organ,Biomass_DW_g) %>%
+  group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
+  summarise(Biomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
+  ungroup() %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
+
+vegroot15N_organBioCorr <- vegroot15N_Organ %>%
+  select(1:4, Organ, OrganRecovery) %>%
+  left_join(vegroot15N_bio_organ, by = join_by(Site, Plot, MP, Round, Organ))
+vegroot15N_organBioCorr %>%
+  ggplot(aes(x = log(Biomass), y = (OrganRecovery), color = Organ)) +
+  geom_point() +
+  geom_smooth(method = lm, span = 0.3, se = TRUE, alpha = 0.6) +
+  #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
+  facet_wrap( ~ Site)
+#
+CorrFunc <- function(xx) {
+  return(data.frame(COR = cor(xx$Biomass, xx$OrganRecovery, method = "spearman")))
+}
+ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
+# No correlation for most < 0.6
+#
 #
 #
 #=======  ###   Statistics   ### =======
@@ -668,7 +809,7 @@ summary(lme1a)
 #
 # Load data from excel instead of calculated combined
 Mic15N_R <- Rec15N %>%
-  select("Site", "Plot", "MP", "Round", "R_MBN")
+  select("Site", "Plot", "MP", "Round", "R_MBN", "R_MBN_frac")
 Mic15N_R <- Mic15N_R %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
@@ -679,7 +820,7 @@ Mic15N_R <- Mic15N_R %>%
 Cont4_Mic     <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0) # July vs July
 Cont5_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # 2 times april
 Cont6_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
-Cont7_Mic     <- c(0, 0, 0, 0, 2,-1,-1, 0, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
+Cont7_Mic     <- c(0, 0, 0, 0, 3,-1,-1,-1, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
 Cont8_Mic     <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
 Cont9_Mic     <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
 Cont10_Mic    <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -690,7 +831,7 @@ contrasts(Mic15N_R$Site)<-AvsV
 # SummervsWinter, SpringvsAutumn, SnowvsNot
 contrasts(Mic15N_R$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
 #contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
-#contrasts(Mic15N_R$Round)<-contr.helmert
+contrasts(Mic15N_R$Round)<-contr.helmert
 #
 # Check if contrasts work
 # Check contrasts are orthogonal
@@ -704,14 +845,17 @@ Anova(MicModel3, type ="III")
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
-  mutate(sqrtR_MBN = sqrt(R_MBN)) %>%
-  mutate(logR_MBN = log(R_MBN)) %>%
-  mutate(cubeR_MBN = (R_MBN)^(1/3)) %>%
-  mutate(arcR_MBN = asin(sqrt(R_MBN/max(Mic15N_R$R_MBN))))
+  mutate(Recov = R_MBN) 
+Mic15N_R <- Mic15N_R %>%
+  mutate(t = max(100, max(Mic15N_R$Recov))) %>%
+  mutate(sqrtR_MBN = sqrt(Recov),
+         logR_MBN = log(Recov),
+         cubeR_MBN = (Recov)^(1/3),
+         arcR_MBN = asin(sqrt(Recov/max(100, max(Mic15N_R$Recov)))))
 #
 #
 #model:
-lme2<-lme(R_MBN ~ Site*Round,
+lme2<-lme(arcR_MBN ~ Site*Round,
           random = ~1|Plot/Site,
           data = Mic15N_R, na.action = na.exclude , method = "REML")
 #
@@ -728,6 +872,17 @@ par(mfrow = c(1,1))
 Anova(lme2, type=2)
 summary(lme2)
 # Highly significant for Round
+
+Mic15N_R %>%
+  ggplot(aes(x = R_MBN)) +
+  geom_dotplot()
+
+dotchart(Rec15N$PlantR_frac, 
+         main="Cleveland plot - Microbial", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = Rec15N$Round, 
+         groups = Rec15N$Plot,
+         gpch = 12, gcolor = 1)
 #
 #
 #
@@ -1209,6 +1364,25 @@ vegroot15N_Organ_sum2 %>%
   facet_wrap( ~ Site, ncol = 2) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Trying out biomass vs recovery
+test2 <- vegroot15N %>%
+  select(1:4,Species,Organ,Biomass_DW_g) %>%
+  group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
+  summarise(Biomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
+  ungroup() %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
+
+test <- vegroot15N_Organ %>%
+  select(1:4, Organ, OrganRecovery) %>%
+  left_join(test2, by = join_by(Site, Plot, MP, Round, Organ))
+test %>%
+  ggplot(aes(x = log(Biomass), y = (OrganRecovery), color = Organ)) +
+  geom_point() +
+  geom_smooth(method = lm, span = 0.3, se = TRUE, alpha = 0.6) +
+  #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
+  facet_wrap( ~ Site)
 #
 #
 #

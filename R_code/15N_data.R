@@ -831,7 +831,7 @@ contrasts(Mic15N_R$Site)<-AvsV
 # SummervsWinter, SpringvsAutumn, SnowvsNot
 contrasts(Mic15N_R$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
 #contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
-contrasts(Mic15N_R$Round)<-contr.helmert
+#contrasts(Mic15N_R$Round)<-contr.helmert
 #
 # Check if contrasts work
 # Check contrasts are orthogonal
@@ -845,7 +845,7 @@ Anova(MicModel3, type ="III")
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
-  mutate(Recov = R_MBN) 
+  mutate(Recov = R_MBN_frac) 
 Mic15N_R <- Mic15N_R %>%
   mutate(t = max(100, max(Mic15N_R$Recov))) %>%
   mutate(sqrtR_MBN = sqrt(Recov),
@@ -855,7 +855,7 @@ Mic15N_R <- Mic15N_R %>%
 #
 #
 #model:
-lme2<-lme(arcR_MBN ~ Site*Round,
+lme2<-lme(sqrtR_MBN ~ Site*Round,
           random = ~1|Plot/Site,
           data = Mic15N_R, na.action = na.exclude , method = "REML")
 #
@@ -873,9 +873,35 @@ Anova(lme2, type=2)
 summary(lme2)
 # Highly significant for Round
 
+Q2_season <- Mic15N_R %>%
+  select(1:4, R_MBN) %>%
+  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
+                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
+                              TRUE ~ NA),
+         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
+                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
+                              TRUE ~ NA),
+         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
+#
+summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("Snow"))
+summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonSW"))
+summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonAS"))
+
+Q1_season %>%
+  ggplot(aes(x = Round, y = PlantRecovery, fill = Snow)) +
+  geom_boxplot() +
+  facet_wrap(~Site)
+
+
+
+
 Mic15N_R %>%
-  ggplot(aes(x = R_MBN)) +
-  geom_dotplot()
+  ggplot(aes(x = R_MBN_frac)) +
+  geom_histogram(bins = 50)
+
+Mic15N_R %>%
+  ggplot() +
+  geom_qq(aes(sample = R_MBN_frac))
 
 dotchart(Rec15N$PlantR_frac, 
          main="Cleveland plot - Microbial", xlab = "Observed values", 
@@ -883,6 +909,85 @@ dotchart(Rec15N$PlantR_frac,
          labels = Rec15N$Round, 
          groups = Rec15N$Plot,
          gpch = 12, gcolor = 1)
+
+dotchart(Mic15N$d15N_SEF, 
+         main="Cleveland plot - Microbial", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = Mic15N$Round, 
+         groups = Mic15N$Plot,
+         gpch = 12, gcolor = 1)
+
+test <- Mic15N %>%
+  mutate(delta_d15N_SEF = if_else(d15N_SE >= d15N_SEF, d15N_SE, d15N_SEF)) %>%
+  mutate(Atom_pc_SEF2 = if_else((Atom_pc_SEF - Atom_pc_SE)<0, Atom_pc_SE, Atom_pc_SEF)) %>%
+  mutate(Atom_pc_SE2 = if_else((Atom_pc_SEF - Atom_pc_SE)<0, Atom_pc_SEF, Atom_pc_SE))
+
+dotchart(test$Atom_pc_SEF2,
+         main="Cleveland plot - Microbial", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = test$Round, 
+         groups = test$Plot,
+         gpch = 12, gcolor = 1)
+
+
+test <- test %>%
+  mutate(R_TDN2 = ((Atom_pc_SE2 - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
+  mutate(R_TDN2 = if_else(R_TDN2 < 0, 0, R_TDN2)) %>%
+  mutate(atom_pc_MBN2 = ((Atom_pc_SEF2/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_SE2/100 * Nconc_microg_pr_gDW_SE) - 
+                          (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE))/
+           (Nconc_microg_pr_gDW_SEF - Nconc_microg_pr_gDW_SE)*100) %>%
+  mutate(R_MBN2 = (((Atom_pc_SEF2/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE2/100 * Nconc_microg_pr_gDW_SE*10^(-6)) - 
+                     (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)))/
+                    K_EN * Soil_RF_DW_g)/(N_add/1000) * 100) %>%
+  mutate(R_MBN2 = if_else(R_MBN2 < 0, 0, R_MBN2))
+
+dotchart(test$R_MBN2,
+         main="Cleveland plot - Microbial", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = test$Round, 
+         groups = test$Plot,
+         gpch = 12, gcolor = 1)
+#
+test <- test %>%
+  mutate(sqrtR_MBN = sqrt(Recov),
+         logR_MBN = log(Recov),
+         cubeR_MBN = (Recov)^(1/3),
+         arcR_MBN = asin(sqrt(Recov/max(100, max(test$Recov)))))
+#
+test2 <- test %>%
+  select(1:4, R_MBN2) %>%
+  left_join(Rec15N, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:4, PlantRecovery, R_MBN2, R_TDN) %>%
+  rename(R_MBN = "R_MBN2") %>%
+  rowwise() %>%
+  mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
+  mutate(PlantR_frac = PlantRecovery/sysRec*100,
+         R_TDN_frac = R_TDN/sysRec*100,
+         R_MBN_frac = R_MBN/sysRec*100)
+#
+test3 <- test2 %>%
+  mutate(Recov = R_MBN_frac)
+test3 <- test3 %>%
+  mutate(sqrtR_MBN = sqrt(Recov),
+         logR_MBN = log(Recov),
+         cubeR_MBN = (Recov)^(1/3),
+         arcR_MBN = asin(sqrt(Recov/max(100, max(test3$Recov)))))
+#
+lme2_2<-lme(arcR_MBN ~ Site*Round,
+            random = ~1|Plot/Site,
+            data = test3, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme2_2), resid(lme2_2), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme2_2), main = "Normally distributed?")                 
+qqline(resid(lme2_2), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme2_2)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme2_2, type=2)
 #
 #
 #

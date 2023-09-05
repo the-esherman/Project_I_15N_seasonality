@@ -23,8 +23,8 @@ soil15N <- read_csv("clean_data/Soil_N.csv", col_names = TRUE)
 #
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
-winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
-winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-27"),as.Date("2020-06-22")))
+winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("11_April_20", "12_May_20"))
+winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
 #
 # List of Measuring periods as they should appear in graphs
 measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")

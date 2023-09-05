@@ -1509,6 +1509,7 @@ Rec15N_3 %>%
 #
 #
 #-------   ## Environmental  ## -------
+#
 # Soil mass
 coreData %>%
   ggplot(aes(x = Round, y = Soil_RF_DW_g)) +
@@ -1519,22 +1520,58 @@ coreData %>%
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
 # Core depth
+# Boxplot
 coreData %>%
-  ggplot(aes(x = Round, y = Soil_depth_cm)) +
+  ggplot(aes(x = Round, y = -Soil_depth_cm)) +
   geom_boxplot() +
-  labs(x = "Time of harvest", y = "depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
+  coord_cartesian(y = c(-11,0)) + 
+  scale_y_continuous(breaks = c(0, -2, -4, -6, -8, -10), labels = abs) +
+  labs(x = "Time of harvest", y = "Depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
   facet_wrap(~Site, scales = "free") +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Point data
+coreData %>%
+  ggplot(aes(x = Round, y = -Soil_depth_cm)) +
+  geom_point() +
+  coord_cartesian(y = c(-11,0)) + 
+  scale_y_continuous(breaks = c(0, -2, -4, -6, -8, -10), labels = abs) +
+  labs(x = "Time of harvest", y = "Depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
+  facet_wrap(~Site, scales = "free") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
 #
 # Snow cover
 coreData %>%
   ggplot(aes(x = Round, y = Snow_depth_plot_cm)) +
   geom_boxplot() +
-  labs(x = "Time of harvest", y = "Snow depth (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
+  labs(x = "Time of harvest", y = "Snow cover (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
   facet_wrap(~Site, scales = "free") +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Select only snow-covered period: MP5-MP13 (Vassijaure end)
+coreData_SnowP <- coreData %>%
+  filter(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12)# | MP == 13)
+lmeSnow<-lme(log(Snow_depth_plot_cm + 1) ~ Site*Round,
+          random = ~1|Plot/Site,
+          data = coreData_SnowP, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeSnow), resid(lmeSnow), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeSnow), main = "Normally distributed?")                 
+qqline(resid(lmeSnow), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeSnow)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lmeSnow, type=2)
+summary(lmeSnow)
+#
 #
 # Soil moisture
 coreData %>%

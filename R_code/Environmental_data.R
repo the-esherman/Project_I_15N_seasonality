@@ -38,7 +38,7 @@ winterP <- data.frame(wstart = c(ymd(20191021), ymd(20191021)), wend = c(ymd(202
 #
 #
 #------- ### Clean data ### -------
-#------- # Air Temperature # -------|
+#------- # Air Temperature # -------
 # Select specific rows
 Abisko_Tair <- Abisko_Tair %>%
   dplyr::select(1:4, "Tair_C1", 8, "Tair_31", 12, "Tair_39_2", "Tair_A", "Tair_A2") %>%
@@ -90,7 +90,7 @@ avgTair_long <- left_join(Abisko_avgTair, Vassijaure_avgTair) %>%
 #
 #
 #
-#------- # EM50 loggers # -------|
+#------- # EM50 loggers # -------
 # Remove last lines without a date and extra header part. Set NaN to NA
 Abisko_EM50 <- Abisko_EM50 %>%
   slice(5:n()) %>%
@@ -110,7 +110,7 @@ Vassijaure_EM50 <- Vassijaure_EM50 %>%
 #
 #
 #
-#------- # Soil Temperature # -------|
+#------- # Soil Temperature # -------
 # Mean Soil temperature
 Abisko_avgTsoil <- Abisko_EM50 %>%
   select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
@@ -171,17 +171,66 @@ avgT_long <- left_join(avgTair_long, avgTsoil_long)
 #
 #
 #
-#------- # Soil Moisture # -------|
+#------- # Soil Moisture # -------
 
 #
 #
 #
-#------- # PAR # -------|
+#------- # PAR # -------
+# Mean Soil PAR
+# Abisko
+Abisko_avgPAR <- Abisko_EM50 %>%
+  select(Date, A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR) %>%
+  # Remove PAR above 3000 µmol pr m2 pr s1
+  mutate(A1_PAR = replace(A1_PAR, A1_PAR > 3000, NA),
+         A2_PAR = replace(A2_PAR, A2_PAR > 3000, NA),
+         A3_PAR = replace(A3_PAR, A3_PAR > 3000, NA),
+         A4_PAR = replace(A4_PAR, A4_PAR > 3000, NA),
+         A5_PAR = replace(A5_PAR, A5_PAR > 3000, NA)) %>%
+  group_by(date(Date)) %>%
+  summarise(A1_PAR = mean(A1_PAR, na.rm = TRUE),
+            A2_PAR = mean(A2_PAR, na.rm = TRUE),
+            A3_PAR = mean(A3_PAR, na.rm = TRUE),
+            A4_PAR = mean(A4_PAR, na.rm = TRUE),
+            A5_PAR = mean(A5_PAR, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(Date)") %>%
+  mutate(Abisko = mean(c(A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR), na.rm = TRUE))
+#
+# Vassijaure
+Vassijaure_avgPAR <- Vassijaure_EM50 %>%
+  select(V_Date, V1_PAR, V2_PAR, V3_PAR, V4_PAR, V5_PAR) %>%
+  group_by(date(V_Date)) %>%
+  summarise(V1_PAR = mean(V1_PAR, na.rm = TRUE),
+            V2_PAR = mean(V2_PAR, na.rm = TRUE),
+            V3_PAR = mean(V3_PAR, na.rm = TRUE),
+            V4_PAR = mean(V4_PAR, na.rm = TRUE),
+            V5_PAR = mean(V5_PAR, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(V_Date)") %>%
+  mutate(Vassijaure = mean(c(V1_PAR, V2_PAR, V3_PAR, V4_PAR, V5_PAR), na.rm = TRUE))
 
+  
+  mutate(A1_PAR = if_else(month(Date) == 7 & A1_PAR < 5, NA, A1_PAR),
+         A2_PAR = if_else(month(Date) == 7 & A2_PAR < 0, NA, A1_PAR),
+         A3_PAR = if_else(month(Date) == 7 & A3_PAR < 0, NA, A1_PAR),
+         A4_PAR = if_else(month(Date) == 7 & A4_PAR < 0, NA, A1_PAR),
+         A5_PAR = if_else(month(Date) == 7 & A5_PAR < 0, NA, A1_PAR)) #%>%
+  
+#
+# Average across plots
+avgPAR_wide <- left_join(Abisko_avgPAR, Vassijaure_avgPAR, by = join_by(Date)) %>%
+  select(c(Date, Abisko, Vassijaure)) %>%
+  rename("Abisko_PAR" = Abisko,
+         "Vassijaure_PAR" = Vassijaure)
+# Combine Abisko and Vassijaure and pivot longer
+avgPAR_long <- left_join(Abisko_avgPAR, Vassijaure_avgPAR, by = join_by(Date)) %>%
+  dplyr::select(c(Date, Abisko, Vassijaure)) %>%
+  pivot_longer(2:3, names_to = "Site", values_to = "diel_PAR")
 #
 #
 #
-#------- # SMHI weather data # -------|
+#------- # SMHI weather data # -------
 # Abisko
 SMHI_Abisko_Tair <- SMHI_Abisko_Tair %>%
   dplyr::select(1:3) %>%
@@ -363,7 +412,14 @@ avgT_long %>%
   xlab("Time") + ylab("Temperature C") +
   theme_bw()
 #facet_wrap( ~ Site)
-
+#
+# ### PAR ###
+avgPAR_long %>%
+  ggplot(aes(x = Date, y = diel_PAR, colour = Site)) +
+  geom_point() +
+  geom_line() +
+  scale_color_viridis(discrete = TRUE) +
+  xlab("Time") + ylab("Temperature C")
 #
 #
 #
@@ -454,6 +510,32 @@ Vassijaure_Tair %>% ggplot(aes(x = date(Date_V), y = Tair_V2)) + geom_point() +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   labs(x = "Time of year", y = "Measured temperature °C", title = "Air temperature - Vassijaure") +
   theme_bw()
+
+#
+# ### PAR ###
+Abisko_EM50 %>% ggplot() + 
+  geom_point(aes(x = date(Date), y = A1_PAR, shape = "A1N")) +
+  geom_point(aes(x = date(Date), y = A2_PAR, shape = "A2N")) +
+  geom_point(aes(x = date(Date), y = A3_PAR, shape = "A3N")) +
+  geom_point(aes(x = date(Date), y = A4_PAR, shape = "A4N")) +
+  geom_point(aes(x = date(Date), y = A5_PAR, shape = "A5N")) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  #coord_cartesian(xlim = c(ymd("2019-07-01"),ymd("2020-09-28"))) +
+  labs(x = "Time of year", y = expression("Measured PAR µmol "*m^-2*s^-1), title = "PAR - Abisko outliers") +
+  theme_bw()
+#
+Vassijaure_EM50 %>% ggplot() + 
+  geom_point(aes(x = date(V_Date), y = V1_PAR, shape = "V1N")) +
+  geom_point(aes(x = date(V_Date), y = V2_PAR, shape = "V2N")) +
+  geom_point(aes(x = date(V_Date), y = V3_PAR, shape = "V3N")) +
+  geom_point(aes(x = date(V_Date), y = V4_PAR, shape = "V4N")) +
+  geom_point(aes(x = date(V_Date), y = V5_PAR, shape = "V5N")) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  #coord_cartesian(xlim = c(ymd("2019-07-01"),ymd("2020-09-28"))) +
+  labs(x = "Time of year", y = expression("Measured PAR µmol "*m^-2*s^-1), title = "PAR - Vassijaure outliers") +
+  theme_bw()
+
+
 
 #------- # Leftovers # -------
 

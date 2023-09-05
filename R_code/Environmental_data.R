@@ -34,6 +34,47 @@ SMHI_Katterjakk_Tair <- read_csv2("raw_data/smhi_Kattejakk_Temp.csv", skip = 9)
 # Abisko: 20191021 - 20200506; Vassijaure: 20191028-20200601
 # Safe to assume Vassijaure also started earlier than when measured, thus assumed same day.
 winterP <- data.frame(wstart = c(ymd(20191021), ymd(20191021)), wend = c(ymd(20200506), ymd(20200601)))
+winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
+#
+#
+#
+#=======  ###   Functions    ### =======
+# From http://www.cookbook-r.com/Manipulating_data/Summarizing_data/
+## Summarizes data.
+## Gives count, mean, standard deviation, standard error of the mean, and confidence interval (default 95%).
+##   data: a data frame.
+##   measurevar: the name of a column that contains the variable to be summariezed
+##   groupvars: a vector containing names of columns that contain grouping variables
+##   na.rm: a boolean that indicates whether to ignore NA's
+##   conf.interval: the percent range of the confidence interval (default is 95%)
+summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
+                      conf.interval=.95, .drop=TRUE) {
+  # New version of length which can handle NA's: if na.rm==T, don't count them
+  length2 <- function (x, na.rm=FALSE) {
+    if (na.rm) sum(!is.na(x))
+    else       length(x)
+  }
+  # This does the summary. For each group's data frame, return a vector with
+  # N, mean, and sd
+  datac <- ddply(data, groupvars, .drop=.drop,
+                 .fun = function(xx, col) {
+                   c(N    = length2(xx[[col]], na.rm=na.rm),
+                     mean = mean   (xx[[col]], na.rm=na.rm),
+                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                   )
+                 },
+                 measurevar
+  )
+  # Rename the "mean" column    
+  datac <- plyr::rename(datac, c("mean" = measurevar))
+  datac$se <- datac$sd / sqrt(datac$N)  # Calculate standard error of the mean
+  # Confidence interval multiplier for standard error
+  # Calculate t-statistic for confidence interval: 
+  # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
+  ciMult <- qt(conf.interval/2 + .5, datac$N-1)
+  datac$ci <- datac$se * ciMult
+  return(datac)
+}
 #
 #
 #
@@ -50,6 +91,12 @@ Abisko_Tair <- Abisko_Tair %>%
   mutate(across(where(is.character), ~na_if(.,"NaN"))) %>%
   mutate(across(c("Tair_A39_1", "Tair_C1", "Tair_31", "Tair_39_2", "Tair_A", "Tair_A2"), as.numeric)) %>%
   mutate(across(c(Date_A, Time_A39_1, Time_C1, Time_31, Time_39_2), ymd_hms))
+# How the temperature should be calculated:
+test <- Abisko_Tair %>%
+  rowwise() %>%
+  mutate(Tair_A3 = mean(c(Tair_A39_1, Tair_C1, Tair_31, Tair_39_2), na.rm = TRUE)) %>%
+  ungroup() %>%
+  filter(!is.na(Tair_A3))
 #
 Abisko_Tair_long <- Abisko_Tair %>%
   dplyr::select(1,3,5,7,9,11) %>%
@@ -167,6 +214,38 @@ avgTsoil_long <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
 # Combine all temperatures
 avgT_wide <- left_join(avgTair_wide, avgTsoil_wide)
 avgT_long <- left_join(avgTair_long, avgTsoil_long)
+#
+# Add confidence interval
+# 95% CI
+test1 <- test %>%
+  dplyr::select("Date_A", "Tair_A3") %>%
+  mutate(Date_A = date(Date_A))
+
+test2 <- summarySE(test1, measurevar = "Tair_A3", groupvars = c("Date_A"))
+
+test2 %>% ggplot() +
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Abisko snow
+  geom_line(aes(x = Date_A, y = Tair_A3, lty = "Abisko"), na.rm = TRUE) + 
+  geom_ribbon(aes(x = Date_A, y = Tair_A3, ymin = Tair_A3-ci, ymax = Tair_A3+ci), alpha = 0.5) +
+  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time", y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
+  guides(lty = guide_legend(title = "Mean diel temperature")) +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "top")
+
+
+test3 <- avgT_wide2 %>%
+  dplyr::filter(Date >= winterP_date$wstart[1]) %>%
+  dplyr::filter(Date <= winterP_date$wend[2])
+
+avgT_wide2 %>%
+  ggplot(aes(x = Abisko_Tair, y = Abisko_Tsoil)) +
+  geom_point()
+test3 %>%
+  ggplot(aes(x = Vassijaure_Tair, y = Vassijaure_Tsoil)) +
+  geom_point()
 
 #
 #

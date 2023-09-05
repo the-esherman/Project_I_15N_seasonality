@@ -563,7 +563,7 @@ alias(PlantModel_alias)
 #
 # transform data
 Q1_veg_stat <- Q1_veg_stat %>%
-  mutate(Recov = PlantR_frac)
+  mutate(Recov = PlantRecovery)
 Q1_veg_stat <- Q1_veg_stat %>%
   mutate(sqrtRecov = sqrt(Recov)) %>%
   mutate(invRecov = 1/Recov) %>%
@@ -1720,6 +1720,46 @@ vegroot15N_Organ_sum2 %>%
   facet_wrap( ~ Site, ncol = 2) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# Biomass
+test_biom <- vegroot15N %>%
+  select(1:4, Species, Organ, Biomass_DW_g)
+test_biom_sum <- summarySE(test_biom, measurevar = "Biomass_DW_g", groupvars = c("Site", "Round", "Organ"), na.rm = TRUE)
+test_biom_sum <- test_biom_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, Organ, Biomass_DW_g, ci, Day_of_harvest)
+#
+test_biom_sum %>%
+  ggplot(aes(x = Day_of_harvest, y = Biomass_DW_g, ymin = Biomass_DW_g-ci, ymax = Biomass_DW_g+ci, fill=Organ, linetype=Organ)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
+  scale_linetype(labels = c("CR", "FR", "S")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  scale_y_continuous(breaks = c(0, 2, 4, 6, 8))+
+  labs(x = "Time of harvest", y = "Biomass (g)", title = "Plant biomass") +
+  facet_wrap( ~ Site, ncol = 2) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+# No CR
+test_biom_sum %>%
+  filter(Organ != "CR") %>%
+  ggplot(aes(x = Day_of_harvest, y = Biomass_DW_g, ymin = Biomass_DW_g-ci, ymax = Biomass_DW_g+ci, fill=Organ, linetype=Organ)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("FR", "S")) +
+  scale_linetype(labels = c("FR", "S")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  scale_y_continuous(breaks = c(0, 1, 2, 3))+
+  labs(x = "Time of harvest", y = "Biomass (g)", title = "Plant biomass") +
+  facet_wrap( ~ Site, ncol = 2) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
 #
 # Trying out biomass vs recovery
 test2 <- vegroot15N %>%

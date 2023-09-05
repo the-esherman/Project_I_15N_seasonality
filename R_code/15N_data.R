@@ -1087,6 +1087,85 @@ summarySE(TDN_season, measurevar = "Recov", groupvars = c("SeasonAS"))
 #
 #
 #
+#=======  ###   Statistics   ### =======
+#-------   ##  Competition   ##  -------
+#
+# Model
+# Response variable: Microbial vs Plant vs TDN recovery of 15N (%)
+# Factors: Time, Site, Part, Time*Site, Time*Part, Site*Part, Time*Site*Part
+# Most important factor: Part and interaction
+#
+# Load data from excel instead of calculated combined
+Compet_all <- Rec15N %>%
+  select("Site", "Plot", "MP", "Round", "PlantR_frac", "R_MBN_frac", "R_TDN_frac") %>%
+  pivot_longer(5:7, names_to = "sysPart", values_to = "Recov")
+Compet_all <- Compet_all %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round", "sysPart"), as.factor))
+#
+# Contrasts - Part recovery
+#              (Pl,Mic,TDN)
+PlvsMic    <- c( 1, -1,  0)
+PlvsMicTDN <- c( 2, -1, -1)
+MicvsTDN   <- c( 0,  1, -1)
+#
+contrasts(Compet_all$sysPart)<-cbind(PlvsMic, PlvsMicTDN, MicvsTDN)
+crossprod(cbind(PlvsMic, PlvsMicTDN, MicvsTDN))
+#
+# Month           (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP              (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+#
+# Same contrasts for Site and Round
+contrasts(Compet_all$Site)<-AvsV
+# Same contrasts as for plant recovery:
+# SummervsWinter, SpringvsAutumn, SnowvsNot
+contrasts(Compet_all$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#contrasts(Compet_all$Round)<-contr.helmert
+#
+# Check if contrasts work
+# Check contrasts are orthogonal
+crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh))#, cont11, cont12, cont13, cont14))
+#
+# Alternative: Two-way ANOVA
+# have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
+CompetModel3 <- aov(Recov ~ Round*Site, data = Compet_all)
+Anova(CompetModel3, type ="III")
+#
+#
+# Transform data
+Compet_all <- Compet_all %>%
+  mutate(sqrtRecov = sqrt(Recov),
+         logRecov = log(Recov),
+         cubeRecov = (Recov)^(1/3),
+         arcRecov = asin(sqrt(Recov/100)))
+#
+Compet_all %>%
+  mutate(across("MP", ~ as.numeric(.x))) %>%
+  ggplot(aes(x = MP, y = Recov, fill = sysPart)) +
+  geom_point()
+#
+#
+#model:
+lmeCompet<-lme(Recov ~ Site*Round*sysPart,
+          random = ~1|Plot/Site,
+          data = Compet_all, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeCompet), resid(lmeCompet), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeCompet), main = "Normally distributed?")                 
+qqline(resid(lmeCompet), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeCompet)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lmeCompet, type=2)
+summary(lmeCompet)
+#
+#
+#
+#
 #=======  ###    Plotting    ### =======
 #-------   ## Plant Biomass  ## -------
 #

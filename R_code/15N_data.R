@@ -521,12 +521,17 @@ vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
+Q1_veg_stat <- Rec15N %>%
+  select(1:4, PlantRecovery, PlantR_frac) %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
+#
 # Contrasts - whole plant recovery
 # Month            (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
 # MP               (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
 SummervsWinter <- c(1, 1, 0, 0,-1,-1,-1,-1,-1, 0, 0, 0, 1, 1, 1)
 SpringvsAutumn <- c(0, 0, 1, 1, 1, 0, 0, 0, 0,-1,-1,-1, 0, 0, 0)
-SnowvsNot      <- c(-8,-8,-8,-8,7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow from November to May, but June in Vassijaure!
+SnowvsNot      <- c(-8,-8,-8,-8,7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow from November to May, but April 2 in Abisko!
 JulvsJan       <- c(1, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 1, 0)
 OctvsApr       <- c(0, 0, 1, 0, 0, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0)
 Summervs2      <- c(1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer '19 vs summer '20
@@ -534,37 +539,41 @@ SpringChA      <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
 SpringChV      <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0) # Spring change in Vassijaure: April/May vs June
 AutumnCh       <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 WinterCh       <- c(0, 0, 0, 0, 1, 1, 1, 1,-1,-1,-1,-1, 0, 0, 0)
+SnowvsNotA     <- c(-7,-7,-7,-7,8, 8, 8, 8, 8, 8, 8, -7,-7,-7,-7) # Snow from November to April 2 in Abisko!
 cont11         <- c(0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 cont12         <- c(0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0)
 cont13         <- c(0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0)
 cont14         <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just to get everything to balance out
 #
 AvsV<-c(1,-1)
-contrasts(vegroot15N_total_Plant$Site)<-AvsV
-contrasts(vegroot15N_total_Plant$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#contrasts(vegroot15N_total_Plant$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
+#
+contrasts(Q1_veg_stat$Site)<-AvsV
+contrasts(Q1_veg_stat$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
+#contrasts(Q1_veg_stat$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
 #
 # Check contrasts are orthogonal
 crossprod(cbind(SummervsWinter, SpringvsAutumn, SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
 # Not orthogonal
 #
 # Check if contrasts work, by using a two-way ANOVA
-PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = vegroot15N_total_Plant)
+PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = Q1_veg_stat)
 Anova(PlantModel_alias, type ="III")
 # alias checks dependencies
 alias(PlantModel_alias)
 #
 # transform data
-vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
-  mutate(sqrtPlantRecovery = sqrt(PlantRecovery)) %>%
-  mutate(invPlantRecovery = 1/PlantRecovery) %>%
-  mutate(logPlantRecovery = log(PlantRecovery+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
-  mutate(arcPlantRecovery = asin(sqrt(PlantRecovery/100))) # Look into this for general percentages!!
+Q1_veg_stat <- Q1_veg_stat %>%
+  mutate(Recov = PlantR_frac)
+Q1_veg_stat <- Q1_veg_stat %>%
+  mutate(sqrtRecov = sqrt(Recov)) %>%
+  mutate(invRecov = 1/Recov) %>%
+  mutate(logRecov = log(Recov+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
+  mutate(arcRecov = asin(sqrt(Recov/100))) # Look into this for general percentages!!
 #
 #model:
-lme1<-lme(logPlantRecovery ~ Round*Site,
+lme1<-lme(logRecov ~ Round*Site,
           random = ~1|Plot/Site,
-          data = vegroot15N_total_Plant, na.action = na.exclude, method = "REML")
+          data = Q1_veg_stat, na.action = na.exclude, method = "REML")
 #
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -580,7 +589,7 @@ Anova(lme1, type=2)
 summary(lme1)
 # Significant for Round
 #
-Q1_season <- vegroot15N_total_Plant %>%
+Q1_season <- Q1_veg_stat %>%
   select(1:4, PlantRecovery) %>%
   mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
                             MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
@@ -887,8 +896,8 @@ summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("Snow"))
 summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonSW"))
 summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonAS"))
 
-Q1_season %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = Snow)) +
+Q2_season %>%
+  ggplot(aes(x = Round, y = R_MBN, fill = Snow)) +
   geom_boxplot() +
   facet_wrap(~Site)
 

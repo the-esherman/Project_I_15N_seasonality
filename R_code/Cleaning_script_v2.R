@@ -67,6 +67,7 @@ Atom_mass_15N_NH4NO3 <- 2*15+4*1.008+3*15.999 # The atomic mass of double 15N NH
 #(2*15*Label_atom_pc)/(2*14.007*(1-Label_atom_pc)+2*15*Label_atom_pc+4*1.008+3*15.999)
 
 Label_15N_frac <- (2*15*Label_atom_pc)/(Atom_mass_14N_NH4NO3*(1-Label_atom_pc)+Atom_mass_15N_NH4NO3*Label_atom_pc) # The atom mass of the 15N to the total label NH4NO3
+Label_N_frac <- (2*15*Label_atom_pc+2*14*(1-Label_atom_pc))/(Atom_mass_14N_NH4NO3*(1-Label_atom_pc)+Atom_mass_15N_NH4NO3*Label_atom_pc)
 # In the numerator: 2 15N per molecule, but only 98.7%
 # In the denominator: The molecule's average mass, as 14N NH4NO3 is 1.3% and 15N NH4NO3 is 98.7%
 
@@ -79,7 +80,8 @@ Core2 <- Core %>%
          Soil_area_cm2 = (Soil_diameter_cm/2)^2*pi, # Patch area cm2
          Soil_ratio = Soil_sub_mass_g/Soil_mass_g, # Subsample to full core ratio
          DW_FW_frac = SM_DW_g/SM_FW_g, # The soil Dry weight to Fresh weight ratio
-         Injection_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_15N_frac, # Actual added amount of labelled 15N, assuming 19mL vol of solution per plot, 1mL per hole
+         Injection_N_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_N_frac, # Actual added amount of N, assuming 19mL vol of solution per plot, 1mL per hole
+         Injection_15N_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_15N_frac, # Actual added amount of labelled 15N, assuming 19mL vol of solution per plot, 1mL per hole
          Soil_RF_FW_g = Soil_subRF_mass_g/Soil_sub_mass_g) %>% # Mass of root free soil in FW
   mutate(Soil_RF_DW_g = Soil_RF_FW_g*Soil_mass_g*DW_FW_frac) # Mass of root free soil in DW
 

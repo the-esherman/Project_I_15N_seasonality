@@ -43,11 +43,16 @@ Nair_Rst = 1/272
 #
 # Added 15N; mg 15N pr patch
 N_add <- 1.084
+Label_atom_pc <- 0.987
 #
 # Extraction correction factor
 K_EN = 0.4
 # See https://climexhandbook.w.uib.no/2019/11/06/soil-microbial-biomass-c-n-and-p/ and UCPH bio lab protocol (where K_EN = 0.4)
 #
+# Extract date for sample. Here using Day of harvest
+DayOf <- coreData %>%
+  select(Site, Round, Day_of_harvest) %>%
+  distinct(Day_of_harvest, .keep_all = TRUE)
 #
 #
 #=======  ###   Functions    ### =======
@@ -119,13 +124,13 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
 #
 #=======  ###   Main data    ### =======
 #
-# Add Round to vegetation data as well as other relevant information
+# Add Round to vegetation data
 vegroot15N <- vegroot15N %>%
   left_join(coreData, by = join_by(Site, Plot, MP)) %>%
   select(1:13, Round) %>%
   relocate(Round, .after = MP)
-
-
+#
+#
 # Vegetation recovery for total core
 vegroot15N_total_Plant <- vegroot15N %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
@@ -137,23 +142,43 @@ vegroot15N_total_Plant <- vegroot15N %>%
 # Pivot wide to get SE and SEF separated
 Mic15N <- soil15N %>%
   pivot_wider(names_from = "Extr_type", values_from = c(Nconc_microg_pr_gDW, d15N, Atom_pc, NO3_microg_pr_gDW, NH4_microg_pr_gDW, Atom_pc_NatAb))
-
-# Add Round to microbial data as well as other relevant information
+#
+# Add Round to microbial data
 Mic15N <- Mic15N %>%
   left_join(coreData, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
-  select(1:16, Round) %>%
+  select(1:16, Round, Injection_15N_mg_pr_patch) %>%
   relocate(Round, .after = MP)
-
+#
+# Calculate recovery in TDN (SE) and microbial parts
+# For microbial recovery a few steps are needed:
+# Calculate a new Atom% for the microbial part based on fumigated (SEF) minus non-fumigated (SE) extractions:
+#    ((AP_SEF*[N]_SEF - AP*[N]_SE) - (AP_NatAb_SEF*[N]_SEF - AP_NatAb*[N]_SE)) / (([N]_SEF - [N]_SE)*100)
+# Then calculate recovery
+#    
 Mic15N <- Mic15N %>%
+  # Recovery of TDN
   mutate(R_TDN = ((Atom_pc_SE - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
-  mutate(R_TDN = if_else(R_TDN < 0, 0, R_TDN)) %>%
+  mutate(R_TDN = if_else(R_TDN < 0, 0, R_TDN)) %>% # Recovery cannot be negative
+  # Recovery of MBN
+  # AP for MBN
   mutate(atom_pc_MBN = ((Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE) - 
                           (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE))/
            (Nconc_microg_pr_gDW_SEF - Nconc_microg_pr_gDW_SE)*100) %>%
+  # Recovery
   mutate(R_MBN = (((Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)) - 
                      (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)))/
-                    K_EN * Soil_RF_DW_g)/(N_add/1000) * 100) %>%
-  mutate(R_MBN = if_else(R_MBN < 0, 0, R_MBN))
+                    K_EN * Soil_RF_DW_g)/(Injection_15N_mg_pr_patch/1000) * 100) %>%
+  mutate(R_MBN = if_else(R_MBN < 0, 0, R_MBN)) # Recovery cannot be negative
+  # # Method 2:
+  # # {15N_lab} & {15N_NatAb}
+  # mutate( # {15N_lab}
+  #         MBN_15N_lab = (Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6))*Soil_RF_DW_g/K_EN,
+  #        # {15N_NatAb}
+  #        MBN_15N_NatAb = (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6))*Soil_RF_DW_g/K_EN) %>%
+  # # Recovery:
+  # # ({15N_lab} - {15N_NatAb})/15N_inj * 100 
+  # mutate(R_MBN2 = ((MBN_15N_lab - MBN_15N_NatAb)*100)/(Injection_15N_mg_pr_patch/1000))
+  # Gives exactly the same results
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
@@ -209,33 +234,49 @@ Rec15N <- vegroot15N_total_Plant %>%
 # New data set with needed information
 
 soil15N_2 <- soil15N %>%
-  left_join(coreData, by = join_by(Site, Plot, MP)) %>%
-  select(1:11, DaysLH, DaysHH, Round, Injection_mg_pr_patch) %>%
+  left_join(coreData, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
+  select(1:11, DaysLH, DaysHH, Round, Injection_15N_mg_pr_patch, Injection_N_mg_pr_patch) %>%
   mutate(DaysHL = DaysHH - DaysLH) %>%
-  relocate(c(Round, DaysLH, DaysHH, DaysHL), .after = MP) %>%
-  rename(Soil_RF_DW_g = Soil_RF_DW_g.x)
+  relocate(c(Round, DaysLH, DaysHH, DaysHL), .after = MP)
 
-# soil15N <- soil15N %>%
-#   mutate(across(c(Plot, MP), as.character))
-#inorgN <- inorgN %>%
-#  mutate(across(c(Plot, MP), as.character))
+
+test2 <- coreData %>%
+  mutate(Soil_RF_FW_g_all = Soil_RF_FW_g*Soil_mass_g)
 #
-# mineral <- inorgN %>%
-#   select(1:4, NH4_µg_DW, NO3_µg_DW) %>%
-#   left_join(soil15N, by = join_by(Site, Plot, MP, SE_SEF)) %>%
-#   relocate(Round, .after = MP)
+test3 <- summarySE(test2, measurevar = "Soil_RF_FW_g_all", groupvars = c("Site", "MP"))
+
 #
 # Calculate
 mineral <- soil15N_2 %>%
+  # Need only non-fumigated extraction (SE) - this is the soil N content
   filter(Extr_type == "SE") %>%
+  # Remove control samples
   filter(MP != "EX (w)") %>%
-  mutate(Nconc_inorg = NH4_microg_pr_gDW + NO3_microg_pr_gDW) %>% # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3]
+  # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3] µg pr g DW
+  mutate(Nconc_inorg = NH4_microg_pr_gDW + NO3_microg_pr_gDW) %>%
+  #The total N concentration in soil cannot be less than the total inorganic concentration!
+  # Three cases where this has to be corrected: A_4_4, A_3_4, V_5_8
   mutate(Nconc_soil = if_else(Nconc_microg_pr_gDW - Nconc_inorg < 0, Nconc_inorg, Nconc_microg_pr_gDW)) %>%
-  mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>% # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in
-  mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc_NatAb * Nconc_org)/Nconc_inorg)) %>% # Assuming organic atom% does not change considerably from natural abundance (!!!)
+  # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in µg pr g DW
+  mutate(Nconc_org = Nconc_soil - Nconc_inorg) %>%
+  # Two estimates of AP:
+  # High: Assuming organic atom% does not change considerably from natural abundance (!!!)
+  mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc_NatAb * Nconc_org)/Nconc_inorg),
+         atom_pc_in_harvest_high2 = if_else(Nconc_inorg == 0, NA, Label_atom_pc*100)) %>% 
+  # Low: Assuming inorganic atom% does not change considerably from natural abundance (!!!)
+  # Or assume [N]_org < [N]_total, then AP_org < AP_total*[N]_total/[N]_org
   mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, Atom_pc_NatAb),
          atom_pc_in_harvest_low2 = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
-  mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.1) * Nconc_org)/Nconc_inorg))
+  # Third alternative:
+  # How far can the atom% be taken? Can the organic N pool have a atom% higher than TDN?
+  mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.000003) * Nconc_org)/Nconc_inorg)) %>%
+  mutate(atom_pc_in_harvest_high = if_else(atom_pc_in_harvest_high > Label_atom_pc*100, Label_atom_pc*100, atom_pc_in_harvest_high),
+         atom_pc_in_harvest_low2)
+# test <- mineral %>%
+#   mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.000003) * Nconc_org)/Nconc_inorg)) %>%
+#   mutate(deltaAP_extreme = atom_pc_in_extreme - Atom_pc_NatAb) %>%
+#   mutate(AP_plus = if_else(Nconc_org == 0, NA, (atom_pc_in_harvest_low*Nconc_inorg + Atom_pc * Nconc_soil)/Nconc_org - Atom_pc)) %>%
+#   mutate(deltaNconc = Nconc_soil - Nconc_inorg)
 #
 # arrange values in order of MP so that the following loop works correctly
 mineral <- mineral %>%
@@ -254,44 +295,51 @@ mineral_V <- mineral %>%
   filter(Site == "Vassijaure")
 mineral_V["Nconc_in0.V"] <- NA
 # Double check I can count
-mt<- vector("double")
+mt<- vector("double") # the count should start 5* NA and then 6-75
+MP_plot<- matrix(NA,nrow = 15*5,ncol = 2) # Making a matrix with MP and plot at the correct spot
+#
 # Loop over each to calculate rate from one round to the next for the same plot and then around 7 days if when labeling happens
-for (i in 2:15) {
-  for (j in 1:5) {
+for (i in 2:15) { # 15MP excluding first round
+  for (j in 1:5) { # 5 replicates
+    # Test if looping count is correct: Skip first 5 (as NA), continue counting from 6 to 75 (15 MP * 5 replicates)
     mt[5*(i-1)+j] <- 5*(i-1)+j
+    MP_plot[5*(i-1)+j,1] <- i # MP
+    MP_plot[5*(i-1)+j,2] <- j # Plot
+    # Abisko initial inorganic N pool
     mineral_A$Nconc_in0.A[5*(i-1)+j] <- (mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == (i))] - 
-                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Abisko" & 
-                                                                                                                   mineral$Plot == j &
-                                                                                                                   mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Abisko" &
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == (i))] - 
+                                         mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Abisko" & 
+                                                                                                               mineral$Plot == j &
+                                                                                                               mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Abisko" &
                                                                                                                                                                   mineral$Plot == j &
                                                                                                                                                                   mineral$MP == (i))] +
-                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))]
+                                         mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == (i-1))]
+    # Vassijaure initial inorganic N pool
     mineral_V$Nconc_in0.V[5*(i-1)+j] <- (mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == i)] - 
-                                          mineral$Nconc_inorg[which(mineral$Site == "Abisko" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Abisko" & 
-                                                                                                                   mineral$Plot == j &
-                                                                                                                   mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Abisko" &
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == i)] - 
+                                         mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == (i-1))])/mineral$DaysHH[which(mineral$Site == "Vassijaure" & 
+                                                                                                               mineral$Plot == j &
+                                                                                                               mineral$MP == (i))] * mineral$DaysHL[which(mineral$Site == "Vassijaure" &
                                                                                                                                                                   mineral$Plot == j &
                                                                                                                                                                   mineral$MP == (i))] + 
-                                          mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
-                                                                     mineral$Plot == j & 
-                                                                     mineral$MP == (i-1))]
+                                         mineral$Nconc_inorg[which(mineral$Site == "Vassijaure" & 
+                                                                   mineral$Plot == j & 
+                                                                   mineral$MP == (i-1))]
   }
 }
 
+#
+#
+#
 
-(mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 6)] - mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 5)])/mineral$DaysHH[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))] * mineral$DaysHL[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))] + mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (6-1))]
-
-(mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 2)] - mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == 5)])/dayHH * dayHL + mineral$Nconc_inorg[which(mineral$Site == "Abisko" & mineral$Plot == 5 & mineral$MP == (2-1))]
 
 
 
@@ -302,99 +350,255 @@ test <- mineral %>%
   select(!c(Nconc_in0.A, Nconc_in0.V))
 
 # Combine Abisko and Vassijaure and join the values
-mineral_test <- mineral %>%
+mineral_combined <- mineral %>%
   left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
   left_join(mineral_V, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
-  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>%
-  select(!c(Nconc_in0.A, Nconc_in0.V))
-#
-# Add core mass in DW
-mic_mass <- Mic15N %>%
-  select(Site, Plot, MP, Soil_RF_DW_g)# %>%
-  mutate(across(c(Plot, MP), as.character))
-#
-mineral_test <- mineral_test %>%
-  left_join(mic_mass, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
+  # Values alternate between Abisko and Vassijaure and should be combined into one value
+  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>% 
+  select(!c(Nconc_in0.A, Nconc_in0.V)) %>%
   relocate(Soil_RF_DW_g, .after = Extr_type)
 #
 # calculate how much 15N was added and add it to the inorganic pool at labeling
-mineral_test <- mineral_test %>%
-  mutate(inj_15N = (N_add*1000)/Soil_RF_DW_g) %>% # µg N added pr g DW
+mineral_combined <- mineral_combined %>%
+  # N label (98.7% 15N) injected per dry weight soil
+  mutate(inj_15N = (Injection_N_mg_pr_patch*1000)/Soil_RF_DW_g) %>% # µg N added pr g DW
+  # Inorganic N concentration at injection point should be set at min 0
   mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
+  # Total inorganic N pool is injected N and inorganic N, µg pr g DW
   mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
-#  mutate(Nconc_in0_l_2 = (Nconc_in0*Mic_mass + N_add*1000)/Mic_mass) %>% # Same as above but made explicit
-  mutate(atom_pc_in0_l = (98.7*inj_15N + Atom_pc_NatAb*Nconc_in0)/Nconc_in0_l) #  NB!!! 98.7% atom% for label
+  # Atom% of the inorganic N pool at injection. Corresponds to the 15N added (in µg pr g DW) plus natural abundance 15N in pre-labelled pool divided by new pool size
+  mutate(atom_pc_in0_l = ((Injection_15N_mg_pr_patch*1000)/Soil_RF_DW_g + (Atom_pc_NatAb/100)*Nconc_in0)/Nconc_in0_l*100) #  NB!!! 98.7% atom% for label
 #
-# Calculate isotope ratio at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
-mineral_test <- mineral_test %>%
-  mutate(R_inj = if_else(is.na(atom_pc_in0_l), NA, atom_pc_in0_l/100 / (1 - atom_pc_in0_l/100)),
-         R_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, atom_pc_in_harvest_high/100 / (1 - atom_pc_in_harvest_high/100)),
-         R_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100))) %>%
+# How much of a fertilizer was the injection? 
+N_fertilizer <- mineral_combined %>%
+  mutate(deltaInj_pc = inj_15N/Nconc_in0_l*100) %>%
+  select(1:4,inj_15N, Nconc_in0, deltaInj_pc)
+N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvars = c("Site", "MP"))
+N_fertilizer_sum %>%
+  ggplot(aes(x = MP, y = deltaInj_pc, color = Site)) + 
+  geom_line() + 
+  scale_x_continuous(breaks = 1:15) +
+  labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
+  theme_classic(base_size = 20)
+#
+#
+# Calculate isotope ratio (isoR) at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
+mineral_combined <- mineral_combined %>%
+  mutate(isoR_inj = if_else(is.na(atom_pc_in0_l), NA, atom_pc_in0_l/100 / (1 - atom_pc_in0_l/100)),
+         isoR_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, atom_pc_in_harvest_high/100 / (1 - atom_pc_in_harvest_high/100)),
+         isoR_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100))) %>%
   # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
-  mutate(R_avg_high = if_else(is.na(R_inj), NA, if_else(is.na(R_harv_high), R_inj, (R_inj - R_harv_high)/2)),
-         R_avg_low = if_else(is.na(R_inj), NA, if_else(is.na(R_harv_low), R_inj, (R_inj - R_harv_low)/2))) %>%
+  mutate(isoR_avg_high = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), isoR_inj, (isoR_inj - isoR_harv_high)/2)),
+         isoR_avg_low = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), isoR_inj, (isoR_inj - isoR_harv_low)/2))) %>%
   # Calculate atom% from the ratio
-  mutate(AP_avg_high = if_else(is.na(R_avg_high), NA, R_avg_high/(1 + R_avg_high)*100),
-         AP_avg_low = if_else(is.na(R_avg_low), NA, R_avg_low/(1 + R_avg_low)*100))
+  mutate(AP_avg_high = if_else(is.na(isoR_avg_high), NA, isoR_avg_high/(1 + isoR_avg_high)*100),
+         AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100))
+
+test <- mineral_combined %>%
+  mutate(delta_inj = Injection_N_mg_pr_patch - Injection_15N_mg_pr_patch) %>%
+  relocate(delta_inj, .before = inj_15N) %>%
+  mutate(delta_Nconc = Nconc_org/Nconc_soil) %>%
+  relocate(delta_Nconc, .after = Nconc_org) %>%
+  filter(delta_Nconc != 1)
+  # mutate(delta_isoR = isoR_avg_high - isoR_avg_low) %>%
+  # select(1:4, atom_pc_in_harvest_high, atom_pc_in_harvest_low, isoR_avg_high, isoR_avg_low, delta_isoR) %>%
+  # filter(delta_isoR < 0)
+
+test4 <- summarySE(test, measurevar = "delta_Nconc", groupvars = c("Site", "Round"))
+ggplot(test4, aes(x = Round, y = delta_Nconc, fill = Site)) + geom_col()
+
+# How much of the total N pool is in the organic fraction
+ggplot(test, aes(x = Round, y = delta_Nconc, fill = Site)) + 
+  geom_boxplot() +
+  labs(x = "Time of harvest", y = expression("Fraction "*frac("[N]"*{}[organic],"[N]"*{}[total])), title = "Organic [N] as fraction of total inorganic [N] at time of harvest") +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+#
 
 
 
 
 
+
+mineral_combined %>%
+  ggplot(aes(x = Round, y = atom_pc_in_harvest_high, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
+
+mineral_combined %>%
+  ggplot(aes(x = Round, y = atom_pc_in_harvest_low2, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
+
+
+mineral_combined %>%
+  mutate(deltaAP_high_low2 = atom_pc_in_harvest_high - atom_pc_in_harvest_low2) %>%
+  ggplot(aes(x = Round, y = deltaAP_high_low2, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
+
+
+test1 <- summarySE(mineral_combined, measurevar = "atom_pc_in_harvest_high", groupvars = c("Site", "Round"), na.rm = TRUE)
+test2 <- summarySE(mineral_combined, measurevar = "atom_pc_in_harvest_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
+test_delta <- mineral_combined %>%
+  mutate(deltaAP = atom_pc_in_harvest_low2 / atom_pc_in_harvest_high* 100)
+test_delta <- summarySE(test_delta, measurevar = "deltaAP", groupvars = c("Site", "Round"), na.rm = TRUE)
+
+test1 <- test1 %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, Day_of_harvest, atom_pc_in_harvest_high, ci) %>%
+  rename("AP_high" = atom_pc_in_harvest_high,
+         "ci_high" = ci)
+test2 <- test2 %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, Day_of_harvest, atom_pc_in_harvest_low2, ci) %>%
+  rename("AP_low" = atom_pc_in_harvest_low2,
+         "ci_low" = ci)
+test_delta <- test_delta %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, Day_of_harvest, deltaAP, ci) %>%
+  rename("AP_delta" = deltaAP,
+         "ci_delta" = ci)
+
+
+test3 <- test1 %>%
+  left_join(test2, by = join_by(Site, Round, Day_of_harvest)) %>%
+  left_join(test_delta, by = join_by(Site, Round, Day_of_harvest))
+
+test3_1 <- test3 %>%
+  rename("High" = AP_high,
+         "Low" = AP_low) %>%
+  select(Site, Round, Day_of_harvest, High, Low) %>%
+  pivot_longer(4:5, names_to = "Estimate", values_to = "AP")
+test3_2 <- test3 %>%
+  rename("High" = ci_high,
+         "Low" = ci_low) %>%
+  select(Site, Round, Day_of_harvest, High, Low) %>%
+  pivot_longer(4:5, names_to = "Estimate", values_to = "ci")
+test4 <- test3_1 %>%
+  left_join(test3_2, by = join_by(Site, Round, Day_of_harvest, Estimate))
+
+test3 %>%
+  ggplot(aes(x = Day_of_harvest, y = AP_delta, ymin = AP_delta-ci_delta, ymax = AP_delta+ci_delta, fill = Site)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("Abisko", "Vassijaure")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  coord_cartesian(ylim = c(0,100)) +
+  labs(x = "Measuring period (MP)", y = expression("Atom% "*{}^15*"N"), title = expression("Soil "*{}^15*"N atom% high estimate")) +
+  theme_light(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+test4 %>%
+  ggplot(aes(x = Day_of_harvest, y = AP, ymin = AP-ci, ymax = AP+ci, fill = Estimate)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_viridis_d(labels = c("High", "Low")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  coord_cartesian(ylim = c(0,100)) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") +
+  labs(x = "Measuring period (MP)", y = expression("Atom% "*{}^15*"N"), title = expression("Soil "*{}^15*"N atom% high estimate")) +
+  theme_light(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+#
+vegroot15N_Organ_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill = Organ)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  #coord_cartesian(ylim = c(-110,75)) +
+  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
+  #scale_linetype(labels = c("Abisko", "Vassijaure")) +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") +
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
+  #guides(color = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+
+#  
+#
 # Now the mineralization can be calculated
-mineral_test <- mineral_test %>%
-  mutate(gross_p = (log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
+mineral_combined <- mineral_combined %>%
+  # Low estimate
+  mutate(gross_p_low2 = (log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
                          ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
                         ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
                           ) / dayLH), 
          # gross production
-         gross_c = (1 + log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
+         gross_c_low2 = (1 + log((atom_pc_in_harvest_low2 - Atom_pc_NatAb # ft - k
                            ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
                           ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
                     ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
                         ) / dayLH)
+         ) %>% # gross consumption
+  # High estimate
+  mutate(gross_p_high = (log((atom_pc_in_harvest_high - Atom_pc_NatAb # ft - k
+                             ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
+                            ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
+                        ) * ((Nconc_in0_l - Nconc_inorg # W0 - Wt
+                              ) / dayLH), 
+         # gross production
+         gross_c_high = (1 + log((atom_pc_in_harvest_high - Atom_pc_NatAb # ft - k
+                          ) / (atom_pc_in0_l - Atom_pc_NatAb) # f0 - k
+                         ) / log(Nconc_inorg / Nconc_in0_l) # log(Wt/W0)
+                 ) * ((Nconc_in0_l-Nconc_inorg # W0 - Wt
+                       ) / dayLH)
          ) # gross consumption
 #
-mineral_test %>%
-  ggplot(aes(Round, gross_p)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_test %>%
+
+
+
+mineral_combined %>%
+  ggplot(aes(Round, gross_p_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+mineral_combined %>%
+  ggplot(aes(Round, gross_p_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+mineral_combined %>%
   ggplot(aes(Round, gross_c)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 
-mineral_test %>%
+mineral_combined %>%
   ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 # How does the 15N/14N ratio change
-mineral_test %>%
-  ggplot(aes(Round, R_avg_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_test %>%
-  ggplot(aes(Round, R_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_combined %>%
+  ggplot(aes(Round, isoR_avg_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_combined %>%
+  ggplot(aes(Round, isoR_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 
 
-# Testing on plant uptake
+# Testing on plant uptake ----
 vegroot15N_format <- vegroot15N %>%
   #mutate(across(c("Plot", "MP"), as.character)) %>%
-  rename("Atom_pc_plant" = Atom_pc)
+  rename("Atom_pc_plant" = Atom_pc,
+         "d15N_plant" = d15N,
+         "R_plant" = Recovery)
 vegMineral <- vegroot15N_format %>%
-  left_join(mineral_test, by = join_by(Site, Plot, MP, Round)) %>%
-  dplyr::select(1:15, 34, 39:42)
+  left_join(mineral_combined, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:7, Soil_RF_DW_g, Biomass_DW_g, Nconc_pc, d15N_plant, Atom_pc_plant, NatAb_atom_pc, R_plant, 20:47)
 
 vegMineral <- vegMineral %>%
-  mutate(ext14N_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/R_avg_high,
-         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/R_avg_low) %>%
-  mutate(NtotRec_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/(AP_avg_high/100),
-         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/(AP_avg_low)/100) %>%
-  mutate(frac15Nstart = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc/100 * Biomass)/Nconc_in0_l,
+  mutate(ext14N_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_high,
+         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low) %>%
+  mutate(NtotRec_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_high/100),
+         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low)/100) %>%
+  mutate(frac15Nstart = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/Nconc_in0_l,
          Ntot_stand_high = NtotRec_high/Nconc_in0_l,
          Ntot_stand_low = NtotRec_low/Nconc_in0_l,
-         Recov_stand = Recovery/Nconc_in0_l)
+         Recov_stand = R_plant/Nconc_in0_l)
 
 
 vegMineral_total_0 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  summarise(PlantRecovery = sum(R_plant, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 vegMineral_total_1 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
@@ -1493,11 +1697,7 @@ test <- Rec15N %>%
   left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
   select(1:11, Day_of_harvest) %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x)))
-
-# Extract date for sample. Here using Day of harvest
-DayOf <- coreData %>%
-  select(Site, Round, Day_of_harvest) %>%
-  distinct(Day_of_harvest, .keep_all = TRUE)
+#
 #
 # Plant recovery fraction
 Rec15N_Plant_sum2 <- Rec15N_Plant_sum %>%

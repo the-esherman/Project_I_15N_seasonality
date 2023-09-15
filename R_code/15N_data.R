@@ -714,47 +714,13 @@ vegroot15N_total_Plant %>%
 #
 #
 #=======  ###   Statistics   ### =======
-#-------   ##     Q Zero     ## -------
+#-------   ##   Contrasts    ## -------
 #
-Q0_ecosys_stat <- Rec15N %>%
-  mutate(across(c("Plot", "MP"), as.character)) %>%
-  mutate(across(c("Site", "MP", "Round"), as.factor))
-#
-# transform data
-Q0_ecosys_stat <-  Q0_ecosys_stat %>%
-  mutate(Recov = sysRec)
-Q0_ecosys_stat <- Q0_ecosys_stat %>%
-  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
-  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
-#
-#model:
-lme0<-lme(arcRecov ~ Round*Site,
-          random = ~1|Plot/Site,
-          data = Q0_ecosys_stat, na.action = na.exclude, method = "REML")
-#
-#Checking assumptions:
-par(mfrow = c(1,2))
-plot(fitted(lme0), resid(lme0), 
-     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme0), main = "Normally distributed?")                 
-qqline(resid(lme0), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme0)
-par(mfrow = c(1,1))
-#
-#model output
-Anova(lme0, type=2)
-summary(lme0)
-# sysRec, Arcsin transformation:
-# Highly significant for Round (χ^2 = 50.0671, p = 5.95*10^-6). Trend for interaction (χ^2 = 23.1476, p = 0.05791)
+# Abisko vs Vassijaure
+AvsV<-c(1,-1)
 #
 #
-# Per site
-Q0_ecosys_stat_A <- Q0_ecosys_stat %>%
-  filter(Site == "Abisko")
-Q0_ecosys_stat_V <- Q0_ecosys_stat %>%
-  filter(Site == "Vassijaure")
-#
-# Contrasts - Snow vs Snow-free and in between
+# Measuring period - Snow vs Snow-free and in between
 #
 # Abisko
 # Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
@@ -778,43 +744,6 @@ Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
 # Check contrasts are orthogonal
 crossprod(cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14))
 #
-contrasts(Q0_ecosys_stat_A$Round) <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
-#
-# Check if contrasts work, by using a two-way ANOVA
-SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat_A)
-Anova(SysModel_alias, type ="III")
-# alias checks dependencies
-alias(SysModel_alias)
-#
-#
-# transform data
-Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
-  mutate(Recov = sysRec)
-Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
-  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
-  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
-#
-#model:
-lme0_A<-lme(arcRecov ~ Round,
-            random = ~1|Plot,
-            data = Q0_ecosys_stat_A, na.action = na.exclude, method = "REML")
-#
-#Checking assumptions:
-par(mfrow = c(1,2))
-plot(fitted(lme0_A), resid(lme0_A), 
-     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme0_A), main = "Normally distributed?")                 
-qqline(resid(lme0_A), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme0_A)
-par(mfrow = c(1,1))
-#
-#model output
-Anova(lme0_A, type=2)
-summary(lme0_A)
-# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
-# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
-#
-#
 # Vassijaure
 # Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
 # MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
@@ -837,6 +766,95 @@ Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
 # Check contrasts are orthogonal
 crossprod(cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14))
 #
+#
+# Plant organs
+SvsR<-c(-1, -1, 2) # Shoots vs roots
+CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
+#
+# Check contrasts are orthogonal
+crossprod(cbind(SvsR,CRvsFR))
+#
+#
+#
+#-------   ##     Q Zero     ## -------
+#
+Q0_ecosys_stat <- Rec15N %>%
+  mutate(across(c("Plot", "MP"), as.character)) %>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
+#
+# transform data
+Q0_ecosys_stat <-  Q0_ecosys_stat %>%
+  mutate(Recov = sysRec)
+Q0_ecosys_stat <- Q0_ecosys_stat %>%
+  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
+  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+#
+# model:
+lme0<-lme(arcRecov ~ Round*Site,
+          random = ~1|Plot/Site,
+          data = Q0_ecosys_stat, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme0), resid(lme0), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme0), main = "Normally distributed?")                 
+qqline(resid(lme0), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme0)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme0, type=2)
+summary(lme0)
+# sysRec, Arcsin transformation:
+# Highly significant for Round (χ^2 = 50.0671, p = 5.95*10^-6). Trend for interaction (χ^2 = 23.1476, p = 0.05791)
+#
+#
+# Per site
+Q0_ecosys_stat_A <- Q0_ecosys_stat %>%
+  filter(Site == "Abisko")
+Q0_ecosys_stat_V <- Q0_ecosys_stat %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts - Abisko
+contrasts(Q0_ecosys_stat_A$Round) <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
+#
+# Check if contrasts work, by using a two-way ANOVA
+SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat_A)
+Anova(SysModel_alias, type ="III")
+# alias checks dependencies
+alias(SysModel_alias)
+#
+# transform data
+Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
+  mutate(Recov = sysRec)
+Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
+  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
+  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+#
+# model:
+lme0_A<-lme(arcRecov ~ Round,
+            random = ~1|Plot,
+            data = Q0_ecosys_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme0_A), resid(lme0_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme0_A), main = "Normally distributed?")                 
+qqline(resid(lme0_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme0_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme0_A, type=2)
+summary(lme0_A)
+# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
+# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+#
+#
+# Contrasts - Vassijaure
 contrasts(Q0_ecosys_stat_V$Round) <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
 #
 # Check if contrasts work, by using a two-way ANOVA
@@ -852,12 +870,12 @@ Q0_ecosys_stat_V <- Q0_ecosys_stat_V %>%
   mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
   mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
 #
-#model:
+# model:
 lme0_V<-lme(arcRecov ~ Round,
             random = ~1|Plot,
             data = Q0_ecosys_stat_V, na.action = na.exclude, method = "REML")
 #
-#Checking assumptions:
+# Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme0_V), resid(lme0_V), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
@@ -866,7 +884,7 @@ qqline(resid(lme0_V), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme0_V)
 par(mfrow = c(1,1))
 #
-#model output
+# model output
 Anova(lme0_V, type=2)
 summary(lme0_V)
 # Highly significant for Snow Cold vs Warm (t = 4.845361, p < 0.0001)
@@ -890,41 +908,6 @@ Q1_veg_stat <- Rec15N %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
-# Contrasts - whole plant recovery
-# Month            (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP               (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-SummervsWinter <- c(1, 1, 0, 0,-1,-1,-1,-1,-1, 0, 0, 0, 1, 1, 1)
-SpringvsAutumn <- c(0, 0, 1, 1, 1, 0, 0, 0, 0,-1,-1,-1, 0, 0, 0)
-SnowvsNot      <- c(-8,-8,-8,-8,7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow from November to May, but April 2 in Abisko!
-JulvsJan       <- c(1, 0, 0, 0, 0, 0,-2, 0, 0, 0, 0, 0, 0, 1, 0)
-OctvsApr       <- c(0, 0, 1, 0, 0, 0, 0, 0, 0, 0,-1, 0, 0, 0, 0)
-Summervs2      <- c(1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer '19 vs summer '20
-SpringChA      <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change in Abisko: April vs May
-SpringChV      <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0) # Spring change in Vassijaure: April/May vs June
-AutumnCh       <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-WinterCh       <- c(0, 0, 0, 0, 1, 1, 1, 1,-1,-1,-1,-1, 0, 0, 0)
-SnowvsNotA     <- c(-7,-7,-7,-7,8, 8, 8, 8, 8, 8, 8, -7,-7,-7,-7) # Snow from November to April 2 in Abisko!
-cont11         <- c(0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-cont12         <- c(0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0)
-cont13         <- c(0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0)
-cont14         <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just to get everything to balance out
-#
-AvsV<-c(1,-1)
-#
-contrasts(Q1_veg_stat$Site)<-AvsV
-contrasts(Q1_veg_stat$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#contrasts(Q1_veg_stat$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
-#
-# Check contrasts are orthogonal
-crossprod(cbind(SummervsWinter, SpringvsAutumn, SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14))
-# Not orthogonal
-#
-# Check if contrasts work, by using a two-way ANOVA
-PlantModel_alias <- aov(PlantRecovery ~ Round*Site, data = Q1_veg_stat)
-Anova(PlantModel_alias, type ="III")
-# alias checks dependencies
-alias(PlantModel_alias)
-#
 # transform data
 Q1_veg_stat <- Q1_veg_stat %>%
   mutate(Recov = PlantRecovery)
@@ -934,12 +917,12 @@ Q1_veg_stat <- Q1_veg_stat %>%
   mutate(logRecov = log(Recov+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
   mutate(arcRecov = asin(sqrt(Recov/100))) # Look into this for general percentages!!
 #
-#model:
+# model:
 lme1<-lme(logRecov ~ Round*Site,
           random = ~1|Plot/Site,
           data = Q1_veg_stat, na.action = na.exclude, method = "REML")
 #
-#Checking assumptions:
+# Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme1), resid(lme1), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
@@ -948,7 +931,7 @@ qqline(resid(lme1), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lme1)
 par(mfrow = c(1,1))
 #
-#model output
+# model output
 Anova(lme1, type=2)
 summary(lme1)
 # Significant for Round
@@ -1045,27 +1028,6 @@ vegroot15N_Organ <- vegroot15N %>%
   mutate(OrganRecovery_ofTotal = OrganRecovery, 
          OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
   select(1:5,OrganRecovery)
-#
-# Contrasts - plant organs
-# For contrasts of Round see Q1
-SvsR<-c(-1, -1, 2) # Shoots vs roots
-CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
-AvsV<-c(1,-1) # Abisko vs Vassijaure. Maybe not much point in specifying this, but not sure if I dare remove it
-contrasts(vegroot15N_Organ$Site)<-AvsV
-contrasts(vegroot15N_Organ$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14) # Contrasts defined in Q1
-#contrasts(vegroot15N_Organ$Round)<-contr.helmert # Contrasts that compare each new round with the previous ones.
-contrasts(vegroot15N_Organ$Organ)<-cbind(SvsR,CRvsFR)
-#
-# Check contrasts are orthogonal
-crossprod(cbind(SvsR,CRvsFR))
-# Orthogonal
-#
-# Check if contrasts work, by using a two-way ANOVA
-OrganModel_alias <- aov(OrganRecovery ~ Round*Site, data = vegroot15N_Organ)
-Anova(OrganModel_alias, type ="III")
-# alias checks dependencies
-alias(OrganModel_alias)
-#
 #
 #
 # transform data
@@ -1187,35 +1149,6 @@ Mic15N_R <- Rec15N %>%
 Mic15N_R <- Mic15N_R %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
-#
-# Contrasts - MBN recovery
-# Month           (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP              (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-Cont4_Mic     <- c(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1, 0) # July vs July
-Cont5_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # 2 times april
-Cont6_Mic     <- c(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # Spring change
-Cont7_Mic     <- c(0, 0, 0, 0, 3,-1,-1,-1, 0, 0, 0, 0, 0, 0, 0) # November is highly different from the rest of winter?
-Cont8_Mic     <- c(0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Or from autumn?
-Cont9_Mic     <- c(1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Just getting the last to work 
-Cont10_Mic    <- c(1, 1,-2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Cont11_Mic    <- c(1, 1, 1, 1, 1,-5, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-AvsV<-c(1,-1)
-contrasts(Mic15N_R$Site)<-AvsV
-# Same contrasts as for plant recovery:
-# SummervsWinter, SpringvsAutumn, SnowvsNot
-contrasts(Mic15N_R$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#contrasts(Mic15N_R$Round)<-cbind(SummervsWinter, SpringvsAutumn, SnowvsNot)#, Cont4_Mic, Cont5_Mic, Cont6_Mic, Cont7_Mic, Cont8_Mic, Cont9_Mic, Cont10_Mic, Cont11_Mic) # Contrasts that compare each new round with the previous ones.
-#contrasts(Mic15N_R$Round)<-contr.helmert
-#
-# Check if contrasts work
-# Check contrasts are orthogonal
-crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh))#, cont11, cont12, cont13, cont14))
-#
-# Alternative: Two-way ANOVA
-# have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
-MicModel3 <- aov(R_MBN ~ Round*Site, data = Mic15N_R)
-Anova(MicModel3, type ="III")
-#
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
@@ -1386,11 +1319,6 @@ TDN15N <- Rec15N %>%
   mutate(across(c("Plot", "MP"), ~as.character(.x))) %>%
   mutate(across(c("Site", "MP", "Round"), ~as.factor(.x))) %>%
   ungroup()
-#
-# Contrasts - TDN
-# Same contrasts as plants
-contrasts(TDN15N$Site)<-AvsV
-contrasts(TDN15N$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
 #
 # transform data
 TDN15N <- TDN15N %>%
@@ -2004,8 +1932,8 @@ coreData %>%
 coreData_SnowP <- coreData %>%
   filter(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12)# | MP == 13)
 lmeSnow<-lme(log(Snow_depth_plot_cm + 1) ~ Site*Round,
-          random = ~1|Plot/Site,
-          data = coreData_SnowP, na.action = na.exclude , method = "REML")
+             random = ~1|Plot/Site,
+             data = coreData_SnowP, na.action = na.exclude , method = "REML")
 #
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -2053,7 +1981,7 @@ vegroot15N_Organ_sum2 %>%
   #guides(color = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
-  
+
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs)
 #
 vegroot15N_Organ_sum2 %>%

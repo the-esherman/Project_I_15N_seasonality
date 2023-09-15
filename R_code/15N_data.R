@@ -714,6 +714,166 @@ vegroot15N_total_Plant %>%
 #
 #
 #=======  ###   Statistics   ### =======
+#-------   ##     Q Zero     ## -------
+#
+Q0_ecosys_stat <- Rec15N %>%
+  mutate(across(c("Plot", "MP"), as.character)) %>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
+#
+# transform data
+Q0_ecosys_stat <-  Q0_ecosys_stat %>%
+  mutate(Recov = sysRec)
+Q0_ecosys_stat <- Q0_ecosys_stat %>%
+  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
+  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+#
+#model:
+lme0<-lme(arcRecov ~ Round*Site,
+          random = ~1|Plot/Site,
+          data = Q0_ecosys_stat, na.action = na.exclude, method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme0), resid(lme0), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme0), main = "Normally distributed?")                 
+qqline(resid(lme0), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme0)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme0, type=2)
+summary(lme0)
+# sysRec, Arcsin transformation:
+# Highly significant for Round (χ^2 = 50.0671, p = 5.95*10^-6). Trend for interaction (χ^2 = 23.1476, p = 0.05791)
+#
+#
+# Per site
+Q0_ecosys_stat_A <- Q0_ecosys_stat %>%
+  filter(Site == "Abisko")
+Q0_ecosys_stat_V <- Q0_ecosys_stat %>%
+  filter(Site == "Vassijaure")
+#
+# Contrasts - Snow vs Snow-free and in between
+#
+# Abisko
+# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Abi_SnowvsNot   <- c(-8,-8,-8,-8, 7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow found on plots from November to May
+Abi_SnowCvsW    <- c( 0, 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
+Abi_freeWvsC    <- c( 2, 2,-5,-5, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2) # Warm vs cold part of the snow-free period
+# The rest of the contrasts: Necessary for balanced test, but not interesting
+Abi_Cont4       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-4, 1, 1)
+Abi_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+Abi_Cont6       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
+Abi_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
+Abi_Cont8       <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Abi_Cont9       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Abi_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
+Abi_Cont11      <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Abi_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Abi_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
+Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+#
+# Check contrasts are orthogonal
+crossprod(cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14))
+#
+contrasts(Q0_ecosys_stat_A$Round) <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
+#
+# Check if contrasts work, by using a two-way ANOVA
+SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat_A)
+Anova(SysModel_alias, type ="III")
+# alias checks dependencies
+alias(SysModel_alias)
+#
+#
+# transform data
+Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
+  mutate(Recov = sysRec)
+Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
+  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
+  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+#
+#model:
+lme0_A<-lme(arcRecov ~ Round,
+            random = ~1|Plot,
+            data = Q0_ecosys_stat_A, na.action = na.exclude, method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme0_A), resid(lme0_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme0_A), main = "Normally distributed?")                 
+qqline(resid(lme0_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme0_A)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme0_A, type=2)
+summary(lme0_A)
+# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
+# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+#
+#
+# Vassijaure
+# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Vas_SnowvsNot   <- c(-7,-7,-7,-7, 8, 8, 8, 8, 8, 8, 8, 8, 8,-7,-7) # Snow found on plots from November to June
+Vas_SnowCvsW    <- c( 0, 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
+Vas_freeWvsC    <- c( 2, 2,-4,-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2) # Warm vs cold part of the snow-free period
+# The rest of the contrasts: Necessary for balanced test, but not interesting
+Vas_Cont4       <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Vas_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+Vas_Cont6       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Vas_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
+Vas_Cont8       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
+Vas_Cont9       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
+Vas_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0)
+Vas_Cont11      <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Vas_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Vas_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
+Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+#
+# Check contrasts are orthogonal
+crossprod(cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14))
+#
+contrasts(Q0_ecosys_stat_V$Round) <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+#
+# Check if contrasts work, by using a two-way ANOVA
+SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat)
+Anova(SysModel_alias, type ="III")
+# alias checks dependencies
+alias(SysModel_alias)
+#
+# transform data
+Q0_ecosys_stat_V <-  Q0_ecosys_stat_V %>%
+  mutate(Recov = sysRec)
+Q0_ecosys_stat_V <- Q0_ecosys_stat_V %>%
+  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
+  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+#
+#model:
+lme0_V<-lme(arcRecov ~ Round,
+            random = ~1|Plot,
+            data = Q0_ecosys_stat_V, na.action = na.exclude, method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme0_V), resid(lme0_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme0_V), main = "Normally distributed?")                 
+qqline(resid(lme0_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme0_V)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme0_V, type=2)
+summary(lme0_V)
+# Highly significant for Snow Cold vs Warm (t = 4.845361, p < 0.0001)
+#
+#
+#
+#=======  ###   Statistics   ### =======
 #-------   ##       Q1       ## -------
 #
 # Model
@@ -722,7 +882,7 @@ vegroot15N_total_Plant %>%
 # Most important factor: Time
 #
 vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
-  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Plot", "MP"), as.character)) %>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 Q1_veg_stat <- Rec15N %>%
@@ -1068,7 +1228,7 @@ Mic15N_R <- Mic15N_R %>%
 #
 #
 #model:
-lme2<-lme(Recov ~ Site*Round,
+lme2<-lme(arcRecov ~ Site*Round,
           random = ~1|Plot/Site,
           data = Mic15N_R, na.action = na.exclude , method = "REML")
 #

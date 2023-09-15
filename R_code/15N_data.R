@@ -741,8 +741,10 @@ Abi_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Abi_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
 Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
 #
+Contr_Abisko_MP <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
+#
 # Check contrasts are orthogonal
-crossprod(cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14))
+crossprod(Contr_Abisko_MP)
 #
 # Vassijaure
 # Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
@@ -763,8 +765,10 @@ Vas_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 Vas_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
 Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
 #
+Contr_Vassijaure_MP <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+#
 # Check contrasts are orthogonal
-crossprod(cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14))
+crossprod(Contr_Vassijaure_MP)
 #
 #
 # Plant organs
@@ -786,8 +790,8 @@ Q0_ecosys_stat <- Rec15N %>%
 Q0_ecosys_stat <-  Q0_ecosys_stat %>%
   mutate(Recov = sysRec)
 Q0_ecosys_stat <- Q0_ecosys_stat %>%
-  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
-  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
 #
 # model:
 lme0<-lme(arcRecov ~ Round*Site,
@@ -805,7 +809,6 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lme0, type=2)
-summary(lme0)
 # sysRec, Arcsin transformation:
 # Highly significant for Round (χ^2 = 50.0671, p = 5.95*10^-6). Trend for interaction (χ^2 = 23.1476, p = 0.05791)
 #
@@ -818,7 +821,7 @@ Q0_ecosys_stat_V <- Q0_ecosys_stat %>%
 #
 #
 # Contrasts - Abisko
-contrasts(Q0_ecosys_stat_A$Round) <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
+contrasts(Q0_ecosys_stat_A$Round) <- Contr_Abisko_MP
 #
 # Check if contrasts work, by using a two-way ANOVA
 SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat_A)
@@ -830,8 +833,8 @@ alias(SysModel_alias)
 Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
   mutate(Recov = sysRec)
 Q0_ecosys_stat_A <- Q0_ecosys_stat_A %>%
-  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
-  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
 #
 # model:
 lme0_A<-lme(arcRecov ~ Round,
@@ -855,7 +858,7 @@ summary(lme0_A)
 #
 #
 # Contrasts - Vassijaure
-contrasts(Q0_ecosys_stat_V$Round) <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+contrasts(Q0_ecosys_stat_V$Round) <- Contr_Vassijaure_MP
 #
 # Check if contrasts work, by using a two-way ANOVA
 SysModel_alias <- aov(sysRec ~ Round, data = Q0_ecosys_stat)
@@ -867,8 +870,8 @@ alias(SysModel_alias)
 Q0_ecosys_stat_V <-  Q0_ecosys_stat_V %>%
   mutate(Recov = sysRec)
 Q0_ecosys_stat_V <- Q0_ecosys_stat_V %>%
-  mutate(logRecov = log(Recov+1)) %>% # Good for low percentage values
-  mutate(arcRecov = asin(sqrt(Recov/1000))) # General use is for this transformation. Recovery values are > 100, so transform by dividing by 1000 instead
+  mutate(logRecov = log(Recov+1), # Good for low percentage values
+         arcRecov = asin(sqrt(Recov/1000))) # Use is for this most transformations in percent. Recovery values are > 100, so transform by dividing by 1000 instead
 #
 # model:
 lme0_V<-lme(arcRecov ~ Round,
@@ -899,10 +902,6 @@ summary(lme0_V)
 # Factors: Time, Site, Time*Site
 # Most important factor: Time
 #
-vegroot15N_total_Plant <- vegroot15N_total_Plant %>%
-  mutate(across(c("Plot", "MP"), as.character)) %>%
-  mutate(across(c("Site", "MP", "Round"), as.factor))
-#
 Q1_veg_stat <- Rec15N %>%
   select(1:4, PlantRecovery, PlantR_frac) %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
@@ -912,10 +911,8 @@ Q1_veg_stat <- Rec15N %>%
 Q1_veg_stat <- Q1_veg_stat %>%
   mutate(Recov = PlantRecovery)
 Q1_veg_stat <- Q1_veg_stat %>%
-  mutate(sqrtRecov = sqrt(Recov)) %>%
-  mutate(invRecov = 1/Recov) %>%
-  mutate(logRecov = log(Recov+1)) %>% # Works the best. Values are small, so even if percent act like log dist.
-  mutate(arcRecov = asin(sqrt(Recov/100))) # Look into this for general percentages!!
+  mutate(logRecov = log(Recov+1), # Good for low percentage values. Use here as values are in the low end
+         arcRecov = asin(sqrt(Recov/100))) # Use is for this most transformations in percent.
 #
 # model:
 lme1<-lme(logRecov ~ Round*Site,
@@ -933,8 +930,9 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lme1, type=2)
-summary(lme1)
-# Significant for Round
+#summary(lme1)
+# Log transformation
+# Significant for Round (χ^2 = 27.671, p = 0.01573)
 #
 Q1_season <- Q1_veg_stat %>%
   select(1:4, PlantRecovery) %>%
@@ -1029,23 +1027,10 @@ vegroot15N_Organ <- vegroot15N %>%
          OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
   select(1:5,OrganRecovery)
 #
-#
 # transform data
 vegroot15N_Organ <- vegroot15N_Organ %>%
-  # select(1:5,7) %>%
-  # rename(OrganRecovery = OrganRecovery_frac) %>%
-  #dplyr::filter(OrganRecovery > 0) %>% 
-  mutate(sqrtOrganRecovery = sqrt(OrganRecovery)) %>%
-  mutate(invOrganRecovery = 1/OrganRecovery) %>%
-  mutate(logOrganRecovery = log(OrganRecovery+1)) %>%
-  mutate(expOrganRecovery = exp(OrganRecovery+1)) %>%
-  mutate(rootOrganRecovery = (OrganRecovery^2)^(1/9)) %>%
-  mutate(sqOrganRecovery = OrganRecovery^2) %>%
-  mutate(arcOrganRecovery = asin(sqrt((OrganRecovery)/100))) %>%
-  mutate(logsqrtOrganRecovery = sqrt(log(OrganRecovery+1))) %>%
-  mutate(logarcOrganRecovery = log(asin(sqrt((OrganRecovery)/100))+1)) %>%
-  mutate(funOrganRecovery = (OrganRecovery/100)^(1/9))
-# BoxCox transformation?
+  mutate(logOrganRecovery = log(OrganRecovery+1), # Good for low percentage values.
+         arcOrganRecovery = asin(sqrt((OrganRecovery)/100))) # Use is for this most transformations in percent.
 #
 # model:
 lme1a<-lme(arcOrganRecovery ~ Round*Site*Organ,
@@ -1063,9 +1048,10 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lme1a, type=2)
-summary(lme1a)
-# For organ recovery as fraction of whole plant recovery:
-# Highly significant for organ and all interactions except Round:Site
+#summary(lme1a)
+# For organ recovery as fraction of whole plant recovery (Arcsin transformation):
+# Highly significant for organ (χ^2 = 669.9609, p < 2.2*10^-16) 
+# and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2*10^-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
 #
 Q1a_season <- vegroot15N_Organ %>%
   select(1:4, Organ, OrganRecovery) %>%
@@ -1152,11 +1138,10 @@ Mic15N_R <- Mic15N_R %>%
 #
 # Transform data
 Mic15N_R <- Mic15N_R %>%
-  mutate(Recov = R_MBN) 
+  mutate(Recov = R_MBN_frac) 
 Mic15N_R <- Mic15N_R %>%
   mutate(sqrtRecov = sqrt(Recov),
          logRecov = log(Recov),
-         cubeRecov = (Recov)^(1/3),
          arcRecov = asin(sqrt(Recov/max(100, max(Mic15N_R$Recov)))))
 #
 #
@@ -1176,8 +1161,9 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lme2, type=2)
-summary(lme2)
-# Highly significant for Round
+#summary(lme2)
+# Arcsin transformation
+# Highly significant for Round (χ^2 = 39.8375, p = 0.0002704)
 
 Q2_season <- Mic15N_R %>%
   select(1:4, R_MBN) %>%
@@ -1324,10 +1310,7 @@ TDN15N <- Rec15N %>%
 TDN15N <- TDN15N %>%
   mutate(Recov = R_TDN_frac)
 TDN15N <- TDN15N %>%
-  mutate(sqrtRecov = sqrt(Recov),
-         invRecov = 1/Recov,
-         logRecov = log(Recov),
-         cubeRecov = (Recov)^(1/3),
+  mutate(logRecov = log(Recov),
          arcRecov = asin(sqrt(Recov/100)))
 #
 #model:

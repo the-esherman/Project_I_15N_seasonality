@@ -386,13 +386,21 @@ N_fertilizer_sum %>%
 mineral_combined <- mineral_combined %>%
   mutate(isoR_inj = if_else(is.na(atom_pc_in0_l), NA, atom_pc_in0_l/100 / (1 - atom_pc_in0_l/100)),
          isoR_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, atom_pc_in_harvest_high/100 / (1 - atom_pc_in_harvest_high/100)),
-         isoR_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100))) %>%
+         isoR_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100)),
+         isoR_harv_low2 = if_else(is.na(atom_pc_in_harvest_low2), NA, atom_pc_in_harvest_low2/100 / (1 - atom_pc_in_harvest_low2/100))) %>%
   # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
-  mutate(isoR_avg_high = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), isoR_inj, (isoR_inj - isoR_harv_high)/2)),
-         isoR_avg_low = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), isoR_inj, (isoR_inj - isoR_harv_low)/2))) %>%
+  mutate(isoR_avg_high = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), isoR_inj, (isoR_inj + isoR_harv_high)/2)),
+         isoR_avg_low = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), isoR_inj, (isoR_inj + isoR_harv_low)/2)),
+         isoR_avg_low2 = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), isoR_inj, (isoR_inj + isoR_harv_low2)/2))) %>%
   # Calculate atom% from the ratio
   mutate(AP_avg_high = if_else(is.na(isoR_avg_high), NA, isoR_avg_high/(1 + isoR_avg_high)*100),
-         AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100))
+         AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100),
+         AP_avg_low2 = if_else(is.na(isoR_avg_low2), NA, isoR_avg_low2/(1 + isoR_avg_low2)*100)) %>%
+  mutate(isoF_avg_high = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_high/100)/2)),
+         isoF_avg_low = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_low/100)/2)),
+         isoF_avg_low2 = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_low2/100)/2))) %>%
+  mutate(isoR_avg_high_v2 = isoF_avg_high/(1-isoF_avg_high),
+         isoR_avg_low_v2 = isoF_avg_low/(1-isoF_avg_low))
 
 test <- mineral_combined %>%
   mutate(delta_inj = Injection_N_mg_pr_patch - Injection_15N_mg_pr_patch) %>%
@@ -418,6 +426,43 @@ ggplot(test, aes(x = Round, y = delta_Nconc, fill = Site)) +
 
 
 
+
+
+
+
+# Is the 15R always lower in harvest than at injection?
+# That is, is there more 15N per 14N at harvest than at injection?
+# This would imply that there is fractionation, or a bias against using the 15N over using the 14N. Which is possible and likely, but does not take into account dilution from mineralization.
+mineral_combined %>%
+  select(1:3, isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2) %>%
+  filter(!is.na(isoR_inj)) %>%
+  mutate(isoR_harv_high = if_else(is.na(isoR_harv_high), isoR_inj, isoR_harv_high),
+         isoR_harv_low = if_else(is.na(isoR_harv_low), isoR_inj, isoR_harv_low),
+         isoR_harv_low2 = if_else(is.na(isoR_harv_low2), isoR_inj, isoR_harv_low2)) %>%
+  #group_by(across(c("Site", "MP"))) %>%
+  summarise(across(c(isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2), ~mean(.)), .by = c("Site", "MP")) %>%
+  pivot_longer(cols = 3:6, names_to = "Time", values_to = "isoR") %>%
+  mutate(Time = case_when(Time == "isoR_inj" ~ 1,
+                          Time == "isoR_harv_high" ~ 3,
+                          Time == "isoR_harv_low" ~ 2,
+                          Time == "isoR_harv_low2" ~ 2.5)) %>%
+  #filter(Time != 3) %>%
+  ggplot(aes(x = Time, y = isoR, color = Site)) + geom_point() + facet_wrap(~ MP)
+  
+
+
+mineral_combined %>%
+  ggplot(aes(x = MP, y = Nconc_inorg, color = Site)) + geom_point()
+
+mineral_combined %>%
+  filter(!is.na(isoR_harv_high),
+         !is.na(isoR_inj)) %>%
+  ggplot(aes(x = isoR_avg_high, y = isoR_avg_high_v2, color = Site)) + geom_point()
+
+mineral_combined %>%
+  filter(!is.na(isoR_harv_high),
+         !is.na(isoR_inj)) %>%
+  ggplot(aes(x = isoR_avg_high/(1+isoR_avg_high), y = isoF_avg_high, color = Site)) + geom_point()
 
 
 
@@ -489,6 +534,7 @@ test3 %>%
 
 test4 %>%
   ggplot(aes(x = Day_of_harvest, y = AP, ymin = AP-ci, ymax = AP+ci, fill = Estimate)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
   geom_line() +
   geom_ribbon(alpha = 0.5) +
   scale_fill_viridis_d(labels = c("High", "Low")) +
@@ -499,23 +545,6 @@ test4 %>%
   theme_light(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 
-
-
-#
-vegroot15N_Organ_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill = Organ)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  #coord_cartesian(ylim = c(-110,75)) +
-  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
-  #scale_linetype(labels = c("Abisko", "Vassijaure")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") +
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  #guides(color = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
 
 
 
@@ -561,8 +590,10 @@ mineral_combined %>%
   ggplot(aes(Round, gross_p_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 mineral_combined %>%
-  ggplot(aes(Round, gross_c)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+  ggplot(aes(Round, gross_c_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
+mineral_combined %>%
+  ggplot(aes(Round, gross_c_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 mineral_combined %>%
   ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
@@ -575,6 +606,7 @@ mineral_combined %>%
 
 
 
+#
 # Testing on plant uptake ----
 vegroot15N_format <- vegroot15N %>%
   #mutate(across(c("Plot", "MP"), as.character)) %>%
@@ -583,17 +615,40 @@ vegroot15N_format <- vegroot15N %>%
          "R_plant" = Recovery)
 vegMineral <- vegroot15N_format %>%
   left_join(mineral_combined, by = join_by(Site, Plot, MP, Round)) %>%
-  select(1:7, Soil_RF_DW_g, Biomass_DW_g, Nconc_pc, d15N_plant, Atom_pc_plant, NatAb_atom_pc, R_plant, 20:47)
+  select(1:7, Soil_RF_DW_g, Biomass_DW_g, Nconc_pc, d15N_plant, Atom_pc_plant, NatAb_atom_pc, R_plant, 20:50)
 
 vegMineral <- vegMineral %>%
   mutate(ext14N_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_high,
-         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low) %>%
+         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low,
+         ext14N_low2 = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low2) %>%
   mutate(NtotRec_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_high/100),
-         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low)/100) %>%
+         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low/100),
+         NtotRec_low2 = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low2/100)) %>%
   mutate(frac15Nstart = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/Nconc_in0_l,
          Ntot_stand_high = NtotRec_high/Nconc_in0_l,
          Ntot_stand_low = NtotRec_low/Nconc_in0_l,
-         Recov_stand = R_plant/Nconc_in0_l)
+         Ntot_stand_low2 = NtotRec_low2/Nconc_in0_l,
+         Recov_stand = R_plant/Nconc_in0_l) %>%
+  mutate(ext14N_high_pr15N = ext14N_high/(Injection_15N_mg_pr_patch/1000),
+         ext14N_low_pr15N = ext14N_low/(Injection_15N_mg_pr_patch/1000),
+         ext14N_low2_pr15N = ext14N_low2/(Injection_15N_mg_pr_patch/1000),
+         NtotRec_high_pr15N = NtotRec_high/(Injection_15N_mg_pr_patch/1000),
+         NtotRec_low_pr15N = NtotRec_low/(Injection_15N_mg_pr_patch/1000),
+         NtotRec_low2_pr15N = NtotRec_low2/(Injection_15N_mg_pr_patch/1000))
+
+
+
+vegMineral %>%
+  ggplot(aes(x = ext14N_high, y = ext14N_low, color = Site)) + geom_point()
+vegMineral %>%
+  ggplot(aes(x = ext14N_high_pr15N, y = ext14N_low_pr15N, color = Site)) + geom_point()
+vegMineral %>%
+  ggplot(aes(x = ext14N_low2_pr15N, y = ext14N_low_pr15N, color = Site)) + geom_point()
+vegMineral %>%
+  ggplot(aes(x = NtotRec_high_pr15N, y = NtotRec_low_pr15N, color = Site)) + geom_point()
+vegMineral %>%
+  ggplot(aes(x = NtotRec_high, y = NtotRec_low, color = Site)) + geom_point()
+
 
 
 vegMineral_total_0 <- vegMineral %>%
@@ -602,19 +657,27 @@ vegMineral_total_0 <- vegMineral %>%
   ungroup()
 vegMineral_total_1 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantExt14N_high = sum(ext14N_high, na.rm = TRUE), .groups = "keep") %>%
+  summarise(PlantExt14N_high = sum(ext14N_high_pr15N, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 vegMineral_total_2 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantExt14N_low = sum(ext14N_low, na.rm = TRUE), .groups = "keep") %>%
+  summarise(PlantExt14N_low = sum(ext14N_low_pr15N, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_2_5 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantExt14N_low2 = sum(ext14N_low2_pr15N, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 vegMineral_total_3 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantN_high = sum(NtotRec_high, na.rm = TRUE), .groups = "keep") %>%
+  summarise(PlantN_high = sum(NtotRec_high_pr15N, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 vegMineral_total_4 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantN_low = sum(NtotRec_low, na.rm = TRUE), .groups = "keep") %>%
+  summarise(PlantN_low = sum(NtotRec_low_pr15N, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+vegMineral_total_4_5 <- vegMineral %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantN_low2 = sum(NtotRec_low2_pr15N, na.rm = TRUE), .groups = "keep") %>%
   ungroup()
 vegMineral_total_5 <- vegMineral %>%
   group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
@@ -636,8 +699,10 @@ vegMineral_total_8 <- vegMineral %>%
 vegMineral_total <- vegMineral_total_0 %>%
   left_join(vegMineral_total_1, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_2, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_2_5, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_3, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_4, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(vegMineral_total_4_5, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_5, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_6, by = join_by(Site, Plot, MP, Round)) %>%
   left_join(vegMineral_total_7, by = join_by(Site, Plot, MP, Round)) %>%
@@ -651,11 +716,15 @@ vegMineral_total %>%
   ggplot(aes(Round, PlantExt14N_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 vegMineral_total %>%
   ggplot(aes(Round, PlantExt14N_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, PlantExt14N_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 vegMineral_total %>%
   ggplot(aes(Round, PlantN_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 vegMineral_total %>%
   ggplot(aes(Round, PlantN_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+vegMineral_total %>%
+  ggplot(aes(Round, PlantN_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
 vegMineral_total %>%
   ggplot(aes(Round, Plantstd_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
@@ -856,6 +925,37 @@ summary(lme0_A)
 # Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
 # Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
 #
+Q0_season_A <- Q0_ecosys_stat_A %>%
+  select(1:4, sysRec) %>%
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                              MP == 10 | MP == 11 | MP == 12 ~ "Warm",
+                              TRUE ~ NA),
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
+                              MP == 3 | MP == 4 ~ "Cold",
+                              TRUE ~ NA))
+#
+#
+Q0_season_A %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(SnowCW))
+Q0_season_A %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(FreeWC))
+#
+#
+Q0_season_A %>%
+  summarise(sysRec_season = mean(sysRec), .by = c(Snow))
+#
+summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("Snow"))
+summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("SnowCW"))
+summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("FreeWC"))
+
+Q0_season_A %>%
+  ggplot(aes(x = Round, y = sysRec, fill = FreeWC)) +
+  geom_boxplot() +
+  facet_wrap(~Site)
+#
 #
 # Contrasts - Vassijaure
 contrasts(Q0_ecosys_stat_V$Round) <- Contr_Vassijaure_MP
@@ -891,6 +991,37 @@ par(mfrow = c(1,1))
 Anova(lme0_V, type=2)
 summary(lme0_V)
 # Highly significant for Snow Cold vs Warm (t = 4.845361, p < 0.0001)
+#
+Q0_season_V <- Q0_ecosys_stat_V %>%
+  select(1:4, sysRec) %>%
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
+                            TRUE ~ NA),
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
+                            MP == 3 | MP == 4 ~ "Cold",
+                            TRUE ~ NA))
+#
+#
+Q0_season_V %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(SnowCW))
+Q0_season_V %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(FreeWC))
+#
+#
+Q0_season_V %>%
+  summarise(sysRec_season = mean(sysRec), .by = c(Snow))
+#
+summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("Snow"))
+summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("SnowCW"))
+summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("FreeWC"))
+
+Q0_season_V %>%
+  ggplot(aes(x = Round, y = sysRec, fill = SnowCW)) +
+  geom_boxplot() +
+  facet_wrap(~Site)
 #
 #
 #
@@ -930,82 +1061,145 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lme1, type=2)
-#summary(lme1)
 # Log transformation
 # Significant for Round (χ^2 = 27.671, p = 0.01573)
 #
-Q1_season <- Q1_veg_stat %>%
+#
+# Per site
+Q1_veg_stat_A <- Q1_veg_stat %>%
+  filter(Site == "Abisko")
+Q1_veg_stat_V <- Q1_veg_stat %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts Abisko
+contrasts(Q1_veg_stat_A$Round) <- Contr_Abisko_MP
+#
+# transform data
+Q1_veg_stat_A <- Q1_veg_stat_A %>%
+  mutate(Recov = PlantRecovery)
+Q1_veg_stat_A <- Q1_veg_stat_A %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme1_A<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q1_veg_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1_A), resid(lme1_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1_A), main = "Normally distributed?")                 
+qqline(resid(lme1_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme1_A, type=2)
+summary(lme1_A)
+# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
+# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+#
+Q1_season_A <- Q1_veg_stat_A %>%
   select(1:4, PlantRecovery) %>%
-  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
-                            MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 ~ "Warm",
                             TRUE ~ NA),
-         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
-                            MP == 10 | MP == 11 | MP == 12 ~ "Spring",
-                            TRUE ~ NA),
-         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
+                            MP == 3 | MP == 4 ~ "Cold",
+                            TRUE ~ NA))
 #
-# Significant for Summer vs Winter and Autumn vs Spring
-Q1_season %>%
-  filter(!is.na(SeasonSW)) %>%
-  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(SeasonSW))
-Q1_season %>%
-  filter(!is.na(SeasonAS)) %>%
-  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(SeasonAS))
-# Summer 5.72 and winter 7.14. But only really visible for Abisko
-# Autumn 6.56 and Spring 4.33, but larger for Abisko
+Q1_season_A %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
+Q1_season_A %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
+Q1_season_A %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
 #
-# Significant for Snow covered season
-Q1_season %>%
-  summarise(PlantRecov_season = mean(PlantRecovery), .by = c(Snow))
-# Snow covered period: 6.09 and outside: 5.96
-summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("Snow"))
-summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("SeasonSW"))
-summarySE(Q1_season, measurevar = "PlantRecovery", groupvars = c("SeasonAS"))
+#
+Q1_season_A %>%
+  summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
+#
+summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("Snow"))
+summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
+summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("FreeWC"))
+#
+Q1_season_A %>%
+  ggplot(aes(x = Round, y = PlantRecovery, fill = FreeWC)) +
+  geom_boxplot() +
+  facet_wrap(~Site)
+#
+#
 
-Q1_season %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = Snow)) +
+# Contrasts Vassijaure
+contrasts(Q1_veg_stat_V$Round) <- Contr_Vassijaure_MP
+#
+# transform data
+Q1_veg_stat_V <- Q1_veg_stat_V %>%
+  mutate(Recov = PlantRecovery)
+Q1_veg_stat_V <- Q1_veg_stat_V %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme1_V<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q1_veg_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1_V), resid(lme1_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1_V), main = "Normally distributed?")                 
+qqline(resid(lme1_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme1_V, type=2)
+summary(lme1_V)
+# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
+# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+#
+Q1_season_V <- Q1_veg_stat_V %>%
+  select(1:4, PlantRecovery) %>%
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
+                            TRUE ~ NA),
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
+                            MP == 3 | MP == 4 ~ "Cold",
+                            TRUE ~ NA))
+#
+Q1_season_V %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
+Q1_season_V %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
+Q1_season_V %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
+#
+#
+Q1_season_V %>%
+  summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
+#
+summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("Snow"))
+summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
+summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("FreeWC"))
+#
+Q1_season_V %>%
+  ggplot(aes(x = Round, y = PlantRecovery, fill = FreeWC)) +
   geom_boxplot() +
   facet_wrap(~Site)
 #
 #
 #
-#-------   ## Q1 alternative ##  -------
-test <- Rec15N %>%
-  mutate(across(c("Plot", "MP"), as.character))%>%
-  mutate(across(c("Site", "MP", "Round"), as.factor)) %>%
-  rename(Recov = "PlantR_frac") # ◄══════
-#
-contrasts(test$Site)<-AvsV
-contrasts(test$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#
-test <- test %>%
-  mutate(sqrtRecov = sqrt(Recov)) %>%
-  mutate(invRecov = 1/Recov) %>%
-  mutate(logRecov = log(Recov+1)) %>%
-  mutate(arcRecov = asin(sqrt(Recov/100))) %>%
-  mutate(loglogRecov = log(log(Recov+1)),
-         logarcRecov = log(asin(sqrt(Recov/100))))
-  
-#
-#model:
-lme1_2<-lme(logarcRecov ~ Round*Site, # ◄══════
-          random = ~1|Plot/Site,
-          data = test, na.action = na.exclude, method = "REML")
-#
-#Checking assumptions:
-par(mfrow = c(1,2))
-plot(fitted(lme1_2), resid(lme1_2), 
-     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme1_2), main = "Normally distributed?")                 
-qqline(resid(lme1_2), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme1)
-par(mfrow = c(1,1))
-#
-#model output
-Anova(lme1_2, type=2)
-summary(lme1_2)
-# Non-significant for anything
-
 #=======  ###   Statistics   ### =======
 #-------   ##       Q1a      ##  -------
 #
@@ -1130,25 +1324,24 @@ ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
 # Most important factor: Time
 #
 # Load data from excel instead of calculated combined
-Mic15N_R <- Rec15N %>%
+Q2_MBN_stat <- Rec15N %>%
   select("Site", "Plot", "MP", "Round", "R_MBN", "R_MBN_frac")
-Mic15N_R <- Mic15N_R %>%
+Q2_MBN_stat <- Q2_MBN_stat %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Transform data
-Mic15N_R <- Mic15N_R %>%
+Q2_MBN_stat <- Q2_MBN_stat %>%
   mutate(Recov = R_MBN_frac) 
-Mic15N_R <- Mic15N_R %>%
-  mutate(sqrtRecov = sqrt(Recov),
-         logRecov = log(Recov),
-         arcRecov = asin(sqrt(Recov/max(100, max(Mic15N_R$Recov)))))
+Q2_MBN_stat <- Q2_MBN_stat %>%
+  mutate(logRecov = log(Recov),
+         arcRecov = asin(sqrt(Recov/max(100, max(Q2_MBN_stat$Recov)))))
 #
 #
 #model:
 lme2<-lme(arcRecov ~ Site*Round,
           random = ~1|Plot/Site,
-          data = Mic15N_R, na.action = na.exclude , method = "REML")
+          data = Q2_MBN_stat, na.action = na.exclude , method = "REML")
 #
 #Checking assumptions:
 par(mfrow = c(1,2))
@@ -1161,164 +1354,118 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lme2, type=2)
-#summary(lme2)
 # Arcsin transformation
-# Highly significant for Round (χ^2 = 39.8375, p = 0.0002704)
-
-Q2_season <- Mic15N_R %>%
-  select(1:4, R_MBN) %>%
-  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
-                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
-                              TRUE ~ NA),
-         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
-                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
-                              TRUE ~ NA),
-         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
-#
-summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("Snow"))
-summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonSW"))
-summarySE(Q2_season, measurevar = "R_MBN", groupvars = c("SeasonAS"))
-
-Q2_season %>%
-  ggplot(aes(x = Round, y = R_MBN, fill = Snow)) +
-  geom_boxplot() +
-  facet_wrap(~Site)
-
-
-
-
-Mic15N_R %>%
-  ggplot(aes(x = R_MBN_frac)) +
-  geom_histogram(bins = 50)
-
-Mic15N_R %>%
-  ggplot() +
-  geom_qq(aes(sample = R_MBN_frac))
-
-dotchart(Rec15N$PlantR_frac, 
-         main="Cleveland plot - Microbial", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = Rec15N$Round, 
-         groups = Rec15N$Plot,
-         gpch = 12, gcolor = 1)
-
-dotchart(Mic15N$d15N_SEF, 
-         main="Cleveland plot - Microbial", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = Mic15N$Round, 
-         groups = Mic15N$Plot,
-         gpch = 12, gcolor = 1)
-
-test <- Mic15N %>%
-  mutate(delta_d15N_SEF = if_else(d15N_SE >= d15N_SEF, d15N_SE, d15N_SEF)) %>%
-  mutate(Atom_pc_SEF2 = if_else((Atom_pc_SEF - Atom_pc_SE)<0, Atom_pc_SE, Atom_pc_SEF)) %>%
-  mutate(Atom_pc_SE2 = if_else((Atom_pc_SEF - Atom_pc_SE)<0, Atom_pc_SEF, Atom_pc_SE))
-
-dotchart(test$Atom_pc_SEF2,
-         main="Cleveland plot - Microbial", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = test$Round, 
-         groups = test$Plot,
-         gpch = 12, gcolor = 1)
-
-
-test <- test %>%
-  mutate(R_TDN2 = ((Atom_pc_SE2 - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
-  mutate(R_TDN2 = if_else(R_TDN2 < 0, 0, R_TDN2)) %>%
-  mutate(atom_pc_MBN2 = ((Atom_pc_SEF2/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_SE2/100 * Nconc_microg_pr_gDW_SE) - 
-                          (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE))/
-           (Nconc_microg_pr_gDW_SEF - Nconc_microg_pr_gDW_SE)*100) %>%
-  mutate(R_MBN2 = (((Atom_pc_SEF2/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE2/100 * Nconc_microg_pr_gDW_SE*10^(-6)) - 
-                     (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)))/
-                    K_EN * Soil_RF_DW_g)/(N_add/1000) * 100) %>%
-  mutate(R_MBN2 = if_else(R_MBN2 < 0, 0, R_MBN2))
-
-dotchart(test$R_MBN2,
-         main="Cleveland plot - Microbial", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = test$Round, 
-         groups = test$Plot,
-         gpch = 12, gcolor = 1)
-#
-test <- test %>%
-  mutate(sqrtR_MBN = sqrt(Recov),
-         logR_MBN = log(Recov),
-         cubeR_MBN = (Recov)^(1/3),
-         arcR_MBN = asin(sqrt(Recov/max(100, max(test$Recov)))))
-#
-test2 <- test %>%
-  select(1:4, R_MBN2) %>%
-  left_join(Rec15N, by = join_by(Site, Plot, MP, Round)) %>%
-  select(1:4, PlantRecovery, R_MBN2, R_TDN) %>%
-  rename(R_MBN = "R_MBN2") %>%
-  rowwise() %>%
-  mutate(sysRec = sum(PlantRecovery, R_TDN, R_MBN, na.rm = TRUE)) %>%
-  mutate(PlantR_frac = PlantRecovery/sysRec*100,
-         R_TDN_frac = R_TDN/sysRec*100,
-         R_MBN_frac = R_MBN/sysRec*100) %>%
-  ungroup()
-#
-test3 <- test2 %>%
-  mutate(Recov = R_MBN_frac)
-test3 <- test3 %>%
-  mutate(sqrtR_MBN = sqrt(Recov),
-         logR_MBN = log(Recov),
-         cubeR_MBN = (Recov)^(1/3),
-         arcR_MBN = asin(sqrt(Recov/max(100, max(test3$Recov)))))
-#
-dotchart(test3$R_MBN,
-         main="Cleveland plot - Microbial", xlab = "Observed values", 
-         pch = 19, color = hcl.colors(12), 
-         labels = test3$Round, 
-         groups = test3$Plot,
-         gpch = 12, gcolor = 1)
-#
-lme2_2<-lme(arcR_MBN ~ Site*Round,
-            random = ~1|Plot/Site,
-            data = test3, na.action = na.exclude , method = "REML")
-#
-#Checking assumptions:
-par(mfrow = c(1,2))
-plot(fitted(lme2_2), resid(lme2_2), 
-     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme2_2), main = "Normally distributed?")                 
-qqline(resid(lme2_2), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme2_2)
-par(mfrow = c(1,1))
-#
-#model output
-Anova(lme2_2, type=2)
+# Not significant for fraction
+# For absolute recovery: Highly significant for Round (χ^2 = 39.8375, p = 0.0002704)
 #
 #
 #
 #=======  ###   Statistics   ### =======
 #-------   ##       TDN      ##  -------
 #
+Q_TDN <- soil15N %>%
+  left_join(Rec15N, by =  join_by(Site, Plot, MP)) %>%
+  relocate(Round, .after = MP) %>%
+  select(1:4, Nconc_microg_pr_gDW, NH4_microg_pr_gDW, NO3_microg_pr_gDW, R_TDN, R_TDN_frac) %>%
+  mutate(across(c("Plot", "MP"), ~as.character(.x))) %>%
+  mutate(across(c("Site", "MP", "Round"), ~as.factor(.x)))
+#
+# --- # TDN N concentration # ---
+#
+Q_TDN_Nconc <- Q_TDN %>%
+  select(1:4, Nconc_microg_pr_gDW, NH4_microg_pr_gDW, NO3_microg_pr_gDW)
+#
+# transform data
+Q_TDN_Nconc <- Q_TDN_Nconc %>%
+  mutate(TDN = Nconc_microg_pr_gDW,
+         NH4 = NH4_microg_pr_gDW,
+         NO3 = NO3_microg_pr_gDW)
+Q_TDN_Nconc <- Q_TDN_Nconc %>%
+  mutate(logTDN = log(TDN),
+         arcTDN = asin(sqrt(TDN/1000))) %>% # Max value is around 982 µg pr g
+  mutate(logNH4 = log(NH4+1),
+         arcNH4 = asin(sqrt((NH4+1)/1000))) %>%
+  mutate(logNO3 = log(NO3+1),
+         arcNO3 = asin(sqrt((NO3+1)/1000)))
+#
+# model:
+lmeTDN_Nconc<-lme(logTDN ~ Round*Site,
+            random = ~1|Plot/Site,
+            data = Q_TDN_Nconc, na.action = na.exclude, method = "REML")
+#
+lmeTDN_NH4<-lme(logNH4 ~ Round*Site,
+                  random = ~1|Plot/Site,
+                  data = Q_TDN_Nconc, na.action = na.exclude, method = "REML")
+#
+lmeTDN_NO3<-lme(logNO3 ~ Round*Site,
+                  random = ~1|Plot/Site,
+                  data = Q_TDN_Nconc, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+# TDN
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN_Nconc), resid(lmeTDN_Nconc), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN_Nconc), main = "Normally distributed?")                 
+qqline(resid(lmeTDN_Nconc), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN_Nconc)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTDN_Nconc, type=2)
+# Not significant
+#
+# NH4
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN_NH4), resid(lmeTDN_NH4), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN_NH4), main = "Normally distributed?")                 
+qqline(resid(lmeTDN_NH4), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN_NH4)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTDN_NH4, type=2)
+#
+# NO3
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN_NO3), resid(lmeTDN_NO3), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN_NO3), main = "Normally distributed?")                 
+qqline(resid(lmeTDN_NO3), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN_NO3)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTDN_NO3, type=2)
+
+Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
+#
+#
+# --- # TDN 15N recovery # ---
+# 
 # Not a part of the direct questions, but still related
 # Model
 # Response variable: Dissolved Nitrogen 15N pool of injected. TDN
 # Factors: Time, Site, Time*Site
 # Most important factor: Time
 #
-TDN15N <- Rec15N %>%
-  select(1:4, R_TDN, R_TDN_frac) %>%
-  mutate(across(c("Plot", "MP"), ~as.character(.x))) %>%
-  mutate(across(c("Site", "MP", "Round"), ~as.factor(.x))) %>%
-  ungroup()
+Q_TDN_stat <- Q_TDN %>%
+  select(1:4, R_TDN, R_TDN_frac)
 #
 # transform data
-TDN15N <- TDN15N %>%
+Q_TDN_stat <- Q_TDN_stat %>%
   mutate(Recov = R_TDN_frac)
-TDN15N <- TDN15N %>%
+Q_TDN_stat <- Q_TDN_stat %>%
   mutate(logRecov = log(Recov),
          arcRecov = asin(sqrt(Recov/100)))
 #
-#model:
+# model:
 lmeTDN<-lme(logRecov ~ Round*Site,
           random = ~1|Plot/Site,
-          data = TDN15N, na.action = na.exclude, method = "REML")
+          data = Q_TDN_stat, na.action = na.exclude, method = "REML")
 #
-#Checking assumptions:
+# Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lmeTDN), resid(lmeTDN), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
@@ -1327,38 +1474,9 @@ qqline(resid(lmeTDN), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lmeTDN)
 par(mfrow = c(1,1))
 #
-#model output
+# model output
 Anova(lmeTDN, type=2)
-summary(lmeTDN)
-# Significant for Round and Site
-#
-TDN_season <- TDN15N %>%
-  select(1:4, Recov) %>%
-  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
-                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
-                              TRUE ~ NA),
-         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
-                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
-                              TRUE ~ NA),
-         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
-#
-# Significant for Summer vs Winter and Autumn vs Spring
-TDN_season %>%
-  filter(!is.na(SeasonSW)) %>%
-  summarise(Recov_season = mean(Recov), .by = c(SeasonSW))
-TDN_season %>%
-  filter(!is.na(SeasonAS)) %>%
-  summarise(Recov_season = mean(Recov), .by = c(SeasonAS))
-# Summer 0.124 and winter 0.171.
-# Autumn 0.114 and Spring 0.127.
-#
-# Significant for Snow covered season
-TDN_season %>%
-  summarise(Recov_season = mean(Recov), .by = c(Snow))
-# Snow covered period: 0.114 and outside: 0.155
-summarySE(TDN_season, measurevar = "Recov", groupvars = c("Snow"))
-summarySE(TDN_season, measurevar = "Recov", groupvars = c("SeasonSW"))
-summarySE(TDN_season, measurevar = "Recov", groupvars = c("SeasonAS"))
+# Highly significant for Round (χ^2 = 87.5184, p = 1.114e-12)
 #
 #
 #

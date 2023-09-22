@@ -23,7 +23,7 @@ soil15N <- read_csv("clean_data/Soil_N.csv", col_names = TRUE)
 #
 # Define the winter period as snow covered period
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
-winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("11_April_20", "12_May_20"))
+winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("11_Apr_20", "12_May_20"))
 winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
 #
 # List of Measuring periods as they should appear in graphs
@@ -849,6 +849,7 @@ crossprod(cbind(SvsR,CRvsFR))
 #
 #
 #
+#=======  ###   Statistics   ### =======
 #-------   ##     Q Zero     ## -------
 #
 Q0_ecosys_stat <- Rec15N %>%
@@ -1213,9 +1214,9 @@ vegroot15N_Organ <- vegroot15N %>%
   group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
   summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   ungroup() %>%
+  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
-  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
   select(1:7) %>%
   mutate(OrganRecovery_ofTotal = OrganRecovery, 
          OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
@@ -1623,9 +1624,9 @@ vegroot15N_Species <- vegroot15N %>%
   #group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
   #summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
   #ungroup() %>%
+  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
-  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
   select(1:8) %>%
   mutate(SpOrganRecovery = Recovery/PlantRecovery*100)
 #
@@ -1745,8 +1746,9 @@ vegroot15N_Species %>%
 # Abisko and Vassijaure plant and microbial recovery faceted
 # Calculate means and 95% CI
 vegroot15N_total_Plant_sum <- summarySE(vegroot15N_total_Plant, measurevar="PlantRecovery", groupvars=c("Site", "Round"))
-Mic15N_sum <- summarySE(Mic15N, measurevar="R_MBN", groupvars=c("Site", "Round"), na.rm=TRUE)
-TDN15N_sum <- summarySE(Mic15N, measurevar="R_TDN", groupvars=c("Site", "Round"), na.rm=TRUE)
+Mic15N_sum <- summarySE(Rec15N, measurevar="R_MBN", groupvars=c("Site", "Round"), na.rm=TRUE)
+TDN15N_sum <- summarySE(Rec15N, measurevar="R_TDN", groupvars=c("Site", "Round"), na.rm=TRUE)
+sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"), na.rm=TRUE)
 #
 # Same calculations as with the summarySE function, but less flexible and would need to write code each place
 # vegroot15N_total_Plant %>%
@@ -1757,6 +1759,18 @@ TDN15N_sum <- summarySE(Mic15N, measurevar="R_TDN", groupvars=c("Site", "Round")
 #                    N = length(PlantRecovery), # 5 replicates
 #                    ci = qt(0.95/2 + .5, length(PlantRecovery)-1) * (sd(PlantRecovery)/sqrt(length(PlantRecovery))), # t-distribution of 95% (97.5% as 2.5% each end) for N-1 times standard error
 #                    .groups = "keep")
+#
+# Total ecosystem recovery +/- 95% CI
+sysRec_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec-ci, ymax=sysRec+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, sysRec),color = "black") +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 # Plant total recovery +/- 95% CI
 vegroot15N_total_Plant_sum %>%  
@@ -1987,6 +2001,15 @@ Rec15N_3 %>%
 #
 #-------   ## Environmental  ## -------
 #
+coreData_2 <- coreData %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x)))
+
+coreData_snow <- summarySE(coreData, measurevar = "Snow_depth_plot_cm", groupvars = c("Site", "Round"))
+coreData_snow <- coreData_snow %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x)))
+#
+
 # Soil mass
 coreData %>%
   ggplot(aes(x = Round, y = Soil_RF_DW_g)) +
@@ -2028,6 +2051,20 @@ coreData %>%
   facet_wrap(~Site, scales = "free") +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+
+coreData_snow %>%
+  ggplot(aes(x = Day_of_harvest, y = Snow_depth_plot_cm, ymin = Snow_depth_plot_cm-ci, ymax = Snow_depth_plot_cm+ci, fill = Site)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_grey() +
+  #scale_fill_viridis_d() +
+  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  labs(x = "Time of harvest", y = "Snow cover (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+
 #
 # Select only snow-covered period: MP5-MP13 (Vassijaure end)
 coreData_SnowP <- coreData %>%

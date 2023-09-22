@@ -36,6 +36,9 @@ SMHI_Katterjakk_Tair <- read_csv2("raw_data/smhi_Kattejakk_Temp.csv", skip = 9)
 winterP <- data.frame(wstart = c(ymd(20191021), ymd(20191021)), wend = c(ymd(20200506), ymd(20200601)))
 winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
 #
+# Snow depth
+snowData <- read_xlsx("raw_data/Snow_depth.xlsx", col_names = TRUE)
+#
 #
 #
 #=======  ###   Functions    ### =======
@@ -398,7 +401,7 @@ avgT_wide2 %>% ggplot() +
 # Air temperatures - all
 airT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Abisko snow
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
   #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
   geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure"), na.rm = TRUE) + 
   #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
@@ -414,18 +417,86 @@ airT_plot <- avgT_wide2 %>% ggplot() +
 # Soil temperatures - all
 soilT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
-  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Abisko snow
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-10,20)) +
-  labs(x = "Time of year", y = "Soil temperature (°C)") + # , title = "Soil temperature"
+  labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
   theme_bw(base_size = 15) +
   theme(legend.position = "top")
 #
-grid.arrange(airT_plot, soilT_plot, ncol = 1)
+# Snow depth on plot
+snowData_2 <- summarySE(snowData, measurevar = "Snow_depth_cm", groupvars = c("Site", "MP", "Date"))
+snowData_2 <- snowData_2 %>%
+  mutate(Date = ymd(Date))
+#
+snowDepth_plot <- snowData_2 %>%
+  ggplot(aes(x = Date, y = Snow_depth_cm, ymin = Snow_depth_cm-ci, ymax = Snow_depth_cm+ci, fill = Site)) +
+  geom_line() +
+  geom_ribbon(alpha = 0.5) +
+  scale_fill_grey() +
+  #scale_fill_viridis_d() +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
+  guides(fill = guide_legend(title = "Snow")) +
+  theme_bw(base_size = 15) +
+  theme(legend.position = "bottom")
+#
+# Plot
+grid.arrange(airT_plot, soilT_plot, snowDepth_plot)
+
+#
+library(car)
+library(nlme)
+#
+snowData_stat <- snowData %>%
+  add_row(Date = 20200603, MP = 13, Site = "Abisko", Plot = 1, Snow_depth_cm = 0) %>% # Add Abisko for MP13 where it is snow-free
+  add_row(Date = 20200603, MP = 13, Site = "Abisko", Plot = 2, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200603, MP = 13, Site = "Abisko", Plot = 3, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200603, MP = 13, Site = "Abisko", Plot = 4, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200603, MP = 13, Site = "Abisko", Plot = 5, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200624, MP = 13, Site = "Abisko", Plot = 1, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200624, MP = 13, Site = "Abisko", Plot = 2, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200624, MP = 13, Site = "Abisko", Plot = 3, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200624, MP = 13, Site = "Abisko", Plot = 4, Snow_depth_cm = 0) %>%
+  add_row(Date = 20200624, MP = 13, Site = "Abisko", Plot = 5, Snow_depth_cm = 0) %>%
+  mutate(MP = case_when(Date == 20200504 | Date == 20200506 ~ 12.1,
+                        Date == 20200525 | Date == 20200527 ~ 12.2,
+                        Date == 20200601 | Date == 20200603 ~ 13.1,
+                        Date == 20200622 | Date == 20200624 ~ 13.2,
+                        TRUE ~ MP)) %>%
+  mutate(Round = case_when(MP == 5 ~ "05_Nov_2019",
+                           MP == 6 ~ "06_Dec_2019",
+                           MP == 7 ~ "07_Jan_2020",
+                           MP == 8 ~ "08_Feb_2020",
+                           MP == 9 ~ "09_Mar_2020",
+                           MP == 10 ~ "10_Apr_2020",
+                           MP == 11 ~ "11_Apr_2020",
+                           MP == 12.1 ~ "12_Maj_2020_injection",
+                           MP == 12.2 ~ "12_Maj_2020_harvest",
+                           MP == 13.1 ~ "13_Jun_2020_injection",
+                           MP == 13.2 ~ "13_Jun_2020_harvest")) #%>%
+  filter(MP != 13.1 & MP != 13.2) # Remove round 13 as Abisko i snow-free by then
+lmeSnow<-lme(asin(sqrt(Snow_depth_cm/100)) ~ Site*Round,
+             random = ~1|Plot/Site,
+             data = snowData_stat, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeSnow), resid(lmeSnow), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeSnow), main = "Normally distributed?")                 
+qqline(resid(lmeSnow), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeSnow)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lmeSnow, type=2)
+
 
 
 # Everything - chaos
@@ -645,6 +716,15 @@ p
 avgT_wide2 %>% 
   ggplot(aes(x = Date, y = Vassijaure_Tair)) + geom_smooth()
 #
+#
+# Layout matrix
+library(grid)
+library(lattice)
+gs <- lapply(1:3, function(ii) 
+  grobTree(rectGrob(gp=gpar(fill=ii, alpha=0.5)), textGrob(ii)))
+lay <- rbind(c(2,2,1),
+             c(3,3,1))
+grid.arrange(grobs = gs, layout_matrix = lay)
 #
 #
 #------- The End -------

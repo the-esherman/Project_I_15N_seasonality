@@ -369,23 +369,59 @@ mineral_combined <- mineral_combined %>%
   # Atom% of the inorganic N pool at injection. Corresponds to the 15N added (in µg pr g DW) plus natural abundance 15N in pre-labelled pool divided by new pool size
   mutate(atom_pc_in0_l = ((Injection_15N_mg_pr_patch*1000)/Soil_RF_DW_g + (Atom_pc_NatAb/100)*Nconc_in0)/Nconc_in0_l*100) #  NB!!! 98.7% atom% for label
 #
+#
+#
 # How much of a fertilizer was the injection? 
 N_fertilizer <- mineral_combined %>%
-  mutate(deltaInj_pc = inj_15N/Nconc_in0_l*100) %>%
-  select(1:4,inj_15N, Nconc_in0, deltaInj_pc)
-N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvars = c("Site", "MP"))
+  mutate(deltaInj_pc = inj_15N/Nconc_in0_l*100,
+         deltaInj_pc2 = (inj_15N*Soil_RF_DW_g)/(Nconc_in0_l*Soil_RF_DW_g)*100) %>%
+  select(1:4,inj_15N, Nconc_in0, deltaInj_pc, deltaInj_pc2)
+N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvars = c("Site", "Round"))
+N_fertilizer_sum2 <- summarySE(N_fertilizer, measurevar = "deltaInj_pc2", groupvars = c("Site", "Round"))
+# N_fertilizer_sum %>%
+#   ggplot(aes(x = MP, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + #ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci,
+#   geom_line() + 
+#   geom_ribbon(alpha = 0.5) +
+#   scale_x_continuous(breaks = 1:15) +
+#   scale_fill_viridis_d() +
+#   labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
+#   #facet_wrap(~Site) +
+#   theme_classic(base_size = 20)
+#
 N_fertilizer_sum %>%
-  ggplot(aes(x = MP, y = deltaInj_pc, color = Site)) + 
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  ggplot(aes(x = Day_of_harvest, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
   geom_line() + 
-  scale_x_continuous(breaks = 1:15) +
+  geom_ribbon(alpha = 0.5) +
+  scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
+  scale_fill_viridis_d() +
   labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
-  theme_classic(base_size = 20)
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+N_fertilizer_sum2 %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  ggplot(aes(x = Day_of_harvest, y = deltaInj_pc2, ymin = deltaInj_pc2-ci, ymax = deltaInj_pc2+ci, fill = Site, linetype = Site)) + 
+  geom_line() + 
+  geom_ribbon(alpha = 0.5) +
+  scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
+  scale_fill_grey() +
+  #scale_fill_viridis_d() +
+  labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+
+
+
 #
 #
 # Calculate isotope ratio (isoR) at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
+# As these are simple calculations of averages, if harvest is NA, we assume a constant ratio
 mineral_combined <- mineral_combined %>%
-  mutate(isoR_inj = if_else(is.na(atom_pc_in0_l), NA, atom_pc_in0_l/100 / (1 - atom_pc_in0_l/100)),
-         isoR_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, atom_pc_in_harvest_high/100 / (1 - atom_pc_in_harvest_high/100)),
+  mutate(isoR_inj = if_else(is.na(atom_pc_in0_l), NA, (atom_pc_in0_l/100) / (1 - atom_pc_in0_l/100)),
+         isoR_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, (atom_pc_in_harvest_high/100) / (1 - atom_pc_in_harvest_high/100)),
          isoR_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100)),
          isoR_harv_low2 = if_else(is.na(atom_pc_in_harvest_low2), NA, atom_pc_in_harvest_low2/100 / (1 - atom_pc_in_harvest_low2/100))) %>%
   # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
@@ -396,9 +432,21 @@ mineral_combined <- mineral_combined %>%
   mutate(AP_avg_high = if_else(is.na(isoR_avg_high), NA, isoR_avg_high/(1 + isoR_avg_high)*100),
          AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100),
          AP_avg_low2 = if_else(is.na(isoR_avg_low2), NA, isoR_avg_low2/(1 + isoR_avg_low2)*100)) %>%
-  mutate(isoF_avg_high = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_high/100)/2)),
-         isoF_avg_low = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_low/100)/2)),
-         isoF_avg_low2 = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), atom_pc_in0_l/100, (atom_pc_in0_l/100 + atom_pc_in_harvest_low2/100)/2))) %>%
+  # Calculate isotopic fractional abundance (isoF) average
+  mutate(isoF_avg_high = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), atom_pc_in0_l/100, 
+                                                                   (atom_pc_in0_l/100 + atom_pc_in_harvest_high/100)/2)), # F high
+         isoF_avg_low = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), atom_pc_in0_l/100, 
+                                                                  (atom_pc_in0_l/100 + atom_pc_in_harvest_low/100)/2)), # F low
+         isoF_avg_low2 = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), atom_pc_in0_l/100, 
+                                                                   (atom_pc_in0_l/100 + atom_pc_in_harvest_low2/100)/2)), # F low2
+         # Invert the AP before calculating to get N/15N (aka N per 15N)
+         isoF_avg_high_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), (atom_pc_in0_l/100)^-1, 
+                                                                       ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_high/100)^-1)/2)), # F^-1 high
+         isoF_avg_low_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), (atom_pc_in0_l/100)^-1, 
+                                                                      ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_low/100)^-1)/2)), # F^-1 low
+         isoF_avg_low2_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), (atom_pc_in0_l/100)^-1, 
+                                                                       ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_low2/100)^-1)/2))) %>% # F^-1 low2
+  # From F calculate isotope ratio (isoR)
   mutate(isoR_avg_high_v2 = isoF_avg_high/(1-isoF_avg_high),
          isoR_avg_low_v2 = isoF_avg_low/(1-isoF_avg_low))
 
@@ -437,10 +485,10 @@ mineral_combined %>%
   select(1:3, isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2) %>%
   filter(!is.na(isoR_inj)) %>%
   mutate(isoR_harv_high = if_else(is.na(isoR_harv_high), isoR_inj, isoR_harv_high),
-         isoR_harv_low = if_else(is.na(isoR_harv_low), isoR_inj, isoR_harv_low),
-         isoR_harv_low2 = if_else(is.na(isoR_harv_low2), isoR_inj, isoR_harv_low2)) %>%
+        isoR_harv_low = if_else(is.na(isoR_harv_low), isoR_inj, isoR_harv_low),
+        isoR_harv_low2 = if_else(is.na(isoR_harv_low2), isoR_inj, isoR_harv_low2)) %>%
   #group_by(across(c("Site", "MP"))) %>%
-  summarise(across(c(isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2), ~mean(.)), .by = c("Site", "MP")) %>%
+  summarise(across(c(isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2), ~mean(., na.rm = TRUE)), .by = c("Site", "MP")) %>%
   pivot_longer(cols = 3:6, names_to = "Time", values_to = "isoR") %>%
   mutate(Time = case_when(Time == "isoR_inj" ~ 1,
                           Time == "isoR_harv_high" ~ 3,
@@ -604,8 +652,184 @@ mineral_combined %>%
 mineral_combined %>%
   ggplot(aes(Round, isoR_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
+mineral_combined %>%
+  filter(!is.na(DaysHH)) %>%
+  select(1:4, Nconc_in0, Nconc_in0_l, Nconc_inorg, Soil_RF_DW_g) %>%
+  pivot_longer(cols = c(Nconc_in0, Nconc_in0_l, Nconc_inorg), names_to = "Estimate", values_to = "Nconc") %>%
+  summarise(across(c("Nconc", "Soil_RF_DW_g"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round", "Estimate")) %>%
+  mutate(Round = factor(Round, levels = unique(Round))) %>%
+  ggplot(aes(x = Round, y = Nconc*Soil_RF_DW_g, fill = Estimate)) + #color = Estimate, group = Estimate)) + 
+  #geom_line() +
+  geom_bar(position = "dodge", stat = "identity") + 
+  facet_wrap(~Site) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+mineral_combined %>%
+  filter(!is.na(DaysHH)) %>%
+  select(1:4, Nconc_in0, Nconc_in0_l, Nconc_inorg, Soil_RF_DW_g, Injection_N_mg_pr_patch) %>%
+  mutate(Nconc_in0Delta = Nconc_in0_l - Nconc_in0,
+         Injection_N = Injection_N_mg_pr_patch*1000) %>%
+  #select(!Nconc_in0, !Nconc_in0_l) %>%
+  mutate(Nconc_in0Delta = Nconc_in0Delta*Soil_RF_DW_g,
+         Nconc_inorg = Nconc_inorg*Soil_RF_DW_g,
+         Nconc_in0 = Nconc_in0*Soil_RF_DW_g,
+         Nconc_in0_l = Nconc_in0_l*Soil_RF_DW_g) %>%
+  pivot_longer(cols = c(Nconc_in0, Nconc_in0_l, Injection_N, Nconc_in0Delta, Nconc_inorg), names_to = "Estimate", values_to = "Nconc") %>%
+  summarise(across(c("Nconc"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round", "Estimate")) %>%
+  mutate(Round = factor(Round, levels = unique(Round))) %>%
+  ggplot(aes(x = Round, y = Nconc, color = Estimate, group = Estimate)) + # fill = Estimate)) + #
+  geom_line() +
+  #geom_bar(position = "dodge", stat = "identity") + 
+  facet_wrap(~Site) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 
 
+
+
+
+
+
+
+
+# Summary!
+# Remove MP1
+mineral_combined_MP2_15 <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
+  rename("isoR_high" = isoR_avg_high,
+         "isoR_low"     = isoR_avg_low,
+         "isoR_low2"    = isoR_avg_low2,
+         "isoR_high_v2" = isoR_avg_high_v2,
+         "isoR_low_v2"  = isoR_avg_low_v2,
+         "isoF_high"    = isoF_avg_high,
+         "isoF_low"     = isoF_avg_low,
+         "isoF_low2"    = isoF_avg_low2)
+  # mutate(isoR_avg_high_inv    = isoR_avg_high^-1,
+  #        isoR_avg_low_inv     = isoR_avg_low^-1,
+  #        isoR_avg_low2_inv    = isoR_avg_low2^-1,
+  #        isoR_avg_high_v2_inv = isoR_avg_high_v2^-1,
+  #        isoR_avg_low_v2_inv  = isoR_avg_low_v2^-1)
+  #        # isoF_avg_high_inv    = isoF_avg_high^-1,
+  #        # isoF_avg_low_inv     = isoF_avg_low^-1,
+  #        # isoF_avg_low2_inv    = isoF_avg_low2^-1)
+#
+# isotopic ratio (isoR)
+min_isoR_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_high_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_low_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
+
+min_isoR_high <- as_tibble(min_isoR_high)
+min_isoR_low <- as_tibble(min_isoR_low)
+min_isoR_low2 <- as_tibble(min_isoR_low2)
+min_isoR_high_v2 <- as_tibble(min_isoR_high_v2)
+min_isoR_low_v2 <- as_tibble(min_isoR_low_v2)
+
+min_isoR <- min_isoR_high %>%
+  left_join(min_isoR_low, by = join_by("Site", "Round")) %>%
+  left_join(min_isoR_low2, by = join_by("Site", "Round")) %>%
+  left_join(min_isoR_high_v2, by = join_by("Site", "Round")) %>%
+  left_join(min_isoR_low_v2, by = join_by("Site", "Round")) %>%
+  rename("ci_high" = ci.x,
+         "ci_low" = ci.y,
+         "ci_low2" = ci.x.x,
+         "ci_high_v2" = ci.y.y,
+         "ci_low_v2" = ci) %>%
+  mutate(across(c(4:7, 9:12, 14:17, 19:22, 23:27), ~as.numeric(.))) %>%
+  mutate(across(c(4:7, 9:12, 14:17, 19:22, 23:27), ~num(., digits = 2)))
+
+min_isoR_format <- min_isoR %>%
+  unite(col = "isoR_high", isoR_high, ci_high, sep = " ± ") %>%
+  unite(col = "isoR_low", isoR_high, ci_low, sep = " ± ") %>%
+  unite(col = "isoR_low2", isoR_low2, ci_low2, sep = " ± ") %>%
+  unite(col = "isoR_high_v2", isoR_high_v2, ci_high_v2, sep = " ± ") %>%
+  unite(col = "isoR_low_v2", isoR_low_v2, ci_low_v2, sep = " ± ")
+
+min_isoR %>%
+  ggplot(aes(x = Round, y = isoR_high)) + geom_col() + facet_wrap(~Site)
+#
+# Fractional abundance (isoF)
+min_isoF_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_high", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoF_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_low", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoF_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
+
+min_isoF_high <- as_tibble(min_isoF_high)
+min_isoF_low <- as_tibble(min_isoF_low)
+min_isoF_low2 <- as_tibble(min_isoF_low2)
+
+min_isoF <- min_isoF_high %>%
+  left_join(min_isoF_low, by = join_by("Site", "Round")) %>%
+  left_join(min_isoF_low2, by = join_by("Site", "Round")) %>%
+  rename("ci_high" = ci.x,
+         "ci_low" = ci.y,
+         "ci_low2" = ci) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
+
+min_isoF %>%
+  ggplot(aes(x = Round, y = isoF_high)) + geom_col() + facet_wrap(~Site)
+
+# Save as csv
+write_csv2(min_isoR, file = "clean_data/isotopicR.csv", na = "", col_names = TRUE)
+write_csv2(min_isoF, file = "clean_data/isotopicF.csv", na = "", col_names = TRUE)
+
+# Plot fractional abundance
+min_isoF %>%
+  select(1:2, isoF_high, isoF_low, ci_high, ci_low) %>%
+  pivot_longer(cols = c(isoF_high, isoF_low), names_to = "Estimate", values_to = "isoF") %>%
+  ggplot(aes(x = Round, y = isoF)) +
+  geom_col(position = "dodge") +
+  scale_fill_viridis_d() +
+  facet_wrap(~Site*Estimate) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+min_isoF %>%
+  select(1:2, isoF_high, isoF_low, ci_high, ci_low) %>%
+  pivot_longer(cols = 3:6, names_to = c(".value", "Estimate"), names_sep = "_") %>%
+  ggplot() +
+  geom_errorbar(aes(x = Round, y = isoF, ymin=isoF, ymax=isoF+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, isoF),color = "black") +
+  scale_fill_viridis_d() +
+  facet_wrap(~Site*Estimate) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+
+min_isoR %>%
+  select(1:2, isoR_high, isoR_low, ci_high, ci_low) %>%
+  pivot_longer(cols = 3:6, names_to = c(".value", "Estimate"), names_sep = "_") %>%
+  ggplot() +
+  geom_errorbar(aes(x = Round, y = isoR, ymin=isoR, ymax=isoR+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, isoR),color = "black") +
+  scale_fill_viridis_d() +
+  facet_wrap(~Site*Estimate) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+
+
+mineral_combined_MP2_15 %>%
+  select(1:4, isoF_high, isoF_low) %>%
+  #mutate(isoF_high = isoF_high^-1,         isoF_low = isoF_low^-1) %>%
+  summarise(across(c("isoF_high", "isoF_low"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round"))
+
+
+min_isoF %>%
+  mutate(isoR_high_F = isoF_high/(1-isoF_high)) %>%
+  select(1:2, isoR_high_F) %>%
+  left_join(min_isoR, by = join_by(Site,Round)) %>%
+  select(1:2, isoR_high, isoR_high_F) %>%
+  ggplot(aes(x = isoR_high, y = isoR_high_F, color = Site)) + geom_point()
+
+min_isoR %>%
+  ggplot(aes(x = Round, y = isoR_high)) + geom_col() + facet_wrap(~Site)
+
+
+
+
+#
+#
 #
 # Testing on plant uptake ----
 vegroot15N_format <- vegroot15N %>%
@@ -1764,7 +1988,7 @@ sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"
 sysRec_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec-ci, ymax=sysRec+ci), position=position_dodge(.9)) +
+  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec, ymax=sysRec+ci), position=position_dodge(.9)) +
   geom_col(aes(Round, sysRec),color = "black") +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 

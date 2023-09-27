@@ -148,7 +148,7 @@ vegrootBulk <- Core2 %>%
 
 # Pivot longer for 15N label added
 vegrootInject <- Core2 %>%
-  select(Site, Plot, MP, Injection_mg_pr_patch) %>%
+  select(Site, Plot, MP, Injection_15N_mg_pr_patch) %>%
   filter(MP != "EX") %>%
   mutate(across(MP, as.numeric))
 
@@ -178,11 +178,11 @@ vegroot2 <- vegroot2 %>%
   add_column(Species = str_split_fixed(vegroot2$Type,"_\\w+",n=2)[,1], .after = "Type")
 vegroot2 <- vegroot2 %>%
   mutate(Recovery = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(N_add/1000) * 100) %>%
-  mutate(Recovery2 = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(Injection_mg_pr_patch/1000) * 100) %>%
+  mutate(Recovery2 = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(Injection_15N_mg_pr_patch/1000) * 100) %>%
   mutate(Recovery = if_else(Recovery < 0, 0, Recovery),
          Recovery2 = if_else(Recovery2 < 0, 0, Recovery2))
 vegroot_output <- vegroot2 %>%
-  select(1:6, Biomass_DW_g, Nconc_pc, d15N, Atom_pc, Injection_mg_pr_patch, NatAb_atom_pc, Recovery2) %>%
+  select(1:6, Biomass_DW_g, Nconc_pc, d15N, Atom_pc, Injection_15N_mg_pr_patch, NatAb_atom_pc, Recovery2) %>%
   rename("Recovery" = Recovery2)
 
 # write a csv with the data
@@ -463,6 +463,8 @@ write_csv(extr15N_all, "clean_data/Soil_N.csv", na = "NA")
 # Graphs for checking calculations against old ----
 # Checking if the old recovery matches the new calculations
 
+# library(ggpubr)
+
 firstVegroot <- read_csv("clean_data/Plant_15N_data.csv", col_names = TRUE)
 
 vegroot3 <- vegroot2 %>%
@@ -548,3 +550,4 @@ y %>%
   ggplot(aes(Abisko, Vassijaure, color = Organ)) + geom_point() + facet_wrap(vars(MP), scales = "free")
 y %>%
   ggplot(aes(Abisko, Vassijaure, color = MP)) + geom_point() + facet_wrap(vars(Organ), scales = "free")
+

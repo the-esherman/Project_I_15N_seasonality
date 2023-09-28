@@ -157,7 +157,7 @@ Mic15N <- Mic15N %>%
 #    
 Mic15N <- Mic15N %>%
   # Recovery of TDN
-  mutate(R_TDN = ((Atom_pc_SE - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(N_add/1000)* 100) %>%
+  mutate(R_TDN = ((Atom_pc_SE - Atom_pc_NatAb_SE)/100 * Nconc_microg_pr_gDW_SE *10^(-6) * Soil_RF_DW_g)/(Injection_15N_mg_pr_patch/1000)* 100) %>%
   mutate(R_TDN = if_else(R_TDN < 0, 0, R_TDN)) %>% # Recovery cannot be negative
   # Recovery of MBN
   # AP for MBN
@@ -1104,7 +1104,7 @@ par(mfrow = c(1,1))
 # model output
 Anova(lme0, type=2)
 # sysRec, Arcsin transformation:
-# Highly significant for Round (χ^2 = 50.0671, p = 5.95*10^-6). Trend for interaction (χ^2 = 23.1476, p = 0.05791)
+# Highly significant for Round (χ^2 = 50.0692, p = 5.945e^-6). Trend for interaction (χ^2 = 23.1478, p = 0.05791)
 #
 #
 # Per site
@@ -1147,8 +1147,8 @@ par(mfrow = c(1,1))
 # model output
 Anova(lme0_A, type=2)
 summary(lme0_A)
-# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
-# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+# Highly significant for Snow Cold vs Warm (t = 2.60147, p = 0.0119)
+# Significant for Summer vs Autumn (t = -2.05415, p = 0.0446)
 #
 Q0_season_A <- Q0_ecosys_stat_A %>%
   select(1:4, sysRec) %>%
@@ -1164,10 +1164,14 @@ Q0_season_A <- Q0_ecosys_stat_A %>%
 Q0_season_A %>%
   filter(!is.na(SnowCW)) %>%
   summarise(sysRec = mean(sysRec), .by = c(SnowCW))
+# Snow-covered
+# Cold: 66.1 Warm: 41.1
+#
 Q0_season_A %>%
   filter(!is.na(FreeWC)) %>%
   summarise(sysRec = mean(sysRec), .by = c(FreeWC))
-#
+# Snow-free
+# Warm: 45.5 Cold: 64.7
 #
 Q0_season_A %>%
   summarise(sysRec_season = mean(sysRec), .by = c(Snow))
@@ -1215,7 +1219,7 @@ par(mfrow = c(1,1))
 # model output
 Anova(lme0_V, type=2)
 summary(lme0_V)
-# Highly significant for Snow Cold vs Warm (t = 4.845361, p < 0.0001)
+# Highly significant for Snow Cold vs Warm (t = 4.845510, p < 0.0001)
 #
 Q0_season_V <- Q0_ecosys_stat_V %>%
   select(1:4, sysRec) %>%
@@ -1231,10 +1235,14 @@ Q0_season_V <- Q0_ecosys_stat_V %>%
 Q0_season_V %>%
   filter(!is.na(SnowCW)) %>%
   summarise(sysRec = mean(sysRec), .by = c(SnowCW))
+# Snow-covered
+# Cold: 65.2 Warm: 34.8
+#
 Q0_season_V %>%
   filter(!is.na(FreeWC)) %>%
   summarise(sysRec = mean(sysRec), .by = c(FreeWC))
-#
+# Snow-free
+# Warm: 46.1 Cold: 37.8
 #
 Q0_season_V %>%
   summarise(sysRec_season = mean(sysRec), .by = c(Snow))
@@ -1286,8 +1294,9 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lme1, type=2)
-# Log transformation
-# Significant for Round (χ^2 = 27.671, p = 0.01573)
+# # Log transformation
+# Proportional: No significance
+# Absolute: Significant for Round (χ^2 = 27.671, p = 0.01573)
 #
 #
 # Per site
@@ -1323,8 +1332,9 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lme1_A, type=2)
+# Round: χ^2 = 33.715, p = 0.00227
 summary(lme1_A)
-# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
+# Highly significant for Snow Cold vs Warm (t = 3.019497, p = 0.0038)
 # Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
 #
 Q1_season_A <- Q1_veg_stat_A %>%
@@ -1339,13 +1349,19 @@ Q1_season_A <- Q1_veg_stat_A %>%
 #
 Q1_season_A %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
+# Snow: 6.17 Clear: 6.00
+#
 Q1_season_A %>%
   filter(!is.na(SnowCW)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
+# Snow-covered
+# Cold: 7.63 Warm: 3.73
+#
 Q1_season_A %>%
   filter(!is.na(FreeWC)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
-#
+# Snow-free
+# warm: 5.35 Cold: 7.63
 #
 Q1_season_A %>%
   summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
@@ -1360,7 +1376,6 @@ Q1_season_A %>%
   facet_wrap(~Site)
 #
 #
-
 # Contrasts Vassijaure
 contrasts(Q1_veg_stat_V$Round) <- Contr_Vassijaure_MP
 #
@@ -1388,8 +1403,8 @@ par(mfrow = c(1,1))
 # model output
 Anova(lme1_V, type=2)
 summary(lme1_V)
-# Highly significant for Snow Cold vs Warm (t = 2.60138, p = 0.0119)
-# Significant for Summer vs Autumn (t = -2.05424, p = 0.0446)
+# Not significant
+#
 #
 Q1_season_V <- Q1_veg_stat_V %>%
   select(1:4, PlantRecovery) %>%
@@ -1403,13 +1418,19 @@ Q1_season_V <- Q1_veg_stat_V %>%
 #
 Q1_season_V %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
+# Snow: 5.64 Clear: 6.46
+#
 Q1_season_V %>%
   filter(!is.na(SnowCW)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
+# Snow-covered
+# Cold: 6.64 Warm: 4.38
+#
 Q1_season_V %>%
   filter(!is.na(FreeWC)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
-#
+# Snow-free
+# Warm: 6.94 Cold: 5.50
 #
 Q1_season_V %>%
   summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
@@ -1469,8 +1490,8 @@ par(mfrow = c(1,1))
 Anova(lme1a, type=2)
 #summary(lme1a)
 # For organ recovery as fraction of whole plant recovery (Arcsin transformation):
-# Highly significant for organ (χ^2 = 669.9609, p < 2.2*10^-16) 
-# and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2*10^-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
+# Highly significant for organ (χ^2 = 669.9609, p < 2.2e-16) 
+# and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2e-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
 #
 Q1a_season <- vegroot15N_Organ %>%
   select(1:4, Organ, OrganRecovery) %>%
@@ -1651,6 +1672,8 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN_NH4, type=2)
+# Log-transformed: Significant for Round (χ^2 = 31.3949, p = 0.004879)
+# Arcsin-transformed (slightly better?): Highly significant for Round (χ^2 = 36.8425, p = 0.0007793) and site (χ^2 = 7.3634, p = 0.0066576)
 #
 # NO3
 par(mfrow = c(1,2))
@@ -1663,7 +1686,8 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN_NO3, type=2)
-
+# Log-transformed: Highly significant for Round (χ^2 = 116.7547, p = <2e-16)
+#
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
 #
 #
@@ -1701,7 +1725,7 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN, type=2)
-# Highly significant for Round (χ^2 = 87.5184, p = 1.114e-12)
+# Highly significant for Round (χ^2 = 204.7306, p = <2e-16), significant for interaction (χ^2 = 25.3168, p = 0.03157)
 #
 #
 #
@@ -1726,29 +1750,14 @@ Compet_all <- Compet_all %>%
 PlvsMic    <- c( 1, -1,  0)
 PlvsMicTDN <- c( 2, -1, -1)
 MicvsTDN   <- c( 0,  1, -1)
+TDNvsPlMic <- c(-1, -1,  2)
 #
-contrasts(Compet_all$sysPart)<-cbind(PlvsMic, PlvsMicTDN, MicvsTDN)
+contrasts(Compet_all$sysPart)<-cbind(PlvsMic, TDNvsPlMic)
 crossprod(cbind(PlvsMic, PlvsMicTDN, MicvsTDN))
-#
-# Month           (J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP              (1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+crossprod(cbind(PlvsMic, TDNvsPlMic))
 #
 # Same contrasts for Site and Round
 contrasts(Compet_all$Site)<-AvsV
-# Same contrasts as for plant recovery:
-# SummervsWinter, SpringvsAutumn, SnowvsNot
-contrasts(Compet_all$Round)<-cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh, cont11, cont12, cont13, cont14)
-#contrasts(Compet_all$Round)<-contr.helmert
-#
-# Check if contrasts work
-# Check contrasts are orthogonal
-crossprod(cbind(SummervsWinter,SpringvsAutumn,SnowvsNot, JulvsJan, OctvsApr, Summervs2, SpringChA, SpringChV, AutumnCh, WinterCh))#, cont11, cont12, cont13, cont14))
-#
-# Alternative: Two-way ANOVA
-# have time as a factor in a two-way ANOVA, combined with Site. As each sampling is destructive, the samples are technically independent of each other, although it does not account for the block design
-CompetModel3 <- aov(Recov ~ Round*Site, data = Compet_all)
-Anova(CompetModel3, type ="III")
-#
 #
 # Transform data
 Compet_all <- Compet_all %>%
@@ -1779,7 +1788,6 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lmeCompet, type=2)
-summary(lmeCompet)
 #
 #
 #
@@ -2163,7 +2171,7 @@ Rec15N_sum2 %>%
   geom_ribbon(alpha = 0.5) +
   scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+
   labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +

@@ -427,7 +427,11 @@ mineral_combined <- mineral_combined %>%
   # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
   mutate(isoR_avg_high = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), isoR_inj, (isoR_inj + isoR_harv_high)/2)),
          isoR_avg_low = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), isoR_inj, (isoR_inj + isoR_harv_low)/2)),
-         isoR_avg_low2 = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), isoR_inj, (isoR_inj + isoR_harv_low2)/2))) %>%
+         isoR_avg_low2 = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), isoR_inj, (isoR_inj + isoR_harv_low2)/2)),
+         # Invert the isotopic ratio before calculating to get 14N/15N (aka 14N per 15N)
+         isoR_avg_high_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_high)/2)),
+         isoR_avg_low_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_low)/2)),
+         isoR_avg_low2_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_low2)/2))) %>%
   # Calculate atom% from the ratio
   mutate(AP_avg_high = if_else(is.na(isoR_avg_high), NA, isoR_avg_high/(1 + isoR_avg_high)*100),
          AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100),
@@ -448,7 +452,77 @@ mineral_combined <- mineral_combined %>%
                                                                        ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_low2/100)^-1)/2))) %>% # F^-1 low2
   # From F calculate isotope ratio (isoR)
   mutate(isoR_avg_high_v2 = isoF_avg_high/(1-isoF_avg_high),
-         isoR_avg_low_v2 = isoF_avg_low/(1-isoF_avg_low))
+         isoR_avg_low_v2 = isoF_avg_low/(1-isoF_avg_low)) %>%
+  # Use average [15N] and average [14N] to calculate 14N/15N
+  mutate(conc15N_inj = (Injection_15N_mg_pr_patch*1000)/Soil_RF_DW_g + (Atom_pc_NatAb/100)*Nconc_in0, # Simple mass calculation: 15N injected + 15N already there
+         conc14N_inj = Nconc_in0_l*1/((atom_pc_in0_l/100)/(1-atom_pc_in0_l/100)),
+         # Higher uncertainty with the harvest point AP
+         conc15N_harv_high = (atom_pc_in_harvest_high/100)*Nconc_inorg,
+         conc15N_harv_low = (atom_pc_in_harvest_low/100)*Nconc_inorg,
+         conc15N_harv_low2 = (atom_pc_in_harvest_low2/100)*Nconc_inorg,
+         conc14N_harv_high = Nconc_inorg*1/((atom_pc_in_harvest_high/100)/(1-atom_pc_in_harvest_high/100)),
+         conc14N_harv_low = Nconc_inorg*1/((atom_pc_in_harvest_low/100)/(1-atom_pc_in_harvest_low/100)),
+         conc14N_harv_low2 = Nconc_inorg*1/((atom_pc_in_harvest_low2/100)/(1-atom_pc_in_harvest_low2/100)))
+
+
+# Average for both [15N] and [14N]
+mineral_isoR <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
+  select(1:29, 51:58) %>%
+  mutate(conc15N_avg_high = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_high), conc15N_inj, (conc15N_inj+conc15N_harv_high)/2)),
+         conc15N_avg_low  = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_low), conc15N_inj, (conc15N_inj+conc15N_harv_low)/2)),
+         conc15N_avg_low2 = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_low2), conc15N_inj, (conc15N_inj+conc15N_harv_low2)/2)),
+         conc14N_avg_high = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_high), conc14N_inj, (conc14N_inj+conc14N_harv_high)/2)),
+         conc14N_avg_low  = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_low), conc14N_inj, (conc14N_inj+conc14N_harv_low)/2)),
+         conc14N_avg_low2 = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_low2), conc14N_inj, (conc14N_inj+conc14N_harv_low2)/2))) %>%
+  mutate(isoR14_high_avg = conc14N_avg_high/conc15N_avg_high,
+         isoR14_low_avg = conc14N_avg_low/conc15N_avg_low,
+         isoR14_low2_avg = conc14N_avg_low2/conc15N_avg_low2)
+
+
+#
+# isotopic ratio (isoR)
+min_isoR_2_high <- summarySE(mineral_isoR, measurevar = "isoR14_high_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_2_low  <- summarySE(mineral_isoR, measurevar = "isoR14_low_avg",  groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_2_low2 <- summarySE(mineral_isoR, measurevar = "isoR14_low2_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
+
+min_isoR_2_high <- as_tibble(min_isoR_2_high)
+min_isoR_2_low  <- as_tibble(min_isoR_2_low)
+min_isoR_2_low2 <- as_tibble(min_isoR_2_low2)
+
+min_isoR_2 <- min_isoR_2_high %>%
+  left_join(min_isoR_2_low, by = join_by("Site", "Round")) %>%
+  left_join(min_isoR_2_low2, by = join_by("Site", "Round")) %>%
+  rename("ci_high" = ci.x,
+         "ci_low" = ci.y,
+         "ci_low2" = ci) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
+
+min_isoR_format <- min_isoR %>%
+  unite(col = "isoR_high", isoR_high, ci_high, sep = " ± ") %>%
+  unite(col = "isoR_low", isoR_high, ci_low, sep = " ± ") %>%
+  unite(col = "isoR_low2", isoR_low2, ci_low2, sep = " ± ") %>%
+  unite(col = "isoR_high_v2", isoR_high_v2, ci_high_v2, sep = " ± ") %>%
+  unite(col = "isoR_low_v2", isoR_low_v2, ci_low_v2, sep = " ± ")
+
+min_isoR_2 %>%
+  ggplot(aes(x = Round, y = isoR14_high_avg)) + geom_col() + facet_wrap(~Site)
+#
+
+write_csv2(min_isoR_2, file = "clean_data/isotopicR_2.csv", na = "", col_names = TRUE)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 test <- mineral_combined %>%
   mutate(delta_inj = Injection_N_mg_pr_patch - Injection_15N_mg_pr_patch) %>%
@@ -652,6 +726,14 @@ mineral_combined %>%
 mineral_combined %>%
   ggplot(aes(Round, isoR_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
+# How does the 14N/15N ratio change
+mineral_combined %>%
+  ggplot(aes(Round, isoR_avg_low_inv)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_combined %>%
+  ggplot(aes(Round, isoR_avg_high_inv)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+
+
+
 mineral_combined %>%
   filter(!is.na(DaysHH)) %>%
   select(1:4, Nconc_in0, Nconc_in0_l, Nconc_inorg, Soil_RF_DW_g) %>%
@@ -701,9 +783,14 @@ mineral_combined_MP2_15 <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
          "isoR_low2"    = isoR_avg_low2,
          "isoR_high_v2" = isoR_avg_high_v2,
          "isoR_low_v2"  = isoR_avg_low_v2,
+         # Fractional abundance
          "isoF_high"    = isoF_avg_high,
          "isoF_low"     = isoF_avg_low,
-         "isoF_low2"    = isoF_avg_low2)
+         "isoF_low2"    = isoF_avg_low2,
+         # Inverted isotopic ratio
+         "isoR_high_inv" = isoR_avg_high_inv,
+         "isoR_low_inv" = isoR_avg_low_inv,
+         "isoR_low2_inv" = isoR_avg_low2_inv)
   # mutate(isoR_avg_high_inv    = isoR_avg_high^-1,
   #        isoR_avg_low_inv     = isoR_avg_low^-1,
   #        isoR_avg_low2_inv    = isoR_avg_low2^-1,
@@ -714,9 +801,9 @@ mineral_combined_MP2_15 <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
   #        # isoF_avg_low2_inv    = isoF_avg_low2^-1)
 #
 # isotopic ratio (isoR)
-min_isoR_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoR_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low2_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_high_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_low_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
 
@@ -771,7 +858,7 @@ min_isoF %>%
   ggplot(aes(x = Round, y = isoF_high)) + geom_col() + facet_wrap(~Site)
 
 # Save as csv
-write_csv2(min_isoR, file = "clean_data/isotopicR.csv", na = "", col_names = TRUE)
+write_csv2(min_isoR, file = "clean_data/isotopicR_inv.csv", na = "", col_names = TRUE)
 write_csv2(min_isoF, file = "clean_data/isotopicF.csv", na = "", col_names = TRUE)
 
 # Plot fractional abundance

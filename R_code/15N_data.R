@@ -533,39 +533,6 @@ min_isoF_2 <- min_isoF_2_high %>%
 #
 # Save data on isotopic ratio (14N)
 write_csv2(min_isoF_2, file = "clean_data/isotopicF_3.csv", na = "", col_names = TRUE)
-
-
-
-
-
-
-
-
-test <- mineral_combined %>%
-  mutate(delta_inj = Injection_N_mg_pr_patch - Injection_15N_mg_pr_patch) %>%
-  relocate(delta_inj, .before = inj_15N) %>%
-  mutate(delta_Nconc = Nconc_org/Nconc_soil) %>%
-  relocate(delta_Nconc, .after = Nconc_org) %>%
-  filter(delta_Nconc != 1)
-  # mutate(delta_isoR = isoR_avg_high - isoR_avg_low) %>%
-  # select(1:4, atom_pc_in_harvest_high, atom_pc_in_harvest_low, isoR_avg_high, isoR_avg_low, delta_isoR) %>%
-  # filter(delta_isoR < 0)
-
-test4 <- summarySE(test, measurevar = "delta_Nconc", groupvars = c("Site", "Round"))
-ggplot(test4, aes(x = Round, y = delta_Nconc, fill = Site)) + geom_col()
-
-# How much of the total N pool is in the organic fraction
-ggplot(test, aes(x = Round, y = delta_Nconc, fill = Site)) + 
-  geom_boxplot() +
-  labs(x = "Time of harvest", y = expression("Fraction "*frac("[N]"*{}[organic],"[N]"*{}[total])), title = "Organic [N] as fraction of total inorganic [N] at time of harvest") +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-#
-# 
-
-
-
-
 #  
 #
 # Now the mineralization can be calculated

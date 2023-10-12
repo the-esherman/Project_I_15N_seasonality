@@ -430,7 +430,11 @@ mineral_isoR <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
   # Isotopic ratio, but 14N over 15N
   mutate(isoR14_high_avg = isoR15_high_avg^-1,
          isoR14_low_avg = isoR15_low_avg^-1,
-         isoR14_low2_avg = isoR15_low2_avg^-1)
+         isoR14_low2_avg = isoR15_low2_avg^-1,
+         # Fractional abundance inverse
+         isoF14_high_avg = isoF15_high_avg^-1,
+         isoF14_low_avg = isoF15_low_avg^-1,
+         isoF14_low2_avg = isoF15_low2_avg^-1)
 #
 # Plot the different estimates against each other
 # Using 14N/15N ratio
@@ -485,7 +489,7 @@ mineral_combined %>%
 # Even though the AP is very different, if the concentration is very low, the ratio will be very similar
 #
 #
-# Average isotopic ratio (isoR) ad get 95% CI
+# Average isotopic ratio (isoR) and get 95% CI
 min_isoR_2_high <- summarySE(mineral_isoR, measurevar = "isoR14_high_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_2_low  <- summarySE(mineral_isoR, measurevar = "isoR14_low_avg",  groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_2_low2 <- summarySE(mineral_isoR, measurevar = "isoR14_low2_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
@@ -504,9 +508,31 @@ min_isoR_2 <- min_isoR_2_high %>%
   mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
   mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
 #
-# Save data on isotopic ratio (14N/15N)
+# Save data on isotopic ratio (14N)
 write_csv2(min_isoR_2, file = "clean_data/isotopicR_3.csv", na = "", col_names = TRUE)
-
+#
+#
+# Average fractional abundance (isoF) and get 95% CI
+min_isoF_2_high <- summarySE(mineral_isoR, measurevar = "isoF14_high_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoF_2_low  <- summarySE(mineral_isoR, measurevar = "isoF14_low_avg",  groupvars = c("Site", "Round"), na.rm = TRUE)
+min_isoF_2_low2 <- summarySE(mineral_isoR, measurevar = "isoF14_low2_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
+#
+min_isoF_2_high <- as_tibble(min_isoF_2_high)
+min_isoF_2_low  <- as_tibble(min_isoF_2_low)
+min_isoF_2_low2 <- as_tibble(min_isoF_2_low2)
+#
+# Combine three different estimates
+min_isoF_2 <- min_isoF_2_high %>%
+  left_join(min_isoF_2_low, by = join_by("Site", "Round")) %>%
+  left_join(min_isoF_2_low2, by = join_by("Site", "Round")) %>%
+  rename("ci_high" = ci.x,
+         "ci_low" = ci.y,
+         "ci_low2" = ci) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
+  mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
+#
+# Save data on isotopic ratio (14N)
+write_csv2(min_isoF_2, file = "clean_data/isotopicF_3.csv", na = "", col_names = TRUE)
 
 
 

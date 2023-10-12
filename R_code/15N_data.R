@@ -43,7 +43,8 @@ Nair_Rst = 1/272
 #
 # Added 15N; mg 15N pr patch
 N_add <- 1.084
-Label_atom_pc <- 0.987
+Label_15F <- 0.987
+Label_atom_pc <- Label_15F*100
 #
 # Extraction correction factor
 K_EN = 0.4
@@ -215,12 +216,12 @@ Rec15N <- vegroot15N_total_Plant %>%
 # For mineralization and immobilization the atom% of the inorganic N is needed.
 # Info needed:
 # Calculate at every harvest point the inorganic atom% (or d15N):
-# [N]_inorganic = [NH4] + [NO3]                                     inorgN$NH4_µg_DW & inorgN$NO3_µg_DW
-# [N]_total (total of extract, found along Mic15N data)             soil15N$Nconc
+# [N]_inorganic = [NH4] + [NO3]                                     inorgN$NH4_microg_pr_gDW & inorgN$NO3_microg_pr_gDW
+# [N]_total (total of extract, found along Mic15N data)             soil15N$Nconc_microg_pr_gDW
 # [N]_org = [N]_total - [N]_inorganic (organic N concentration)
-# atom%_organic (Organic 15N ratio, equal to background)            soil15N$atom_pc_NatAb
+# atom%_organic (Organic 15N ratio, equal to background)            soil15N$Atom_pc_NatAb
 # atom%_inorganic = ?
-# atom%_total (the total extracted N's 15N ratio)                   soil15N$atom_pc
+# atom%_total (the total extracted N's 15N ratio)                   soil15N$Atom_pc
 #
 # Thus
 # atom%_tot = (atom%_org * [N]_org + atom%_inorg * [N]_inorg) / [N]_tot
@@ -232,29 +233,20 @@ Rec15N <- vegroot15N_total_Plant %>%
 # atom%_inorg = (atom%_tot * [N]_tot - atom%_org * [N]_org) / [N]_inorg
 #
 # New data set with needed information
-
+# Add Days between harvests (DaysHH), between label to harvest (DaysLH), and harvest to label (HL)
 soil15N_2 <- soil15N %>%
   left_join(coreData, by = join_by(Site, Plot, MP, Soil_RF_DW_g)) %>%
   select(1:11, DaysLH, DaysHH, Round, Injection_15N_mg_pr_patch, Injection_N_mg_pr_patch) %>%
   mutate(DaysHL = DaysHH - DaysLH) %>%
   relocate(c(Round, DaysLH, DaysHH, DaysHL), .after = MP)
-
-
-test2 <- coreData %>%
-  mutate(Soil_RF_FW_g_all = Soil_RF_FW_g*Soil_mass_g)
 #
-test3 <- summarySE(test2, measurevar = "Soil_RF_FW_g_all", groupvars = c("Site", "MP"))
-
-#
-# Calculate
+# Calculate [N] and AP
 mineral <- soil15N_2 %>%
   # Need only non-fumigated extraction (SE) - this is the soil N content
   filter(Extr_type == "SE") %>%
-  # Remove control samples
-  filter(MP != "EX (w)") %>%
   # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3] µg pr g DW
   mutate(Nconc_inorg = NH4_microg_pr_gDW + NO3_microg_pr_gDW) %>%
-  #The total N concentration in soil cannot be less than the total inorganic concentration!
+  # The total N concentration in soil cannot be less than the total inorganic concentration!
   # Three cases where this has to be corrected: A_4_4, A_3_4, V_5_8
   mutate(Nconc_soil = if_else(Nconc_microg_pr_gDW - Nconc_inorg < 0, Nconc_inorg, Nconc_microg_pr_gDW)) %>%
   # Organic N concentration is the difference between TDN and inorganic N: [N]_org = [TDN] - [N]_in µg pr g DW
@@ -262,21 +254,17 @@ mineral <- soil15N_2 %>%
   # Two estimates of AP:
   # High: Assuming organic atom% does not change considerably from natural abundance (!!!)
   mutate(atom_pc_in_harvest_high = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc_NatAb * Nconc_org)/Nconc_inorg),
-         atom_pc_in_harvest_high2 = if_else(Nconc_inorg == 0, NA, Label_atom_pc*100)) %>% 
+         atom_pc_in_harvest_high2 = if_else(Nconc_inorg == 0, NA, Label_atom_pc)) %>% 
   # Low: Assuming inorganic atom% does not change considerably from natural abundance (!!!)
-  # Or assume [N]_org < [N]_total, then AP_org < AP_total*[N]_total/[N]_org
+  # Or assume if [N]_org < [N]_total, then AP_org < AP_total*[N]_total/[N]_org
   mutate(atom_pc_in_harvest_low = if_else(Nconc_inorg == 0, NA, Atom_pc_NatAb),
          atom_pc_in_harvest_low2 = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - Atom_pc * Nconc_org)/Nconc_inorg)) %>% # Since atom%_organic < atom%_total*[N]_total/[N]_organic when [N]_org < [N]_tot
   # Third alternative:
-  # How far can the atom% be taken? Can the organic N pool have a atom% higher than TDN?
+  # How far can the atom% be taken? Can the organic N pool have an atom% higher than TDN?
   mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.000003) * Nconc_org)/Nconc_inorg)) %>%
-  mutate(atom_pc_in_harvest_high = if_else(atom_pc_in_harvest_high > Label_atom_pc*100, Label_atom_pc*100, atom_pc_in_harvest_high),
+  # The high inorganic AP estimate during harvest should still be less than label AP (98.7%)
+  mutate(atom_pc_in_harvest_high = if_else(atom_pc_in_harvest_high > Label_atom_pc, Label_atom_pc, atom_pc_in_harvest_high),
          atom_pc_in_harvest_low2)
-# test <- mineral %>%
-#   mutate(atom_pc_in_extreme = if_else(Nconc_inorg == 0, NA, (Atom_pc * Nconc_soil - (Atom_pc+0.000003) * Nconc_org)/Nconc_inorg)) %>%
-#   mutate(deltaAP_extreme = atom_pc_in_extreme - Atom_pc_NatAb) %>%
-#   mutate(AP_plus = if_else(Nconc_org == 0, NA, (atom_pc_in_harvest_low*Nconc_inorg + Atom_pc * Nconc_soil)/Nconc_org - Atom_pc)) %>%
-#   mutate(deltaNconc = Nconc_soil - Nconc_inorg)
 #
 # arrange values in order of MP so that the following loop works correctly
 mineral <- mineral %>%
@@ -335,20 +323,31 @@ for (i in 2:15) { # 15MP excluding first round
                                                                    mineral$MP == (i-1))]
   }
 }
-
 #
-#
-#
-
-
-
-
-test <- mineral %>%
+# Checking if the mineralization fits the approx. 1 week after previous harvest linear interpolation
+plot_min_test <- mineral %>%
   left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
   left_join(mineral_V, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
-  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>%
-  select(!c(Nconc_in0.A, Nconc_in0.V))
-
+  # Values alternate between Abisko and Vassijaure and should be combined into one value
+  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>% 
+  select(!c(Nconc_in0.A, Nconc_in0.V)) %>%
+  relocate(Soil_RF_DW_g, .after = Extr_type)
+#
+# Plot average inorganic [N] at harvest (Nconc_inorg) and the interpolated inorganic [N] at injection
+plot_min_test %>%
+  mutate(Plot = as.character(Plot)) %>%
+  ggplot() + 
+  geom_point(aes(x = MP-0.75, y = Nconc_in0, color = Plot)) + 
+  geom_line(aes(x = MP, y = Nconc_inorg, color = Plot)) + facet_wrap(~Site)
+#
+# Plot average inorganic [N] at harvest (Nconc_inorg) and the interpolated inorganic [N] at injection
+plot_min_test %>%
+  summarise(across(c(Nconc_inorg, Nconc_in0), ~mean(.x, na.rm = TRUE)), .by = c(Site, MP)) %>%
+  ggplot() + 
+  geom_point(aes(x = MP-0.75, y = Nconc_in0, color = Site)) + 
+  geom_line(aes(x = MP, y = Nconc_inorg, color = Site))
+# Everything good. Note that small deviations from the actual value is because it was not always a perfect 28 days between harvests
+#
 # Combine Abisko and Vassijaure and join the values
 mineral_combined <- mineral %>%
   left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
@@ -358,11 +357,11 @@ mineral_combined <- mineral %>%
   select(!c(Nconc_in0.A, Nconc_in0.V)) %>%
   relocate(Soil_RF_DW_g, .after = Extr_type)
 #
-# calculate how much 15N was added and add it to the inorganic pool at labeling
+# Calculate how much 15N was added and add it to the inorganic pool at labeling
 mineral_combined <- mineral_combined %>%
-  # N label (98.7% 15N) injected per dry weight soil
+  # N label (98.7% 15N) injected per g dry weight soil
   mutate(inj_15N = (Injection_N_mg_pr_patch*1000)/Soil_RF_DW_g) %>% # µg N added pr g DW
-  # Inorganic N concentration at injection point should be set at min 0
+  # Inorganic N concentration at injection point should be set at minimum 0
   mutate(Nconc_in0 = if_else(Nconc_in0 <= 0, 0, Nconc_in0)) %>%
   # Total inorganic N pool is injected N and inorganic N, µg pr g DW
   mutate(Nconc_in0_l = Nconc_in0 + inj_15N) %>%
@@ -370,40 +369,18 @@ mineral_combined <- mineral_combined %>%
   mutate(atom_pc_in0_l = ((Injection_15N_mg_pr_patch*1000)/Soil_RF_DW_g + (Atom_pc_NatAb/100)*Nconc_in0)/Nconc_in0_l*100) #  NB!!! 98.7% atom% for label
 #
 #
-#
-# How much of a fertilizer was the injection? 
+# How much of a inorganic fertilizer was the injection? 
 N_fertilizer <- mineral_combined %>%
   mutate(deltaInj_pc = inj_15N/Nconc_in0_l*100,
-         deltaInj_pc2 = (inj_15N*Soil_RF_DW_g)/(Nconc_in0_l*Soil_RF_DW_g)*100) %>%
+         deltaInj_pc2 = (inj_15N*Soil_RF_DW_g)/(Nconc_in0_l*Soil_RF_DW_g)*100) %>% # Exactly the same as for the other one, but written out explicitly
   select(1:4,inj_15N, Nconc_in0, deltaInj_pc, deltaInj_pc2)
 N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvars = c("Site", "Round"))
-N_fertilizer_sum2 <- summarySE(N_fertilizer, measurevar = "deltaInj_pc2", groupvars = c("Site", "Round"))
-# N_fertilizer_sum %>%
-#   ggplot(aes(x = MP, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + #ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci,
-#   geom_line() + 
-#   geom_ribbon(alpha = 0.5) +
-#   scale_x_continuous(breaks = 1:15) +
-#   scale_fill_viridis_d() +
-#   labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
-#   #facet_wrap(~Site) +
-#   theme_classic(base_size = 20)
 #
+# Plot how much the injected N adds to the total N pool (incl. the label) at injection
 N_fertilizer_sum %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
   ggplot(aes(x = Day_of_harvest, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
-  geom_line() + 
-  geom_ribbon(alpha = 0.5) +
-  scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
-  scale_fill_viridis_d() +
-  labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-#
-N_fertilizer_sum2 %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  ggplot(aes(x = Day_of_harvest, y = deltaInj_pc2, ymin = deltaInj_pc2-ci, ymax = deltaInj_pc2+ci, fill = Site, linetype = Site)) + 
   geom_line() + 
   geom_ribbon(alpha = 0.5) +
   scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
@@ -412,83 +389,112 @@ N_fertilizer_sum2 %>%
   labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
-
-
-
 #
 #
-# Calculate isotope ratio (isoR) at injection and harvest. Then calculate average ratio over the 3 weeks and convert to average AP
-# As these are simple calculations of averages, if harvest is NA, we assume a constant ratio
+# Calculate isotope ratio (isoR) at injection and harvest, then calculate it as an average for the 3 week period between label and harvest
+# To average the isotope ratio, calculate [N] and [15N] average. With this average calculate the fractional abundance (isoF), and from that calculate isotopic ratio
 mineral_combined <- mineral_combined %>%
   mutate(isoR_inj = if_else(is.na(atom_pc_in0_l), NA, (atom_pc_in0_l/100) / (1 - atom_pc_in0_l/100)),
          isoR_harv_high = if_else(is.na(atom_pc_in_harvest_high), NA, (atom_pc_in_harvest_high/100) / (1 - atom_pc_in_harvest_high/100)),
          isoR_harv_low = if_else(is.na(atom_pc_in_harvest_low), NA, atom_pc_in_harvest_low/100 / (1 - atom_pc_in_harvest_low/100)),
          isoR_harv_low2 = if_else(is.na(atom_pc_in_harvest_low2), NA, atom_pc_in_harvest_low2/100 / (1 - atom_pc_in_harvest_low2/100))) %>%
-  # If the inorganic N pool is depleted at harvest, it is assumed that the ratio stays constant
-  mutate(isoR_avg_high = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), isoR_inj, (isoR_inj + isoR_harv_high)/2)),
-         isoR_avg_low = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), isoR_inj, (isoR_inj + isoR_harv_low)/2)),
-         isoR_avg_low2 = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), isoR_inj, (isoR_inj + isoR_harv_low2)/2)),
-         # Invert the isotopic ratio before calculating to get 14N/15N (aka 14N per 15N)
-         isoR_avg_high_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_high), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_high)/2)),
-         isoR_avg_low_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_low)/2)),
-         isoR_avg_low2_inv = if_else(is.na(isoR_inj), NA, if_else(is.na(isoR_harv_low2), 1/isoR_inj, (1/isoR_inj + 1/isoR_harv_low2)/2))) %>%
-  # Calculate atom% from the ratio
-  mutate(AP_avg_high = if_else(is.na(isoR_avg_high), NA, isoR_avg_high/(1 + isoR_avg_high)*100),
-         AP_avg_low = if_else(is.na(isoR_avg_low), NA, isoR_avg_low/(1 + isoR_avg_low)*100),
-         AP_avg_low2 = if_else(is.na(isoR_avg_low2), NA, isoR_avg_low2/(1 + isoR_avg_low2)*100)) %>%
-  # Calculate isotopic fractional abundance (isoF) average
-  mutate(isoF_avg_high = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), atom_pc_in0_l/100, 
-                                                                   (atom_pc_in0_l/100 + atom_pc_in_harvest_high/100)/2)), # F high
-         isoF_avg_low = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), atom_pc_in0_l/100, 
-                                                                  (atom_pc_in0_l/100 + atom_pc_in_harvest_low/100)/2)), # F low
-         isoF_avg_low2 = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), atom_pc_in0_l/100, 
-                                                                   (atom_pc_in0_l/100 + atom_pc_in_harvest_low2/100)/2)), # F low2
-         # Invert the AP before calculating to get N/15N (aka N per 15N)
-         isoF_avg_high_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_high), (atom_pc_in0_l/100)^-1, 
-                                                                       ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_high/100)^-1)/2)), # F^-1 high
-         isoF_avg_low_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low), (atom_pc_in0_l/100)^-1, 
-                                                                      ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_low/100)^-1)/2)), # F^-1 low
-         isoF_avg_low2_inv = if_else(is.na(atom_pc_in0_l), NA, if_else(is.na(atom_pc_in_harvest_low2), (atom_pc_in0_l/100)^-1, 
-                                                                       ((atom_pc_in0_l/100)^-1 + (atom_pc_in_harvest_low2/100)^-1)/2))) %>% # F^-1 low2
-  # From F calculate isotope ratio (isoR)
-  mutate(isoR_avg_high_v2 = isoF_avg_high/(1-isoF_avg_high),
-         isoR_avg_low_v2 = isoF_avg_low/(1-isoF_avg_low)) %>%
-  # Use average [15N] and average [14N] to calculate 14N/15N
-  mutate(conc15N_inj = (Injection_15N_mg_pr_patch*1000)/Soil_RF_DW_g + (Atom_pc_NatAb/100)*Nconc_in0, # Simple mass calculation: 15N injected + 15N already there
-         conc14N_inj = Nconc_in0_l*1/((atom_pc_in0_l/100)/(1-atom_pc_in0_l/100)),
+  # Calculate the [15N] for the labeling to harvest period
+  mutate(conc15N_inj = ((Injection_15N_mg_pr_patch*1000) + (Atom_pc_NatAb/100)*Nconc_in0*Soil_RF_DW_g)/Soil_RF_DW_g, # Simple mass calculation: 15N injected + 15N already there
          # Higher uncertainty with the harvest point AP
-         conc15N_harv_high = (atom_pc_in_harvest_high/100)*Nconc_inorg,
-         conc15N_harv_low = (atom_pc_in_harvest_low/100)*Nconc_inorg,
-         conc15N_harv_low2 = (atom_pc_in_harvest_low2/100)*Nconc_inorg,
-         conc14N_harv_high = Nconc_inorg*1/((atom_pc_in_harvest_high/100)/(1-atom_pc_in_harvest_high/100)),
-         conc14N_harv_low = Nconc_inorg*1/((atom_pc_in_harvest_low/100)/(1-atom_pc_in_harvest_low/100)),
-         conc14N_harv_low2 = Nconc_inorg*1/((atom_pc_in_harvest_low2/100)/(1-atom_pc_in_harvest_low2/100)))
-
-
-# Average for both [15N] and [14N]
-mineral_isoR <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
-  select(1:29, 51:58) %>%
-  mutate(conc15N_avg_high = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_high), conc15N_inj, (conc15N_inj+conc15N_harv_high)/2)),
-         conc15N_avg_low  = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_low), conc15N_inj, (conc15N_inj+conc15N_harv_low)/2)),
-         conc15N_avg_low2 = if_else(is.na(conc15N_inj), NA, if_else(is.na(conc15N_harv_low2), conc15N_inj, (conc15N_inj+conc15N_harv_low2)/2)),
-         conc14N_avg_high = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_high), conc14N_inj, (conc14N_inj+conc14N_harv_high)/2)),
-         conc14N_avg_low  = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_low), conc14N_inj, (conc14N_inj+conc14N_harv_low)/2)),
-         conc14N_avg_low2 = if_else(is.na(conc14N_inj), NA, if_else(is.na(conc14N_harv_low2), conc14N_inj, (conc14N_inj+conc14N_harv_low2)/2))) %>%
-  mutate(isoR14_high_avg = conc14N_avg_high/conc15N_avg_high,
-         isoR14_low_avg = conc14N_avg_low/conc15N_avg_low,
-         isoR14_low2_avg = conc14N_avg_low2/conc15N_avg_low2)
-
-
+         conc15N_harv_high = if_else(is.na(atom_pc_in_harvest_high), 0, (atom_pc_in_harvest_high/100)*Nconc_inorg),
+         conc15N_harv_low = if_else(is.na(atom_pc_in_harvest_low), 0, (atom_pc_in_harvest_low/100)*Nconc_inorg),
+         conc15N_harv_low2 = if_else(is.na(atom_pc_in_harvest_low2), 0, (atom_pc_in_harvest_low2/100)*Nconc_inorg))
 #
-# isotopic ratio (isoR)
+# Average for both [N] (Nconc_in_avg) and [15N] (conc15N_avg_...) to get fractional abundance and isotopic ratio
+mineral_isoR <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
+  mutate(conc15N_avg_high = (conc15N_inj+conc15N_harv_high)/2, # conc15N_inj/2
+         conc15N_avg_low  = (conc15N_inj+conc15N_harv_low)/2,
+         conc15N_avg_low2 = (conc15N_inj+conc15N_harv_low2)/2,
+         Nconc_in_avg = (Nconc_in0_l+Nconc_inorg)/2) %>%
+  # calculate isotopic ratio and fractional abundance
+  mutate(# Fractional Abundance
+         isoF15_high_avg = conc15N_avg_high/Nconc_in_avg,
+         isoF15_low_avg = conc15N_avg_low/Nconc_in_avg,
+         isoF15_low2_avg = conc15N_avg_low2/Nconc_in_avg,
+         # Alternatively, no need to average first as both are averaged from 2 samples
+         isoF15_high_avg2 = (conc15N_inj+conc15N_harv_high)/(Nconc_in0_l+Nconc_inorg),
+         # 14N at the average point - to do 14N/15N - gives the same result as inverting the fractional abundance
+         conc14N_avg_high = Nconc_in_avg - conc15N_avg_high,
+         conc14N_avg_low = Nconc_in_avg - conc15N_avg_low,
+         conc14N_avg_low2 = Nconc_in_avg - conc15N_avg_low2) %>%
+  mutate(isoR15_high_avg = isoF15_high_avg/(1-isoF15_high_avg),
+         isoR15_low_avg = isoF15_low_avg/(1-isoF15_low_avg),
+         isoR15_low2_avg = isoF15_low2_avg/(1-isoF15_low2_avg),
+         # [14N]/[15N] - gives the same result as inverting the fractional abundance
+         isoR14_high_avg2 = conc14N_avg_high/conc15N_avg_high) %>%
+  # Isotopic ratio, but 14N over 15N
+  mutate(isoR14_high_avg = isoR15_high_avg^-1,
+         isoR14_low_avg = isoR15_low_avg^-1,
+         isoR14_low2_avg = isoR15_low2_avg^-1)
+#
+# Plot the different estimates against each other
+# Using 14N/15N ratio
+mineral_isoR %>%
+  select(1:4, isoR14_high_avg:isoR14_low2_avg) %>%
+  rename("High" = isoR14_high_avg,
+         "Low" = isoR14_low_avg,
+         "Low2" = isoR14_low2_avg) %>%
+  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "isoR14") %>%
+  #summarise(isoR14 = mean(isoR14), .by = c(Site, MP, Estimate)) %>%
+  ggplot(aes(x = MP, y = isoR14, color = Estimate)) + geom_point() + facet_wrap(~Site)
+#
+# Using 15N/14N ratio inverted (should be same as above)
+mineral_isoR %>%
+  select(1:4, isoR15_high_avg:isoR15_low2_avg) %>%
+  rename("High" = isoR15_high_avg,
+         "Low" = isoR15_low_avg,
+         "Low2" = isoR15_low2_avg) %>%
+  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "isoR15") %>%
+  ggplot(aes(x = MP, y = isoR15^-1, color = Estimate)) + geom_point() + facet_wrap(~Site)
+# The estimates are very similar
+#
+# Plot harvest concentrations
+# As points
+mineral_isoR %>%
+  select(1:4, conc15N_harv_high:conc15N_harv_low2) %>%
+  rename("High" = conc15N_harv_high,
+         "Low" = conc15N_harv_low,
+         "Low2" = conc15N_harv_low2) %>%
+  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "conc15N") %>%
+  ggplot(aes(x = MP, y = conc15N, color = Estimate)) + geom_point() + facet_wrap(~Site)
+#
+# As average line
+mineral_isoR %>%
+  select(1:4, conc15N_harv_high:conc15N_harv_low2) %>%
+  rename("High" = conc15N_harv_high,
+         "Low" = conc15N_harv_low,
+         "Low2" = conc15N_harv_low2) %>%
+  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "conc15N") %>%
+  summarise(conc15N = mean(conc15N, rm.na = TRUE), .by = c(Site, MP, Estimate)) %>%
+  ggplot(aes(x = MP, y = conc15N, color = Estimate)) + geom_line() + facet_wrap(~Site)
+# The concentration is very low for all estimates at harvest
+#
+# Plot AP for harvest
+mineral_combined %>%
+  select(1:4, atom_pc_in_harvest_high, atom_pc_in_harvest_low, atom_pc_in_harvest_low2) %>%
+  rename("High" = atom_pc_in_harvest_high,
+         "Low" = atom_pc_in_harvest_low,
+         "Low2" = atom_pc_in_harvest_low2) %>%
+  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "AP_harv") %>%
+  ggplot(aes(x = MP, y = AP_harv, color = Estimate)) + geom_point() + facet_wrap(~Site)
+# Even though the AP is very different, if the concentration is very low, the ratio will be very similar
+#
+#
+# Average isotopic ratio (isoR) ad get 95% CI
 min_isoR_2_high <- summarySE(mineral_isoR, measurevar = "isoR14_high_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_2_low  <- summarySE(mineral_isoR, measurevar = "isoR14_low_avg",  groupvars = c("Site", "Round"), na.rm = TRUE)
 min_isoR_2_low2 <- summarySE(mineral_isoR, measurevar = "isoR14_low2_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
-
+#
 min_isoR_2_high <- as_tibble(min_isoR_2_high)
 min_isoR_2_low  <- as_tibble(min_isoR_2_low)
 min_isoR_2_low2 <- as_tibble(min_isoR_2_low2)
-
+#
+# Combine three different estimates
 min_isoR_2 <- min_isoR_2_high %>%
   left_join(min_isoR_2_low, by = join_by("Site", "Round")) %>%
   left_join(min_isoR_2_low2, by = join_by("Site", "Round")) %>%
@@ -497,24 +503,9 @@ min_isoR_2 <- min_isoR_2_high %>%
          "ci_low2" = ci) %>%
   mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
   mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
-
-min_isoR_format <- min_isoR %>%
-  unite(col = "isoR_high", isoR_high, ci_high, sep = " ± ") %>%
-  unite(col = "isoR_low", isoR_high, ci_low, sep = " ± ") %>%
-  unite(col = "isoR_low2", isoR_low2, ci_low2, sep = " ± ") %>%
-  unite(col = "isoR_high_v2", isoR_high_v2, ci_high_v2, sep = " ± ") %>%
-  unite(col = "isoR_low_v2", isoR_low_v2, ci_low_v2, sep = " ± ")
-
-min_isoR_2 %>%
-  ggplot(aes(x = Round, y = isoR14_high_avg)) + geom_col() + facet_wrap(~Site)
 #
-
-write_csv2(min_isoR_2, file = "clean_data/isotopicR_2.csv", na = "", col_names = TRUE)
-
-
-
-
-
+# Save data on isotopic ratio (14N/15N)
+write_csv2(min_isoR_2, file = "clean_data/isotopicR_3.csv", na = "", col_names = TRUE)
 
 
 
@@ -544,129 +535,7 @@ ggplot(test, aes(x = Round, y = delta_Nconc, fill = Site)) +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 #
-#
-
-
-
-
-
-
-
-# Is the 15R always lower in harvest than at injection?
-# That is, is there more 15N per 14N at harvest than at injection?
-# This would imply that there is fractionation, or a bias against using the 15N over using the 14N. Which is possible and likely, but does not take into account dilution from mineralization.
-mineral_combined %>%
-  select(1:3, isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2) %>%
-  filter(!is.na(isoR_inj)) %>%
-  mutate(isoR_harv_high = if_else(is.na(isoR_harv_high), isoR_inj, isoR_harv_high),
-        isoR_harv_low = if_else(is.na(isoR_harv_low), isoR_inj, isoR_harv_low),
-        isoR_harv_low2 = if_else(is.na(isoR_harv_low2), isoR_inj, isoR_harv_low2)) %>%
-  #group_by(across(c("Site", "MP"))) %>%
-  summarise(across(c(isoR_inj, isoR_harv_high, isoR_harv_low, isoR_harv_low2), ~mean(., na.rm = TRUE)), .by = c("Site", "MP")) %>%
-  pivot_longer(cols = 3:6, names_to = "Time", values_to = "isoR") %>%
-  mutate(Time = case_when(Time == "isoR_inj" ~ 1,
-                          Time == "isoR_harv_high" ~ 3,
-                          Time == "isoR_harv_low" ~ 2,
-                          Time == "isoR_harv_low2" ~ 2.5)) %>%
-  #filter(Time != 3) %>%
-  ggplot(aes(x = Time, y = isoR, color = Site)) + geom_point() + facet_wrap(~ MP)
-  
-
-
-mineral_combined %>%
-  ggplot(aes(x = MP, y = Nconc_inorg, color = Site)) + geom_point()
-
-mineral_combined %>%
-  filter(!is.na(isoR_harv_high),
-         !is.na(isoR_inj)) %>%
-  ggplot(aes(x = isoR_avg_high, y = isoR_avg_high_v2, color = Site)) + geom_point()
-
-mineral_combined %>%
-  filter(!is.na(isoR_harv_high),
-         !is.na(isoR_inj)) %>%
-  ggplot(aes(x = isoR_avg_high/(1+isoR_avg_high), y = isoF_avg_high, color = Site)) + geom_point()
-
-
-
-mineral_combined %>%
-  ggplot(aes(x = Round, y = atom_pc_in_harvest_high, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
-
-mineral_combined %>%
-  ggplot(aes(x = Round, y = atom_pc_in_harvest_low2, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
-
-
-mineral_combined %>%
-  mutate(deltaAP_high_low2 = atom_pc_in_harvest_high - atom_pc_in_harvest_low2) %>%
-  ggplot(aes(x = Round, y = deltaAP_high_low2, fill = Site)) + geom_boxplot() + coord_cartesian(ylim = c(0,1))
-
-
-test1 <- summarySE(mineral_combined, measurevar = "atom_pc_in_harvest_high", groupvars = c("Site", "Round"), na.rm = TRUE)
-test2 <- summarySE(mineral_combined, measurevar = "atom_pc_in_harvest_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
-test_delta <- mineral_combined %>%
-  mutate(deltaAP = atom_pc_in_harvest_low2 / atom_pc_in_harvest_high* 100)
-test_delta <- summarySE(test_delta, measurevar = "deltaAP", groupvars = c("Site", "Round"), na.rm = TRUE)
-
-test1 <- test1 %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  select(Site, Round, Day_of_harvest, atom_pc_in_harvest_high, ci) %>%
-  rename("AP_high" = atom_pc_in_harvest_high,
-         "ci_high" = ci)
-test2 <- test2 %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  select(Site, Round, Day_of_harvest, atom_pc_in_harvest_low2, ci) %>%
-  rename("AP_low" = atom_pc_in_harvest_low2,
-         "ci_low" = ci)
-test_delta <- test_delta %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  select(Site, Round, Day_of_harvest, deltaAP, ci) %>%
-  rename("AP_delta" = deltaAP,
-         "ci_delta" = ci)
-
-
-test3 <- test1 %>%
-  left_join(test2, by = join_by(Site, Round, Day_of_harvest)) %>%
-  left_join(test_delta, by = join_by(Site, Round, Day_of_harvest))
-
-test3_1 <- test3 %>%
-  rename("High" = AP_high,
-         "Low" = AP_low) %>%
-  select(Site, Round, Day_of_harvest, High, Low) %>%
-  pivot_longer(4:5, names_to = "Estimate", values_to = "AP")
-test3_2 <- test3 %>%
-  rename("High" = ci_high,
-         "Low" = ci_low) %>%
-  select(Site, Round, Day_of_harvest, High, Low) %>%
-  pivot_longer(4:5, names_to = "Estimate", values_to = "ci")
-test4 <- test3_1 %>%
-  left_join(test3_2, by = join_by(Site, Round, Day_of_harvest, Estimate))
-
-test3 %>%
-  ggplot(aes(x = Day_of_harvest, y = AP_delta, ymin = AP_delta-ci_delta, ymax = AP_delta+ci_delta, fill = Site)) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("Abisko", "Vassijaure")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  coord_cartesian(ylim = c(0,100)) +
-  labs(x = "Measuring period (MP)", y = expression("Atom% "*{}^15*"N"), title = expression("Soil "*{}^15*"N atom% high estimate")) +
-  theme_light(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-
-test4 %>%
-  ggplot(aes(x = Day_of_harvest, y = AP, ymin = AP-ci, ymax = AP+ci, fill = Estimate)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("High", "Low")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  coord_cartesian(ylim = c(0,100)) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") +
-  labs(x = "Measuring period (MP)", y = expression("Atom% "*{}^15*"N"), title = expression("Soil "*{}^15*"N atom% high estimate")) +
-  theme_light(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-
+# 
 
 
 

@@ -423,9 +423,9 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   geom_hline(yintercept = 0, color = "#999999") +
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
-  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-10,20)) +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-5,15)) +
   labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
   theme_bw(base_size = 15) +

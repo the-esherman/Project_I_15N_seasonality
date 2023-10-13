@@ -1957,7 +1957,7 @@ sysRec_sum %>%
 vegroot15N_total_Plant_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery-ci, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
   #geom_point(aes(Round, PlantRecovery)) +
   geom_col(aes(Round, PlantRecovery),color = "black") +
   coord_cartesian(ylim=c(0,30)) +

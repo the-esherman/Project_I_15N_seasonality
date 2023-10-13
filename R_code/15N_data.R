@@ -564,219 +564,33 @@ mineral_combined <- mineral_combined %>%
                        ) / dayLH)
          ) # gross consumption
 #
-
-
-
+#
 mineral_combined %>%
   ggplot(aes(Round, gross_p_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+#
 mineral_combined %>%
   ggplot(aes(Round, gross_p_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+#
 mineral_combined %>%
   ggplot(aes(Round, gross_c_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+#
 mineral_combined %>%
   ggplot(aes(Round, gross_c_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+#
 mineral_combined %>%
   ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+#
 # How does the 15N/14N ratio change
-mineral_combined %>%
-  ggplot(aes(Round, isoR_avg_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_combined %>%
-  ggplot(aes(Round, isoR_avg_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
+mineral_isoR %>%
+  ggplot(aes(Round, isoR15_low_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_isoR %>%
+  ggplot(aes(Round, isoR15_high_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+#
 # How does the 14N/15N ratio change
-mineral_combined %>%
-  ggplot(aes(Round, isoR_avg_low_inv)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_combined %>%
-  ggplot(aes(Round, isoR_avg_high_inv)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-
-
-mineral_combined %>%
-  filter(!is.na(DaysHH)) %>%
-  select(1:4, Nconc_in0, Nconc_in0_l, Nconc_inorg, Soil_RF_DW_g) %>%
-  pivot_longer(cols = c(Nconc_in0, Nconc_in0_l, Nconc_inorg), names_to = "Estimate", values_to = "Nconc") %>%
-  summarise(across(c("Nconc", "Soil_RF_DW_g"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round", "Estimate")) %>%
-  mutate(Round = factor(Round, levels = unique(Round))) %>%
-  ggplot(aes(x = Round, y = Nconc*Soil_RF_DW_g, fill = Estimate)) + #color = Estimate, group = Estimate)) + 
-  #geom_line() +
-  geom_bar(position = "dodge", stat = "identity") + 
-  facet_wrap(~Site) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-mineral_combined %>%
-  filter(!is.na(DaysHH)) %>%
-  select(1:4, Nconc_in0, Nconc_in0_l, Nconc_inorg, Soil_RF_DW_g, Injection_N_mg_pr_patch) %>%
-  mutate(Nconc_in0Delta = Nconc_in0_l - Nconc_in0,
-         Injection_N = Injection_N_mg_pr_patch*1000) %>%
-  #select(!Nconc_in0, !Nconc_in0_l) %>%
-  mutate(Nconc_in0Delta = Nconc_in0Delta*Soil_RF_DW_g,
-         Nconc_inorg = Nconc_inorg*Soil_RF_DW_g,
-         Nconc_in0 = Nconc_in0*Soil_RF_DW_g,
-         Nconc_in0_l = Nconc_in0_l*Soil_RF_DW_g) %>%
-  pivot_longer(cols = c(Nconc_in0, Nconc_in0_l, Injection_N, Nconc_in0Delta, Nconc_inorg), names_to = "Estimate", values_to = "Nconc") %>%
-  summarise(across(c("Nconc"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round", "Estimate")) %>%
-  mutate(Round = factor(Round, levels = unique(Round))) %>%
-  ggplot(aes(x = Round, y = Nconc, color = Estimate, group = Estimate)) + # fill = Estimate)) + #
-  geom_line() +
-  #geom_bar(position = "dodge", stat = "identity") + 
-  facet_wrap(~Site) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-
-
-
-
-
-
-
-
-# Summary!
-# Remove MP1
-mineral_combined_MP2_15 <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
-  rename("isoR_high" = isoR_avg_high,
-         "isoR_low"     = isoR_avg_low,
-         "isoR_low2"    = isoR_avg_low2,
-         "isoR_high_v2" = isoR_avg_high_v2,
-         "isoR_low_v2"  = isoR_avg_low_v2,
-         # Fractional abundance
-         "isoF_high"    = isoF_avg_high,
-         "isoF_low"     = isoF_avg_low,
-         "isoF_low2"    = isoF_avg_low2,
-         # Inverted isotopic ratio
-         "isoR_high_inv" = isoR_avg_high_inv,
-         "isoR_low_inv" = isoR_avg_low_inv,
-         "isoR_low2_inv" = isoR_avg_low2_inv)
-  # mutate(isoR_avg_high_inv    = isoR_avg_high^-1,
-  #        isoR_avg_low_inv     = isoR_avg_low^-1,
-  #        isoR_avg_low2_inv    = isoR_avg_low2^-1,
-  #        isoR_avg_high_v2_inv = isoR_avg_high_v2^-1,
-  #        isoR_avg_low_v2_inv  = isoR_avg_low_v2^-1)
-  #        # isoF_avg_high_inv    = isoF_avg_high^-1,
-  #        # isoF_avg_low_inv     = isoF_avg_low^-1,
-  #        # isoF_avg_low2_inv    = isoF_avg_low2^-1)
-#
-# isotopic ratio (isoR)
-min_isoR_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low2_inv", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_high_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_high_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoR_low_v2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoR_low_v2", groupvars = c("Site", "Round"), na.rm = TRUE)
-
-min_isoR_high <- as_tibble(min_isoR_high)
-min_isoR_low <- as_tibble(min_isoR_low)
-min_isoR_low2 <- as_tibble(min_isoR_low2)
-min_isoR_high_v2 <- as_tibble(min_isoR_high_v2)
-min_isoR_low_v2 <- as_tibble(min_isoR_low_v2)
-
-min_isoR <- min_isoR_high %>%
-  left_join(min_isoR_low, by = join_by("Site", "Round")) %>%
-  left_join(min_isoR_low2, by = join_by("Site", "Round")) %>%
-  left_join(min_isoR_high_v2, by = join_by("Site", "Round")) %>%
-  left_join(min_isoR_low_v2, by = join_by("Site", "Round")) %>%
-  rename("ci_high" = ci.x,
-         "ci_low" = ci.y,
-         "ci_low2" = ci.x.x,
-         "ci_high_v2" = ci.y.y,
-         "ci_low_v2" = ci) %>%
-  mutate(across(c(4:7, 9:12, 14:17, 19:22, 23:27), ~as.numeric(.))) %>%
-  mutate(across(c(4:7, 9:12, 14:17, 19:22, 23:27), ~num(., digits = 2)))
-
-min_isoR_format <- min_isoR %>%
-  unite(col = "isoR_high", isoR_high, ci_high, sep = " ± ") %>%
-  unite(col = "isoR_low", isoR_high, ci_low, sep = " ± ") %>%
-  unite(col = "isoR_low2", isoR_low2, ci_low2, sep = " ± ") %>%
-  unite(col = "isoR_high_v2", isoR_high_v2, ci_high_v2, sep = " ± ") %>%
-  unite(col = "isoR_low_v2", isoR_low_v2, ci_low_v2, sep = " ± ")
-
-min_isoR %>%
-  ggplot(aes(x = Round, y = isoR_high)) + geom_col() + facet_wrap(~Site)
-#
-# Fractional abundance (isoF)
-min_isoF_high <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_high", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoF_low <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_low", groupvars = c("Site", "Round"), na.rm = TRUE)
-min_isoF_low2 <- summarySE(mineral_combined_MP2_15, measurevar = "isoF_low2", groupvars = c("Site", "Round"), na.rm = TRUE)
-
-min_isoF_high <- as_tibble(min_isoF_high)
-min_isoF_low <- as_tibble(min_isoF_low)
-min_isoF_low2 <- as_tibble(min_isoF_low2)
-
-min_isoF <- min_isoF_high %>%
-  left_join(min_isoF_low, by = join_by("Site", "Round")) %>%
-  left_join(min_isoF_low2, by = join_by("Site", "Round")) %>%
-  rename("ci_high" = ci.x,
-         "ci_low" = ci.y,
-         "ci_low2" = ci) %>%
-  mutate(across(c(4:7, 9:12, 14:17), ~as.numeric(.))) %>%
-  mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
-
-min_isoF %>%
-  ggplot(aes(x = Round, y = isoF_high)) + geom_col() + facet_wrap(~Site)
-
-# Save as csv
-write_csv2(min_isoR, file = "clean_data/isotopicR_inv.csv", na = "", col_names = TRUE)
-write_csv2(min_isoF, file = "clean_data/isotopicF.csv", na = "", col_names = TRUE)
-
-# Plot fractional abundance
-min_isoF %>%
-  select(1:2, isoF_high, isoF_low, ci_high, ci_low) %>%
-  pivot_longer(cols = c(isoF_high, isoF_low), names_to = "Estimate", values_to = "isoF") %>%
-  ggplot(aes(x = Round, y = isoF)) +
-  geom_col(position = "dodge") +
-  scale_fill_viridis_d() +
-  facet_wrap(~Site*Estimate) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-min_isoF %>%
-  select(1:2, isoF_high, isoF_low, ci_high, ci_low) %>%
-  pivot_longer(cols = 3:6, names_to = c(".value", "Estimate"), names_sep = "_") %>%
-  ggplot() +
-  geom_errorbar(aes(x = Round, y = isoF, ymin=isoF, ymax=isoF+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, isoF),color = "black") +
-  scale_fill_viridis_d() +
-  facet_wrap(~Site*Estimate) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-
-min_isoR %>%
-  select(1:2, isoR_high, isoR_low, ci_high, ci_low) %>%
-  pivot_longer(cols = 3:6, names_to = c(".value", "Estimate"), names_sep = "_") %>%
-  ggplot() +
-  geom_errorbar(aes(x = Round, y = isoR, ymin=isoR, ymax=isoR+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, isoR),color = "black") +
-  scale_fill_viridis_d() +
-  facet_wrap(~Site*Estimate) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-
-mineral_combined_MP2_15 %>%
-  select(1:4, isoF_high, isoF_low) %>%
-  #mutate(isoF_high = isoF_high^-1,         isoF_low = isoF_low^-1) %>%
-  summarise(across(c("isoF_high", "isoF_low"), ~mean(., na.rm = TRUE)), .by = c("Site", "Round"))
-
-
-min_isoF %>%
-  mutate(isoR_high_F = isoF_high/(1-isoF_high)) %>%
-  select(1:2, isoR_high_F) %>%
-  left_join(min_isoR, by = join_by(Site,Round)) %>%
-  select(1:2, isoR_high, isoR_high_F) %>%
-  ggplot(aes(x = isoR_high, y = isoR_high_F, color = Site)) + geom_point()
-
-min_isoR %>%
-  ggplot(aes(x = Round, y = isoR_high)) + geom_col() + facet_wrap(~Site)
-
-
-
-
+mineral_isoR %>%
+  ggplot(aes(Round, isoR14_low_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+mineral_isoR %>%
+  ggplot(aes(Round, isoR14_high_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 #
 #
 #

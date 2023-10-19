@@ -413,7 +413,7 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = NULL, y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
   guides(lty = guide_legend(title = "Mean diel temperature")) +
-  theme_bw(base_size = 15) +
+  theme_classic(base_size = 15) +
   theme(legend.position = "top", axis.text.x = element_blank())
 #
 # Soil temperatures - all
@@ -421,6 +421,8 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
   annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
   geom_hline(yintercept = 0, color = "#999999") +
+  #annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -3, ymax = 0, fill = "white", alpha = 0.9) +
+  #geom_hline(yintercept = -3, color = "#D55E00") +
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
@@ -428,7 +430,7 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-5,15)) +
   labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
-  theme_bw(base_size = 15) +
+  theme_classic(base_size = 15) +
   theme(legend.position = "top")
 #
 # Snow depth on plot
@@ -446,7 +448,7 @@ snowDepth_plot <- snowData_2 %>%
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
   guides(fill = guide_legend(title = "Snow")) +
-  theme_bw(base_size = 15) +
+  theme_classic(base_size = 15) +
   theme(legend.position = "bottom")
 #
 # Plot
@@ -491,44 +493,50 @@ soilT_plot2 <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
   geom_hline(yintercept = 0, color = "#999999") +
   
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[1]), y = -5, xend = as.Date(DayOfLH$Day_of_label[1]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[2]), y = -5, xend = as.Date(DayOfLH$Day_of_label[2]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[3]), y = -5, xend = as.Date(DayOfLH$Day_of_label[3]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[4]), y = -5, xend = as.Date(DayOfLH$Day_of_label[4]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[5]), y = -5, xend = as.Date(DayOfLH$Day_of_label[5]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[6]), y = -5, xend = as.Date(DayOfLH$Day_of_label[6]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[7]), y = -5, xend = as.Date(DayOfLH$Day_of_label[7]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[8]), y = -5, xend = as.Date(DayOfLH$Day_of_label[8]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[9]), y = -5, xend = as.Date(DayOfLH$Day_of_label[9]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[10]), y = -5, xend = as.Date(DayOfLH$Day_of_label[10]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[11]), y = -5, xend = as.Date(DayOfLH$Day_of_label[11]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[12]), y = -5, xend = as.Date(DayOfLH$Day_of_label[12]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[13]), y = -5, xend = as.Date(DayOfLH$Day_of_label[13]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[14]), y = -5, xend = as.Date(DayOfLH$Day_of_label[14]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[15]), y = -5, xend = as.Date(DayOfLH$Day_of_label[15]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#56B4E9") +
+  # Arrows from label to harvest
+  #geom_curve(aes(x = as.Date(DayOfLH$Day_of_label[2]), y = 0, xend = as.Date(DayOfLH$Day_of_harvest[2]), yend = 0), linewidth = 0.9, curvature = -0.5, arrow = arrow(length = unit(0.3, "cm"), type = "closed")) +
+  #geom_curve(aes(x = as.Date(DayOfLH$Day_of_label[3]), y = 0, xend = as.Date(DayOfLH$Day_of_harvest[3]), yend = 0), linewidth = 0.9, curvature = -0.5, arrow = arrow(length = unit(0.3, "cm"), type = "closed")) +
   
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[1]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[1]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[2]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[2]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[3]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[3]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[4]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[4]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[5]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[5]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[6]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[6]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[7]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[7]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[8]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[8]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[9]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[9]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[10]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[10]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[11]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[11]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[12]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[12]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[13]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[13]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[14]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[14]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
-  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[15]), y = -5, xend = as.Date(DayOfLH$Day_of_harvest[15]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.5, "cm")), color = "#D55E00") +
+  # Label arrows
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[1]), y = -3, xend = as.Date(DayOfLH$Day_of_label[1]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[2]), y = -3, xend = as.Date(DayOfLH$Day_of_label[2]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[3]), y = -3, xend = as.Date(DayOfLH$Day_of_label[3]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[4]), y = -3, xend = as.Date(DayOfLH$Day_of_label[4]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[5]), y = -3, xend = as.Date(DayOfLH$Day_of_label[5]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[6]), y = 3, xend = as.Date(DayOfLH$Day_of_label[6]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[7]), y = 3, xend = as.Date(DayOfLH$Day_of_label[7]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[8]), y = 3, xend = as.Date(DayOfLH$Day_of_label[8]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[9]), y = 3, xend = as.Date(DayOfLH$Day_of_label[9]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[10]), y = 3, xend = as.Date(DayOfLH$Day_of_label[10]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[11]), y = 3, xend = as.Date(DayOfLH$Day_of_label[11]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[12]), y = 3, xend = as.Date(DayOfLH$Day_of_label[12]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[13]), y = -3, xend = as.Date(DayOfLH$Day_of_label[13]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[14]), y = -3, xend = as.Date(DayOfLH$Day_of_label[14]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_label[15]), y = -3, xend = as.Date(DayOfLH$Day_of_label[15]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#56B4E9") +
+  
+  # Harvest arrows
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[1]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[1]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[2]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[2]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[3]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[3]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[4]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[4]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[5]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[5]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[6]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[6]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[7]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[7]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[8]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[8]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[9]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[9]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[10]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[10]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[11]), y = 3, xend = as.Date(DayOfLH$Day_of_harvest[11]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[12]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[12]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[13]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[13]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[14]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[14]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
+  geom_segment(aes(x = as.Date(DayOfLH$Day_of_harvest[15]), y = -3, xend = as.Date(DayOfLH$Day_of_harvest[15]), yend = 0), linewidth = 2, arrow = arrow(length = unit(0.3, "cm")), color = "#D55E00") +
   
   
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
-  scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
+  scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-10,20)) +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-5,15)) +
   labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
   theme_classic(base_size = 15) +

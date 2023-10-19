@@ -1759,6 +1759,7 @@ sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"
 sysRec_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  #geom_hline(yintercept = 100, color = "red") +
   geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec, ymax=sysRec+ci), position=position_dodge(.9)) +
   geom_col(aes(Round, sysRec),color = "black") +
   scale_x_discrete(labels = measuringPeriod) +
@@ -1766,6 +1767,38 @@ sysRec_sum %>%
   labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Total ecosystem recovery stacked
+Rec15N %>%
+  select(1:4, PlantRecovery, R_MBN, R_TDN) %>%
+  pivot_longer(5:7, names_to = "Part", values_to = "Recovery") %>%
+  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
+  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Part"))) %>%
+  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(sysRec_sum, by = join_by(Site, Round)) %>%
+  select(1:4, sysRec, ci) %>%
+  mutate(ci = if_else(Part == "R_MBN", ci, 0)) %>%
+  mutate(Part=factor(Part)) %>%
+  mutate(Part = fct_relevel(Part, c("R_MBN", "PlantRecovery", "R_TDN"))) %>%
+  mutate(Part=case_when(Part == "PlantRecovery" ~ "Plant Recovery",
+                        Part == "R_MBN" ~ "Microbial Recovery",
+                        Part == "R_TDN" ~ "Total Dissolved Nitrogen (TDN)")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgRecovery, fill = factor(Part)), position = "stack", color = "black") + # levels=c("S","FR","CR")
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec+ci, ymax=sysRec), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  guides(fill = guide_legend(title = "System type")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
 #
 # Plant total recovery +/- 95% CI
 vegroot15N_total_Plant_sum %>%  
@@ -1837,6 +1870,35 @@ vegroot15N_Organ_sum %>%
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(-125,75)) +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = OrganRecovery, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# For the label to be correct
+vegroot15N_Organ_sum %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
+         ci = if_else(Organ == "S", ci, -ci),
+         avgR_CI = if_else(Organ == "CR", OrganRecovery, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  ungroup() %>%
+  mutate(Organ = case_when(Organ == "S" ~ "Shoots",
+                           Organ == "FR" ~ "Fine Roots",
+                           Organ == "CR" ~ "Coarse Roots")) %>%
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("Shoots","Fine Roots","Coarse Roots"))), position = "stack", color = "black") +
   coord_cartesian(ylim = c(-125,75)) +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = OrganRecovery, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
@@ -1930,12 +1992,13 @@ Rec15N_sum2 <- Rec15N_Plant_sum2 %>%
 Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  #geom_hline(yintercept = c(10,20), color = "red") +
   geom_line() +
   geom_ribbon(alpha = 0.5) +
   scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
   labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
   theme_classic(base_size = 20) +

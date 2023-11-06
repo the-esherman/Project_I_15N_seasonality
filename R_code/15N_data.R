@@ -595,178 +595,45 @@ mineral_isoR %>%
 #
 #
 # Testing on plant uptake ----
-vegroot15N_format <- vegroot15N %>%
-  #mutate(across(c("Plot", "MP"), as.character)) %>%
-  rename("Atom_pc_plant" = Atom_pc,
-         "d15N_plant" = d15N,
-         "R_plant" = Recovery)
-vegMineral <- vegroot15N_format %>%
-  left_join(mineral_combined, by = join_by(Site, Plot, MP, Round)) %>%
-  select(1:7, Soil_RF_DW_g, Biomass_DW_g, Nconc_pc, d15N_plant, Atom_pc_plant, NatAb_atom_pc, R_plant, 20:50)
-
-vegMineral <- vegMineral %>%
-  mutate(ext14N_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_high,
-         ext14N_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low,
-         ext14N_low2 = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/isoR_avg_low2) %>%
-  mutate(NtotRec_high = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_high/100),
-         NtotRec_low = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low/100),
-         NtotRec_low2 = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/(AP_avg_low2/100)) %>%
-  mutate(frac15Nstart = ((Atom_pc_plant - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)/Nconc_in0_l,
-         Ntot_stand_high = NtotRec_high/Nconc_in0_l,
-         Ntot_stand_low = NtotRec_low/Nconc_in0_l,
-         Ntot_stand_low2 = NtotRec_low2/Nconc_in0_l,
-         Recov_stand = R_plant/Nconc_in0_l) %>%
-  mutate(ext14N_high_pr15N = ext14N_high/(Injection_15N_mg_pr_patch/1000),
-         ext14N_low_pr15N = ext14N_low/(Injection_15N_mg_pr_patch/1000),
-         ext14N_low2_pr15N = ext14N_low2/(Injection_15N_mg_pr_patch/1000),
-         NtotRec_high_pr15N = NtotRec_high/(Injection_15N_mg_pr_patch/1000),
-         NtotRec_low_pr15N = NtotRec_low/(Injection_15N_mg_pr_patch/1000),
-         NtotRec_low2_pr15N = NtotRec_low2/(Injection_15N_mg_pr_patch/1000))
+#
+Rec15N_isoN <- mineral_isoR %>%
+  select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
+  left_join(Rec15N, by = join_by(Site, Plot, MP, Round)) %>%
+  mutate(PlantRecovery_N_high = PlantRecovery/100*isoF14_high_avg,
+         PlantRecovery_N_low = PlantRecovery/100*isoF14_low_avg,
+         R_MBN_N_high = R_MBN/100*isoF14_high_avg,
+         R_MBN_N_low = R_MBN/100*isoF14_low_avg) %>%
+  mutate(sysRec_N_high = PlantRecovery_N_high + R_MBN_N_high,
+         sysRec_N_low = PlantRecovery_N_low + R_MBN_N_low)
 
 
+  
+sysRec_N_high_sum <- summarySE(Rec15N_isoN, measurevar="sysRec_N_high", groupvars=c("Site", "Round"), na.rm=TRUE)
 
-vegMineral %>%
-  ggplot(aes(x = ext14N_high, y = ext14N_low, color = Site)) + geom_point()
-vegMineral %>%
-  ggplot(aes(x = ext14N_high_pr15N, y = ext14N_low_pr15N, color = Site)) + geom_point()
-vegMineral %>%
-  ggplot(aes(x = ext14N_low2_pr15N, y = ext14N_low_pr15N, color = Site)) + geom_point()
-vegMineral %>%
-  ggplot(aes(x = NtotRec_high_pr15N, y = NtotRec_low_pr15N, color = Site)) + geom_point()
-vegMineral %>%
-  ggplot(aes(x = NtotRec_high, y = NtotRec_low, color = Site)) + geom_point()
-
-
-
-vegMineral_total_0 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantRecovery = sum(R_plant, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_1 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantExt14N_high = sum(ext14N_high_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_2 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantExt14N_low = sum(ext14N_low_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_2_5 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantExt14N_low2 = sum(ext14N_low2_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_3 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantN_high = sum(NtotRec_high_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_4 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantN_low = sum(NtotRec_low_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_4_5 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantN_low2 = sum(NtotRec_low2_pr15N, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_5 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(Plantstd_high = sum(Ntot_stand_high, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_6 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(Plantstd_low = sum(Ntot_stand_low, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_7 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(Plantstd_15N = sum(frac15Nstart, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-vegMineral_total_8 <- vegMineral %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantRecovstd = sum(Recov_stand, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-
-vegMineral_total <- vegMineral_total_0 %>%
-  left_join(vegMineral_total_1, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_2, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_2_5, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_3, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_4, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_4_5, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_5, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_6, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_7, by = join_by(Site, Plot, MP, Round)) %>%
-  left_join(vegMineral_total_8, by = join_by(Site, Plot, MP, Round))
-
-
-vegMineral_total %>%
-  ggplot(aes(Round, PlantRecovery)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-vegMineral_total %>%
-  ggplot(aes(Round, PlantExt14N_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, PlantExt14N_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, PlantExt14N_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-vegMineral_total %>%
-  ggplot(aes(Round, PlantN_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, PlantN_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, PlantN_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-vegMineral_total %>%
-  ggplot(aes(Round, Plantstd_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, Plantstd_low)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(Round, Plantstd_15N)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-vegMineral_total %>%
-  ggplot(aes(Plantstd_low, Plantstd_high)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(PlantRecovstd, Plantstd_low)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
-
-vegMineral_total %>%
-  ggplot(aes(PlantN_low, PlantN_high)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
-vegMineral_total %>%
-  ggplot(aes(PlantN_low, PlantN_high)) + geom_point() + facet_wrap(vars(Site), scales = "free")
-
-
-vegMineral_total %>%
-  dplyr::select(1:4, 8,9) %>%
-  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake") %>%
-  mutate(across("MP", as.numeric)) %>%
-  ggplot(aes(Round, PlantN_uptake, color = Site)) + geom_boxplot() + facet_wrap(vars(Estimate), scales = "free")
-
-vegMineral_total %>%
-  dplyr::select(1:4, 10,11) %>%
-  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
-  mutate(across("MP", as.numeric)) %>%
-  ggplot(aes(MP, PlantN_uptake_std, color = Site)) + geom_point() + facet_wrap(vars(Estimate), scales = "free")
-vegMineral_total %>%
-  dplyr::select(1:4, 10,11) %>%
-  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
-  mutate(across("MP", as.numeric)) %>%
-  ggplot(aes(Round, PlantN_uptake_std, color = Site)) + geom_boxplot() + facet_wrap(vars(Estimate), scales = "free")
-vegMineral_total %>%
-  dplyr::select(1:4, 10,11) %>%
-  pivot_longer(cols = 5:6, names_to = "Estimate", values_to = "PlantN_uptake_std") %>%
-  mutate(across("MP", as.numeric)) %>%
-  ggplot(aes(Round, PlantN_uptake_std, color = Estimate)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-
-
-vegMineral_total %>%
-  ggplot(aes(PlantRecovery, PlantRecovstd)) + geom_smooth() + facet_wrap(vars(Site), scales = "free")
-
-
-vegMineral_total %>%
-  ggplot(aes(Round, PlantRecovstd)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+# Total ecosystem recovery +/- 95% CI
+sysRec_N_high_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  #geom_hline(yintercept = 100, color = "red") +
+  geom_errorbar(aes(x = Round, y = sysRec_N_high, ymin=sysRec_N_high, ymax=sysRec_N_high+ci), position=position_dodge(.9)) +
+  geom_col(aes(Round, sysRec_N_high),color = "black") +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("N per added "*{}^15*"N"), title = expression("Total ecosystem N taken up per "*{}^15*"N tracer recovery")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 
 
 
 
-vegroot15N_total_Plant %>%
-  ggplot(aes(Round, PlantRecovery)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 
+# CR vs FR
+vegroot15N %>%
+  filter(Organ != "S" & Species != "BulkG") %>%
+  ggplot(aes(x = Species, y = d15N, color = Organ)) +
+  geom_boxplot() #+
+  #facet_wrap(~Organ)
+#
 #
 #
 #=======  ###   Statistics   ### =======
@@ -1256,6 +1123,185 @@ Anova(lme1a, type=2)
 # Highly significant for organ (χ^2 = 669.9609, p < 2.2e-16) 
 # and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2e-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
 #
+# Per site
+vegroot15N_Organ_A <- vegroot15N_Organ %>%
+  filter(Site == "Abisko")
+vegroot15N_Organ_V <- vegroot15N_Organ %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts Abisko
+contrasts(vegroot15N_Organ_A$Round) <- Contr_Abisko_MP
+#
+# transform data
+vegroot15N_Organ_A <- vegroot15N_Organ_A %>%
+  mutate(Recov = OrganRecovery)
+vegroot15N_Organ_A <- vegroot15N_Organ_A %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme1_A<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = vegroot15N_Organ_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1_A), resid(lme1_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1_A), main = "Normally distributed?")                 
+qqline(resid(lme1_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme1_A, type=2)
+# Not significant
+summary(lme1_A)
+# Trend for summer vs autumn (t = 1.86572, p = 0.0635)
+# 
+#
+Q1a_season_A <- vegroot15N_Organ_A %>%
+  select(1:4, Organ, OrganRecovery) %>%
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 ~ "Warm",
+                            TRUE ~ NA),
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
+                            MP == 3 | MP == 4 ~ "Cold",
+                            TRUE ~ NA))
+#
+Q1a_season_A %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(Snow, Organ))
+# S:  Clear 6.35; Snow 13.9
+# CR: Clear 20.1; Snow 27.6
+# FR: Clear 73.5; Snow 58.5
+#
+Q1a_season_A %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(SnowCW, Organ))
+# Snow-covered
+# S: Cold 15.4; Warm 11.3
+# CR: Cold 23.9; Warm 33.8
+# FR: Cold 60.6; Warm 54.9
+#
+Q1a_season_A %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(FreeWC, Organ))
+# Snow-free
+# S: Warm 8.05; Cold 2.09
+# CR: Warm 21.7; Cold 16.2
+# FR: Warm 70.3; Cold 81.7
+#
+Q1a_season_A %>%
+  summarise(sysRec_season = mean(OrganRecovery), .by = c(Snow, Organ))
+#
+summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("Snow", "Organ"))
+summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
+summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("FreeWC", "Organ"))
+#
+Q1a_season_A %>%
+  ggplot(aes(x = Round, y = OrganRecovery, fill = FreeWC)) +
+  geom_boxplot() +
+  facet_wrap(~Organ)
+  #facet_grid(rows = vars(Organ), cols = vars(Site))
+#
+#
+# Contrasts Vassijaure
+contrasts(vegroot15N_Organ_V$Round) <- Contr_Vassijaure_MP
+#
+# transform data
+vegroot15N_Organ_V <- vegroot15N_Organ_V %>%
+  mutate(Recov = OrganRecovery)
+vegroot15N_Organ_V <- vegroot15N_Organ_V %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme1_V<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = vegroot15N_Organ_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme1_V), resid(lme1_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme1_V), main = "Normally distributed?")                 
+qqline(resid(lme1_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme1_V, type=2)
+# 
+summary(lme1_V)
+# Not significant
+#
+#
+Q1a_season_V <- vegroot15N_Organ_V %>%
+  select(1:4, Organ, OrganRecovery) %>%
+  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
+                            TRUE ~ NA),
+         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
+                            MP == 3 | MP == 4 ~ "Cold",
+                            TRUE ~ NA))
+#
+Q1a_season_V %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(Snow, Organ))
+# CR: Clear 26.2; Snow 31.3
+# FR: Clear 68.1; Snow 48.2
+# S: Clear 5.71; Snow 20.5
+#
+Q1a_season_V %>%
+  filter(!is.na(SnowCW)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(SnowCW, Organ))
+# Snow-covered
+# S: Cold 13.6; Warm 29.1
+# CR: Cold 31.7; Warm 30.8
+# FR: Cold 54.8; Warm 40.1
+#
+Q1a_season_V %>%
+  filter(!is.na(FreeWC)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(FreeWC, Organ))
+# Snow-free
+# S: Warm 7.25; Cold 2.63
+# CR: Warm 22.2; Cold 34.2
+# FR: Warm 70.5; Cold 63.1
+#
+Q1a_season_V %>%
+  summarise(sysRec_season = mean(OrganRecovery), .by = c(Snow, Organ))
+#
+summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("Snow", "Organ"))
+summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
+summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("FreeWC", "Organ"))
+#
+Q1a_season_V %>%
+  ggplot(aes(x = Round, y = OrganRecovery, fill = FreeWC)) +
+  geom_boxplot() +
+  facet_wrap(~Organ)
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Q1a_season <- vegroot15N_Organ %>%
   select(1:4, Organ, OrganRecovery) %>%
   mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",

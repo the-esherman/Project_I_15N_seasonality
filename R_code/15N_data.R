@@ -596,6 +596,137 @@ mineral_isoR %>%
 #
 # Testing on plant uptake ----
 #
+MinVeg <- vegroot15N %>%
+  mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)) 
+
+MinVeg2 <- MinVeg %>%
+  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
+  summarise(PlantRec15N = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
+  ungroup()
+
+MinVeg_isoR <- mineral_isoR %>%
+  select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
+  left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
+  mutate(PlantRecovery_N_high = PlantRec15N*isoF14_high_avg,
+         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg)
+
+MinVeg_isoR %>%
+  ggplot(aes(x = Round, y = PlantRecovery_N_low)) + geom_boxplot() + facet_wrap(~Site)
+MinVeg_isoR %>%
+  ggplot(aes(x = Round, y = PlantRecovery_N_high)) + geom_boxplot() + facet_wrap(~Site)
+
+
+
+
+#
+MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high", groupvars=c("Site", "Round"))
+MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low", groupvars=c("Site", "Round"))
+#
+# Plant total recovery +/- 95% CI
+MinVeg_isoR_high_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high, ymin=PlantRecovery_N_high, ymax=PlantRecovery_N_high+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, PlantRecovery_N_high)) +
+  geom_col(aes(Round, PlantRecovery_N_high),color = "black") +
+  #coord_cartesian(ylim=c(0,50)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, high estimate")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+MinVeg_isoR_low_sum %>%  
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_low, ymin=PlantRecovery_N_low, ymax=PlantRecovery_N_low+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, PlantRecovery_N_low)) +
+  geom_col(aes(Round, PlantRecovery_N_low),color = "black") +
+  #coord_cartesian(ylim=c(0,50)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+# ═══════════════════════════════════════╗
+mineral_isoR %>% #                       ▼
+  ggplot(aes(x = Nconc_in0_l, y = Nconc_inorg)) + geom_point() + facet_wrap(~Site)
+# ══════════════════════════════╗
+mineral_isoR %>% #              ▼
+  ggplot(aes(x = Round, y = isoF14_high_avg)) + geom_point() + facet_wrap(~Site)
+# ══════════════════════════════╗
+mineral_isoR %>% #              ▼
+  ggplot(aes(x = Round, y = isoF15_high_avg)) + geom_point() + facet_wrap(~Site)
+mineral_isoR %>%
+  ggplot(aes(x = conc15N_avg_high, y = Nconc_in_avg)) + geom_point() + facet_wrap(~Site)
+mineral_isoR %>%
+  ggplot(aes(x = Round, y = Nconc_in_avg)) + geom_point() + facet_wrap(~Site)
+# ═══════════════════════════════════╗
+mineral_isoR %>% #                   ▼
+  ggplot(aes(x = Round, y = conc15N_avg_high)) + geom_point() + facet_wrap(~Site)
+# ═════════════════════════════════════════╗
+mineral_isoR %>% #                         ▼
+  ggplot(aes(x = conc15N_inj, y = conc15N_harv_high)) + geom_point() + facet_wrap(~Site)
+# ═════════════════════════════════╗
+mineral_isoR %>% #                 ▼
+  ggplot(aes(x = Round, y = Nconc_inorg)) + geom_point() + facet_wrap(~Site)
+# ═══════════════════════════╗
+mineral_isoR %>% #           ▼
+  ggplot(aes(x = Round, y = NH4_microg_pr_gDW)) + geom_point() + facet_wrap(~Site)
+# ═══════════════════════════╗
+mineral_isoR %>% #           ▼
+  ggplot(aes(x = Round, y = NO3_microg_pr_gDW)) + geom_point() + facet_wrap(~Site)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Rec15N_isoN <- mineral_isoR %>%
   select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
   left_join(Rec15N, by = join_by(Site, Plot, MP, Round)) %>%
@@ -1538,6 +1669,7 @@ Anova(lmeTDN, type=2)
 # Highly significant for Round (χ^2 = 204.7306, p = <2e-16), significant for interaction (χ^2 = 25.3168, p = 0.03157)
 #
 Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_cartesian(ylim = c(0,3)) + facet_wrap(~Site)
+
 #
 #
 #

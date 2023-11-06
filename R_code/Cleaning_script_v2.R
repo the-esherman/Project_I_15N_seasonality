@@ -344,6 +344,48 @@ extrInorgN_blanks_avg_label <- extrInorgN_blanks_avg %>%
 extrInorgN_blanks_avg_control <- extrInorgN_blanks_avg %>%
   filter(MP == "EX")
 
+
+
+extrInorgN_blanks.1 <- extrInorgN_blanks %>%
+  filter(Extr_type == "SE")
+extrInorgN_blanks.2 <- extrInorgN_blanks %>%
+  filter(Extr_type == "SEF")
+
+dotchart(extrInorgN_blanks.1$NH4_sample_microg_pr_L, 
+         main="Cleveland plot - NH4 SE blanks", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_blanks.1$MP, 
+         groups = extrInorgN_blanks.1$Plot,
+         gpch = 12, gcolor = 1)
+dotchart(extrInorgN_blanks.2$NH4_sample_microg_pr_L, 
+         main="Cleveland plot - NH4 SEF blanks", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_blanks.2$MP, 
+         groups = extrInorgN_blanks.2$Plot,
+         gpch = 12, gcolor = 1)
+
+
+extrInorgN_clean_2.1 <- extrInorgN_clean_2 %>%
+  filter(Extr_type == "SE")
+extrInorgN_clean_2.2 <- extrInorgN_clean_2 %>%
+  filter(Extr_type == "SEF")
+
+dotchart(extrInorgN_clean_2.1$NH4_sample_microg_pr_L, 
+         main="Cleveland plot - NH4 SE", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_clean_2.1$MP, 
+         groups = extrInorgN_clean_2.1$Plot,
+         gpch = 12, gcolor = 1)
+dotchart(extrInorgN_clean_2.2$NH4_sample_microg_pr_L, 
+         main="Cleveland plot - NH4 SE", xlab = "Observed values", 
+         pch = 19, color = hcl.colors(12), 
+         labels = extrInorgN_clean_2.2$MP, 
+         groups = extrInorgN_clean_2.2$Plot,
+         gpch = 12, gcolor = 1)
+
+
+
+
 # 
 extrInorgN_clean <- extrInorgN_clean_2 %>%
   filter(MP != "EX") %>%

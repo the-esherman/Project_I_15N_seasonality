@@ -1498,6 +1498,7 @@ Anova(lmeTDN_NO3, type=2)
 # Log-transformed: Highly significant for Round (χ^2 = 116.7547, p = <2e-16)
 #
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
+Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NH4)) + geom_boxplot()
 #
 #
 # --- # TDN 15N recovery # ---
@@ -1535,6 +1536,8 @@ par(mfrow = c(1,1))
 # model output
 Anova(lmeTDN, type=2)
 # Highly significant for Round (χ^2 = 204.7306, p = <2e-16), significant for interaction (χ^2 = 25.3168, p = 0.03157)
+#
+Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_cartesian(ylim = c(0,3)) + facet_wrap(~Site)
 #
 #
 #

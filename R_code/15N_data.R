@@ -600,57 +600,116 @@ MinVeg <- vegroot15N %>%
   mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)) 
 
 MinVeg2 <- MinVeg %>%
-  group_by(across(c("Site", "Plot", "MP", "Round"))) %>%
-  summarise(PlantRec15N = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
+  summarise(across(c(Biomass_DW_g, Recovery), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
+  rename("PlantRec15N" = Recovery)
+
 
 MinVeg_isoR <- mineral_isoR %>%
   select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
   left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
   mutate(PlantRecovery_N_high = PlantRec15N*isoF14_high_avg,
-         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg)
-
+         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg) %>%
+  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g,
+         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g,
+         PlantRecovery_15N_pr_DW = PlantRec15N/Biomass_DW_g)
+#
+#
+# Simple graph to check data
 MinVeg_isoR %>%
   ggplot(aes(x = Round, y = PlantRecovery_N_low)) + geom_boxplot() + facet_wrap(~Site)
 MinVeg_isoR %>%
   ggplot(aes(x = Round, y = PlantRecovery_N_high)) + geom_boxplot() + facet_wrap(~Site)
-
-
-
-
 #
-MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high", groupvars=c("Site", "Round"))
-MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low", groupvars=c("Site", "Round"))
-#
-# Plant total recovery +/- 95% CI
-MinVeg_isoR_high_sum %>%  
+# isotopic fraction in soil (inverted)
+# High estimate
+MinVeg_isoR_F14_high_sum <- summarySE(MinVeg_isoR, measurevar="isoF14_high_avg", groupvars=c("Site", "Round"))
+MinVeg_isoR_F14_high_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high, ymin=PlantRecovery_N_high, ymax=PlantRecovery_N_high+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, PlantRecovery_N_high)) +
-  geom_col(aes(Round, PlantRecovery_N_high),color = "black") +
+  geom_errorbar(aes(x = Round, y = isoF14_high_avg, ymin=isoF14_high_avg, ymax=isoF14_high_avg+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, isoF14_high_avg)) +
+  geom_col(aes(Round, isoF14_high_avg),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, high estimate")) + 
+  labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, high estimate")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-MinVeg_isoR_low_sum %>%  
+# Low estimate
+MinVeg_isoR_F14_low_sum <- summarySE(MinVeg_isoR, measurevar="isoF14_low_avg", groupvars=c("Site", "Round"))
+MinVeg_isoR_F14_low_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery_N_low, ymin=PlantRecovery_N_low, ymax=PlantRecovery_N_low+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, PlantRecovery_N_low)) +
-  geom_col(aes(Round, PlantRecovery_N_low),color = "black") +
+  geom_errorbar(aes(x = Round, y = isoF14_low_avg, ymin=isoF14_low_avg, ymax=isoF14_low_avg+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, isoF14_low_avg)) +
+  geom_col(aes(Round, isoF14_low_avg),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
+  labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, low estimate")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+MinVeg_isoR %>%
+  ggplot() + geom_point(aes(x = MP, y = isoF14_high_avg))
+#
+# Average and get 95% CI
+MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_DW", groupvars=c("Site", "Round"))
+MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low_pr_DW", groupvars=c("Site", "Round"))
+MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", groupvars=c("Site", "Round"))
+#
+# Plant total N uptake +/- 95% CI
+# High estimate
+MinVeg_isoR_high_sum %>%
+  rename("PlantRecovery" = PlantRecovery_N_high_pr_DW) %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, PlantRecovery)) +
+  geom_col(aes(Round, PlantRecovery),color = "black") +
+  #coord_cartesian(ylim=c(0,50)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, high estimate")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Low estimate
+MinVeg_isoR_low_sum %>%
+  rename("PlantRecovery" = PlantRecovery_N_low_pr_DW) %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, PlantRecovery)) +
+  geom_col(aes(Round, PlantRecovery),color = "black") +
+  #coord_cartesian(ylim=c(0,50)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Plant 15N uptake per g DW
+MinVeg_15N_sum %>%
+  rename("PlantRecovery" = PlantRecovery_15N_pr_DW) %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
+  #geom_point(aes(Round, PlantRecovery)) +
+  geom_col(aes(Round, PlantRecovery),color = "black") +
+  #coord_cartesian(ylim=c(0,50)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression(""*{}^15*"N per g DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
 
 
-
+# Why is A_3_6 so high??
 # ═══════════════════════════════════════╗
 mineral_isoR %>% #                       ▼
   ggplot(aes(x = Nconc_in0_l, y = Nconc_inorg)) + geom_point() + facet_wrap(~Site)
@@ -679,6 +738,7 @@ mineral_isoR %>% #           ▼
 # ═══════════════════════════╗
 mineral_isoR %>% #           ▼
   ggplot(aes(x = Round, y = NO3_microg_pr_gDW)) + geom_point() + facet_wrap(~Site)
+# Both NH4 and NO3 have a very high value in December (MP6), but from different plots. It is NH4 that is high on plot 3!
 
 
 

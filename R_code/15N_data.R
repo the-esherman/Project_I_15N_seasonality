@@ -1820,7 +1820,7 @@ vegroot15N_bio %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-# Plant biomass by organ +/- SE
+# Plant biomass by organ + SE
 vegroot15N %>%
   group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
   summarise(TotalBiomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
@@ -1849,6 +1849,50 @@ vegroot15N %>%
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+
+
+
+
+
+# Plant biomass by organ 95% CI
+vegroot15N_biom_sum <- summarySE(vegroot15N_biom, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
+
+vegroot15N_biom_sum %>%
+  rename("avgBiomass" = Biomass_DW_g) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
+         ci = if_else(Organ == "S", ci, -ci),
+         avgR_CI = if_else(Organ == "CR", avgBiomass, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+avgBiomass, avgBiomass)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  coord_cartesian(ylim = c(-18,3)) +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-18, -15, -12, -9, -6, -3, 0, 3), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Biomass (g pr sample)"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+  
+
+  
+  
+
+
+   
+  
+  
+  
+  
 #
 #
 #
@@ -2086,7 +2130,7 @@ TDN15N_sum %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-# Proportional to total recovery
+# Proportional to total recovery ----
 # Calculate means and 95% CI
 Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
 Rec15N_TDN_sum <- summarySE(Rec15N, measurevar = "R_TDN_frac", groupvars = c("Site", "Round"))

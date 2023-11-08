@@ -672,7 +672,7 @@ MinVeg_isoR_high_sum %>%
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, high estimate")) + 
+  labs(x = "Measuring period (MP)", y = expression("Estimated total N-uptake (g N g"*{}^-1*" DW)"), title = expression("Estimated total plant N uptake following labelled "*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -702,7 +702,7 @@ MinVeg_15N_sum %>%
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression(""*{}^15*"N per g DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
+  labs(x = "Measuring period (MP)", y = expression("g"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -888,9 +888,10 @@ crossprod(Contr_Vassijaure_MP)
 # Plant organs
 SvsR<-c(-1, -1, 2) # Shoots vs roots
 CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
+Contr_organ <- cbind(SvsR,CRvsFR)
 #
 # Check contrasts are orthogonal
-crossprod(cbind(SvsR,CRvsFR))
+crossprod(Contr_organ)
 #
 #
 #
@@ -1288,6 +1289,9 @@ vegroot15N_Organ <- vegroot15N %>%
          OrganRecovery = OrganRecovery/PlantRecovery*100) %>%
   select(1:5,OrganRecovery)
 #
+# Contrasts
+contrasts(vegroot15N_Organ$Organ) <- Contr_organ
+#
 # transform data
 vegroot15N_Organ <- vegroot15N_Organ %>%
   mutate(logOrganRecovery = log(OrganRecovery+1), # Good for low percentage values.
@@ -1309,7 +1313,7 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lme1a, type=2)
-#summary(lme1a)
+summary(lme1a)
 # For organ recovery as fraction of whole plant recovery (Arcsin transformation):
 # Highly significant for organ (χ^2 = 669.9609, p < 2.2e-16) 
 # and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2e-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
@@ -1323,6 +1327,7 @@ vegroot15N_Organ_V <- vegroot15N_Organ %>%
 #
 # Contrasts Abisko
 contrasts(vegroot15N_Organ_A$Round) <- Contr_Abisko_MP
+contrasts(vegroot15N_Organ_A$Organ) <- Contr_organ
 #
 # transform data
 vegroot15N_Organ_A <- vegroot15N_Organ_A %>%
@@ -1332,7 +1337,7 @@ vegroot15N_Organ_A <- vegroot15N_Organ_A %>%
          arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
 #
 # model:
-lme1_A<-lme(logRecov ~ Round,
+lme1_A<-lme(logRecov ~ Round*Organ,
             random = ~1|Plot,
             data = vegroot15N_Organ_A, na.action = na.exclude, method = "REML")
 #
@@ -1400,6 +1405,7 @@ Q1a_season_A %>%
 #
 # Contrasts Vassijaure
 contrasts(vegroot15N_Organ_V$Round) <- Contr_Vassijaure_MP
+contrasts(vegroot15N_Organ_V$Organ) <- Contr_organ
 #
 # transform data
 vegroot15N_Organ_V <- vegroot15N_Organ_V %>%
@@ -1409,7 +1415,7 @@ vegroot15N_Organ_V <- vegroot15N_Organ_V %>%
          arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
 #
 # model:
-lme1_V<-lme(logRecov ~ Round,
+lme1_V<-lme(logRecov ~ Round*Organ,
             random = ~1|Plot,
             data = vegroot15N_Organ_V, na.action = na.exclude, method = "REML")
 #

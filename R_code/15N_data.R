@@ -605,12 +605,16 @@ MinVeg2 <- MinVeg %>%
 
 
 MinVeg_isoR <- mineral_isoR %>%
-  select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
+  select(1:4, isoR14_high_avg, isoR14_low_avg, isoF14_high_avg, isoF14_low_avg) %>%
   left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
   mutate(PlantRecovery_N_high = PlantRec15N*isoF14_high_avg,
-         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg) %>%
+         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg,
+         PlantRecovery_14N_high = PlantRec15N*isoR14_high_avg,
+         PlantRecovery_14N_low = PlantRec15N*isoR14_low_avg) %>%
   mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g,
          PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g,
+         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g,
+         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g,
          PlantRecovery_15N_pr_DW = PlantRec15N/Biomass_DW_g)
 #
 #
@@ -707,6 +711,85 @@ MinVeg_15N_sum %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
+
+MinVeg_isoR.2 <- MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_DW,
+         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc")
+
+MinVeg_N_sum <- summarySE(MinVeg_isoR.2, measurevar="Nconc", groupvars=c("Site", "Round", "Isotope"))
+
+
+MinVeg_N_sum %>%
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, Nconc, fill = factor(Isotope, levels=c("Plant14N","Plant15N"))), position = "stack", color = "black") +
+  #geom_errorbar(aes(x = Round, y = Nconc, ymin=Nconc, ymax=Nconc+ci), position=position_dodge(.9)) +
+  #coord_cartesian(ylim = c(0,100)) +
+  scale_fill_viridis_d(labels = c("14N", "15N")) +
+  scale_x_discrete(labels = measuringPeriod) +
+  #scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+
+
+
+
+
+
+
+
+
+MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_DW,
+         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
+  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
+  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Isotope"))) %>%
+  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(MinVeg_isoR_high_sum, by = join_by(Site, Round)) %>%
+  select(1:4, PlantRecovery_N_high_pr_DW, ci) %>%
+  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
+  mutate(Isotope=factor(Isotope)) %>%
+  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
+  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
+                           Isotope == "Plant15N" ~ "15N")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("g N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Why is A_3_6 so high??

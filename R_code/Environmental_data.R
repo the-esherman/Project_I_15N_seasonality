@@ -12,6 +12,7 @@ library(viridis)
 #library(plotly)
 #library(hrbrthemes)
 library(gridExtra)
+library(cowplot)
 #
 #
 #------- ### Load the data ### -------
@@ -412,9 +413,13 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = NULL, y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
-  guides(lty = guide_legend(title = NULL))+ #lty = guide_legend(title = "Mean diel temperature")) +
-  theme_bw(base_size = 15)+
+  guides(lty = guide_legend(title = "Mean diel temperature"))+ #lty = guide_legend(title = "Mean diel temperature")) +
+  theme_bw(base_size = 20) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
+#
+airT_legend <- get_legend(airT_plot)
+airT_plot.2 <- airT_plot + theme_bw(base_size = 17) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 15)) 
+#airT_plot <- airT_plot + guides(lty = NULL)
 #
 # Soil temperatures - all
 soilT_plot <- avgT_wide2 %>% ggplot() +
@@ -430,7 +435,7 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-5,15)) +
   labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
-  theme_bw(base_size = 15) +
+  theme_bw(base_size = 17) +
   theme(legend.position = "top")
 #
 # Snow depth on plot
@@ -448,14 +453,18 @@ snowDepth_plot <- snowData_2 %>%
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
   guides(fill = guide_legend(title = "Snow")) +
-  theme_bw(base_size = 15) +
+  theme_bw(base_size = 20) +
   theme(legend.position = "bottom")
 #
+snowData_legend <- get_legend(snowDepth_plot)
+snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 17) + theme(legend.position = "none") 
+#
 # Plot
-grid.arrange(airT_plot, soilT_plot, snowDepth_plot)
-grid.arrange(airT_plot, soilT_plot, snowDepth_plot, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
-
-
+#grid.arrange(airT_plot, soilT_plot, snowDepth_plot)
+#grid.arrange(airT_plot, soilT_plot, snowDepth_plot, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
+grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot.2, snowData_legend, ncol = 1, widths = c(2.7), heights = c(0.5, 3, 3, 3, 0.5))#, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
+#
+#
 # Core data on soils and days of labelling and harvest as well as snowdepth
 coreData <- read_csv("clean_data/Core_data.csv", col_names = TRUE)
 # Extract date for sample. Here using Day of harvest

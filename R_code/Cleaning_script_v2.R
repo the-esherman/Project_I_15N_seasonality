@@ -593,4 +593,34 @@ y %>%
   ggplot(aes(Abisko, Vassijaure, color = Organ)) + geom_point() + facet_wrap(vars(MP), scales = "free")
 y %>%
   ggplot(aes(Abisko, Vassijaure, color = MP)) + geom_point() + facet_wrap(vars(Organ), scales = "free")
-
+#
+# Control times vs each other
+vegroot15N_control %>%
+  # Remove two duplicates from EX. Very similar values
+  filter(Site != "Vassijaure" | Plot != 1 | MP != "EX" | Organ != "DS_S" | Nconc_pc <= 1) %>% # V_1_DS_S
+  filter(Site != "Abisko" | Plot != 4 | MP != "EX" | Organ != "ES_CR" | d15N <= -7.9) %>% # A_4_ES_CR
+  select(1:4, d15N) %>%
+  filter(MP != "?") %>%
+  complete(Site, Plot, MP, Organ) %>%
+  pivot_wider(names_from = MP, values_from = d15N) %>%
+  ggplot(aes(x = C, y = EX, color = Site)) + 
+  geom_point() +
+  #scale_colour_viridis_d() + # option = "H"
+  labs(title = expression("Control "*delta^15*"N")) + 
+  theme_bw(base_size = 20)
+#
+# Control sites vs each other
+vegroot15N_control %>%
+  # Remove two duplicates from EX. Very similar values
+  filter(Site != "Vassijaure" | Plot != 1 | MP != "EX" | Organ != "DS_S" | Nconc_pc <= 1) %>% # V_1_DS_S
+  filter(Site != "Abisko" | Plot != 4 | MP != "EX" | Organ != "ES_CR" | d15N <= -7.9) %>% # A_4_ES_CR
+  select(1:4, d15N) %>%
+  filter(MP != "?") %>%
+  complete(Site, Plot, MP, Organ) %>%
+  pivot_wider(names_from = Site, values_from = d15N) %>%
+  # Plot
+  ggplot(aes(x = Abisko, y = Vassijaure, color = MP)) + 
+  geom_point() +
+  scale_colour_viridis_d() + # option = "H"
+  labs(title = expression("Control "*delta^15*"N")) + 
+  theme_bw(base_size = 20)

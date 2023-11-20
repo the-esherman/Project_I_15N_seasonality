@@ -594,7 +594,7 @@ mineral_isoR %>%
 #
 #
 #
-# Testing on plant uptake ----
+# • Testing on plant uptake ----
 #
 MinVeg <- vegroot15N %>%
   mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)) 
@@ -1945,7 +1945,7 @@ vegroot15N %>%
 
 
 # Plant biomass by organ 95% CI
-vegroot15N_biom_sum <- summarySE(vegroot15N_biom, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
+vegroot15N_biom_sum <- summarySE(vegroot15N, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
 
 vegroot15N_biom_sum %>%
   rename("avgBiomass" = Biomass_DW_g) %>%
@@ -2219,7 +2219,7 @@ TDN15N_sum %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-# Proportional to total recovery ----
+# • Proportional to total recovery ----
 # Calculate means and 95% CI
 Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
 Rec15N_TDN_sum <- summarySE(Rec15N, measurevar = "R_TDN_frac", groupvars = c("Site", "Round"))
@@ -2530,7 +2530,7 @@ coreData %>%
 #
 #
 #
-# Testing ##----
+# • Testing ##----
 #
 vegroot15N_Organ_sum2 <- vegroot15N_Organ_sum %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%

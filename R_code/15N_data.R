@@ -2650,5 +2650,16 @@ soil15N %>%
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
 #
+# TDN d15N values
+soil15N_2 %>%
+  filter(Extr_type == "SE") %>%
+  ggplot(aes(x = Round, y = d15N, fill = Site)) + 
+  geom_boxplot() +
+  #scale_colour_viridis_d() +
+  labs(title = "TDN d15N") +
+  theme_bw(base_size = 20) +
+  theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+#
 #
 #=======  ###  { The End }   ### =======

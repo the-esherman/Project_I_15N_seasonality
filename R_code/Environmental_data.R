@@ -416,7 +416,7 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = NULL, y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
   guides(lty = guide_legend(title = "Mean diel temperature"))+ #lty = guide_legend(title = "Mean diel temperature")) +
-  theme_bw(base_size = 20) +
+  theme_bw(base_size = 25) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
 #
 airT_legend <- get_legend(airT_plot)
@@ -455,7 +455,7 @@ snowDepth_plot <- snowData_2 %>%
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
   guides(fill = guide_legend(title = "Snow"), linetype = "none") +
-  theme_bw(base_size = 20) +
+  theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 
 #

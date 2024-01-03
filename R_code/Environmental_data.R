@@ -446,7 +446,7 @@ snowData_2 <- snowData_2 %>%
   mutate(Date = ymd(Date))
 #
 snowDepth_plot <- snowData_2 %>%
-  ggplot(aes(x = Date, y = Snow_depth_cm, ymin = Snow_depth_cm-min, ymax = Snow_depth_cm+max, fill = Site, linetype = Site)) +
+  ggplot(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site)) +
   geom_ribbon(alpha = 0.5) +
   geom_line() +
   scale_fill_grey() +

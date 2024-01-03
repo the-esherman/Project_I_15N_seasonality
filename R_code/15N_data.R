@@ -597,25 +597,33 @@ mineral_isoR %>%
 # • Testing on plant uptake ----
 #
 MinVeg <- vegroot15N %>%
-  mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g)) 
+  mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g), # g 15N in excess
+         Rec15N_pr_DW = (Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100) # Unit not defined, but simply 15N pr DW (in practice that would be g 15N pr g DW)
 
 MinVeg2 <- MinVeg %>%
-  summarise(across(c(Biomass_DW_g, Recovery), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
-  rename("PlantRec15N" = Recovery)
+  summarise(across(c(Biomass_DW_g, Recovery, Rec15N, Rec15N_pr_DW), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
+  rename("PlantRec15N" = Recovery) # Not that useful !!
 
 
 MinVeg_isoR <- mineral_isoR %>%
   select(1:4, isoR14_high_avg, isoR14_low_avg, isoF14_high_avg, isoF14_low_avg) %>%
   left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
-  mutate(PlantRecovery_N_high = PlantRec15N*isoF14_high_avg,
-         PlantRecovery_N_low = PlantRec15N*isoF14_low_avg,
-         PlantRecovery_14N_high = PlantRec15N*isoR14_high_avg,
-         PlantRecovery_14N_low = PlantRec15N*isoR14_low_avg) %>%
-  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g,
-         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g,
-         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g,
-         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g,
-         PlantRecovery_15N_pr_DW = PlantRec15N/Biomass_DW_g)
+  #
+  # Calculated by using the 15N excess in plants (Rec15N) to get either N or 14N that followed along the excess 15N
+  # Values are in g
+  mutate(PlantRecovery_N_high = Rec15N*isoF14_high_avg,
+         PlantRecovery_N_low = Rec15N*isoF14_low_avg,
+         PlantRecovery_14N_high = Rec15N*isoR14_high_avg,
+         PlantRecovery_14N_low = Rec15N*isoR14_low_avg) %>%
+  # 
+  # All values are now in µg pr g DW
+  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
+         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
+         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
+         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
+         PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6)
+
+
 #
 #
 # Simple graph to check data
@@ -676,7 +684,7 @@ MinVeg_isoR_high_sum %>%
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Estimated total N-uptake (g N g"*{}^-1*" DW)"), title = expression("Estimated total plant N uptake following labelled "*{}^15*"N")) + 
+  labs(x = "Measuring period (MP)", y = expression("Estimated total N-uptake (µg N g"*{}^-1*" DW)"), title = expression("Estimated total plant N uptake following labelled "*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -706,7 +714,7 @@ MinVeg_15N_sum %>%
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("g"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
+  labs(x = "Measuring period (MP)", y = expression("µg"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -773,7 +781,7 @@ MinVeg_isoR %>%
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("g N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))

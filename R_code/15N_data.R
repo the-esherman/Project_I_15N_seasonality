@@ -381,8 +381,8 @@ N_fertilizer_sum %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
   ggplot(aes(x = Day_of_harvest, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
-  geom_line() + 
   geom_ribbon(alpha = 0.5) +
+  geom_line(size = 0.9) + 
   scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
   scale_fill_grey() +
   #scale_fill_viridis_d() +

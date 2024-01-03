@@ -65,7 +65,9 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                  .fun = function(xx, col) {
                    c(N    = length2(xx[[col]], na.rm=na.rm),
                      mean = mean   (xx[[col]], na.rm=na.rm),
-                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                     sd   = sd     (xx[[col]], na.rm=na.rm),
+                     max  = max    (xx[[col]], na.rm=na.rm),
+                     min  = min    (xx[[col]], na.rm=na.rm)
                    )
                  },
                  measurevar
@@ -77,7 +79,7 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   # Calculate t-statistic for confidence interval: 
   # e.g., if conf.interval is .95, use .975 (above/below), and use df=N-1
   ciMult <- qt(conf.interval/2 + .5, datac$N-1)
-  datac$ci <- datac$se * ciMult
+  datac$ci <- datac$se * ciMult 
   return(datac)
 }
 #
@@ -444,17 +446,18 @@ snowData_2 <- snowData_2 %>%
   mutate(Date = ymd(Date))
 #
 snowDepth_plot <- snowData_2 %>%
-  ggplot(aes(x = Date, y = Snow_depth_cm, ymin = Snow_depth_cm-ci, ymax = Snow_depth_cm+ci, fill = Site)) +
-  geom_line() +
+  ggplot(aes(x = Date, y = Snow_depth_cm, ymin = Snow_depth_cm-min, ymax = Snow_depth_cm+max, fill = Site, linetype = Site)) +
   geom_ribbon(alpha = 0.5) +
+  geom_line() +
   scale_fill_grey() +
   #scale_fill_viridis_d() +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
-  guides(fill = guide_legend(title = "Snow")) +
+  guides(fill = guide_legend(title = "Snow"), linetype = "none") +
   theme_bw(base_size = 20) +
   theme(legend.position = "bottom")
+
 #
 snowData_legend <- get_legend(snowDepth_plot)
 snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 17) + theme(legend.position = "none") 

@@ -467,6 +467,16 @@ snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 17) + theme(legend.pos
 #grid.arrange(airT_plot, soilT_plot, snowDepth_plot, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
 grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot.2, snowData_legend, ncol = 1, widths = c(2.7), heights = c(0.5, 3, 3, 3, 0.5))#, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
 #
+# Save important data from environmental:
+write_tsv(avgT_wide2, "export/Temperature_Air_Soil.tsv")
+write_tsv(snowData, "export/Snow.tsv")
+write_tsv(snowData_2, "export/Snow_avg.tsv")
+#
+# For quick access to make the graphs above:
+#avgT_wide2 <- read_tsv("export/Temperature_Air_Soil.tsv")
+#snowData <- read_tsv("export/Snow.tsv")
+#snowData_2 <- read_tsv("export/Snow_avg.tsv")
+#
 #
 # Core data on soils and days of labelling and harvest as well as snowdepth
 coreData <- read_csv("clean_data/Core_data.csv", col_names = TRUE)

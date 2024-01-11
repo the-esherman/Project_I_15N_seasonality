@@ -1720,6 +1720,7 @@ Anova(lme2, type=2)
 Q_TDN <- soil15N %>%
   left_join(Rec15N, by =  join_by(Site, Plot, MP)) %>%
   relocate(Round, .after = MP) %>%
+  filter(Extr_type == "SE") %>%
   select(1:4, Nconc_microg_pr_gDW, NH4_microg_pr_gDW, NO3_microg_pr_gDW, R_TDN, R_TDN_frac) %>%
   mutate(across(c("Plot", "MP"), ~as.character(.x))) %>%
   mutate(across(c("Site", "MP", "Round"), ~as.factor(.x)))
@@ -1767,7 +1768,7 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN_Nconc, type=2)
-# Not significant
+# Highly significant for Round (χ^2 = 201.6574, p <2e-16)
 #
 # NH4
 par(mfrow = c(1,2))
@@ -1780,8 +1781,8 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN_NH4, type=2)
-# Log-transformed: Significant for Round (χ^2 = 31.3949, p = 0.004879)
-# Arcsin-transformed (slightly better?): Highly significant for Round (χ^2 = 36.8425, p = 0.0007793) and site (χ^2 = 7.3634, p = 0.0066576)
+# Log-transformed: Highly significant for Round (χ^2 = 298.9642, p <2e-16)
+# Arcsin-transformed (worse): Highly significant for Round (χ^2 = 212.7164, p <2e-16)
 #
 # NO3
 par(mfrow = c(1,2))
@@ -1794,7 +1795,7 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN_NO3, type=2)
-# Log-transformed: Highly significant for Round (χ^2 = 116.7547, p = <2e-16)
+# Log-transformed (not great fit): Highly significant for Round (χ^2 = 190.3545, p = <2e-16)
 #
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NH4)) + geom_boxplot()
@@ -1834,7 +1835,7 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN, type=2)
-# Highly significant for Round (χ^2 = 204.7306, p = <2e-16), significant for interaction (χ^2 = 25.3168, p = 0.03157)
+# Highly significant for Round (χ^2 = 87.5372, p = 1.105e-12)
 #
 Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_cartesian(ylim = c(0,3)) + facet_wrap(~Site)
 

@@ -192,6 +192,11 @@ Rec15N <- vegroot15N_total_Plant %>%
          R_MBN_frac = R_MBN/sysRec*100) %>%
   ungroup()
 #
+# How much 15N was added
+Added_N <- coreData %>%
+  mutate(N_pr_m2 = Injection_N_mg_pr_patch/((Soil_diameter_cm/2/100)^2*pi)) %>%
+  select(1:5, N_pr_m2)
+#
 #
 #
 #=======  ### Mineralization ### =======
@@ -1002,17 +1007,23 @@ Q0_ecosys_stat <- Q0_ecosys_stat %>%
 #
 # model:
 lme0<-lme(arcRecov ~ Round*Site,
-          random = ~1|Plot/Site,
+          random = ~1|Site/Plot,
           data = Q0_ecosys_stat, na.action = na.exclude, method = "REML")
+
+ranef(lme0)
+
 #
 # Checking assumptions:
 par(mfrow = c(1,2))
 plot(fitted(lme0), resid(lme0), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
 qqnorm(resid(lme0), main = "Normally distributed?")                 
-qqline(resid(lme0), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme0)
+qqline(resid(lme0), main = "Homogeneity of Variances?", col = 2)
+plot(lme0) # Homogeneity of Variance?
+# Alternative: checks 
+qqnorm(lme0, ~ranef(., level=2)) # Normal distribution?
 par(mfrow = c(1,1))
+
 #
 # model output
 Anova(lme0, type=2)

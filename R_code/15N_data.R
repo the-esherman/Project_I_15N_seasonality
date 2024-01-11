@@ -1799,6 +1799,14 @@ Anova(lmeTDN_NO3, type=2)
 #
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
 Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NH4)) + geom_boxplot()
+
+NH4_conc <- Q_TDN_Nconc %>%
+  select(Site, Plot, Round, NH4) %>%
+  summarise(NH4 = mean(NH4), .by = c(Round))
+NO3_conc <- Q_TDN_Nconc %>%
+  select(Site, Plot, Round, NO3) %>%
+  summarise(NO3 = mean(NO3), .by = c(Round))
+
 #
 #
 # --- # TDN 15N recovery # ---
@@ -1835,7 +1843,8 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTDN, type=2)
-# Highly significant for Round (χ^2 = 87.5372, p = 1.105e-12)
+# Absolute: Highly significant for Round (χ^2 = 77.0616, p = 9.886e-11)
+# Proportional: Highly significant for Round (χ^2 = 87.5372, p = 1.105e-12)
 #
 Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_cartesian(ylim = c(0,3)) + facet_wrap(~Site)
 

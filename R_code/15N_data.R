@@ -1968,11 +1968,47 @@ vegroot15N %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+# 
+# Biomass pr m2
+vegroot15N_prm2 <- vegroot15N %>%
+  left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
+  mutate(Biomass_DW_g_m2 = Biomass_DW_g/((Soil_diameter_cm/200)^2*pi)) %>%
+  mutate(Biomass_DW_kg_m2 = Biomass_DW_g_m2/1000) %>%
+  select(1:7, Biomass_DW_g_m2, Biomass_DW_kg_m2)
+#
+# Plant biomass by organ + SE
+vegroot15N_prm2 %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
+  summarise(TotalBiomass = sum(Biomass_DW_g_m2, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
+  mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
+         se = if_else(Organ == "S", se, -se),
+         avgR_SE = if_else(Organ == "CR", avgBiomass, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgBiomass, avgBiomass)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
+  #coord_cartesian(ylim = c(-18,3)) +
+  scale_fill_viridis_d() +
+  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Biomass") +
+  geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_y_continuous(breaks = c(-2000, -1500, -1000, -500, 0, 500), labels = abs) +
+  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
+  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("Biomass (g "*m^2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 
 
-
-
-
+#
+#
 # Plant biomass by organ 95% CI
 vegroot15N_biom_sum <- summarySE(vegroot15N, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
 

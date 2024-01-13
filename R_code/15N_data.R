@@ -1974,7 +1974,7 @@ vegroot15N_prm2 <- vegroot15N %>%
   left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
   mutate(Biomass_DW_g_m2 = Biomass_DW_g/((Soil_diameter_cm/200)^2*pi)) %>%
   mutate(Biomass_DW_kg_m2 = Biomass_DW_g_m2/1000) %>%
-  select(1:7, Biomass_DW_g_m2, Biomass_DW_kg_m2)
+  select(1:7, Biomass_DW_g, Biomass_DW_g_m2, Biomass_DW_kg_m2)
 #
 # Plant biomass by organ + SE
 vegroot15N_prm2 %>%

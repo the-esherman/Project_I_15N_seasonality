@@ -28,6 +28,7 @@ winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12"
 #
 # List of Measuring periods as they should appear in graphs
 measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
+measuringPeriod_miner <- c("Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
 #
 # Days between periods. Will need adjusting as not always 21 days from labeling to harvest and at some point Abisko and Vassijaure shifted which was done first = a few days difference!
 # Days between labeling and harvest
@@ -647,7 +648,7 @@ MinVeg_isoR_F14_high_sum %>%
   #geom_point(aes(Round, isoF14_high_avg)) +
   geom_col(aes(Round, isoF14_high_avg),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, high estimate")) + 
   theme_classic(base_size = 20) +
@@ -662,7 +663,7 @@ MinVeg_isoR_F14_low_sum %>%
   #geom_point(aes(Round, isoF14_low_avg)) +
   geom_col(aes(Round, isoF14_low_avg),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, low estimate")) + 
   theme_classic(base_size = 20) +
@@ -687,7 +688,7 @@ MinVeg_isoR_high_sum %>%
   #geom_point(aes(Round, PlantRecovery)) +
   geom_col(aes(Round, PlantRecovery),color = "black") +
   coord_cartesian(ylim = c(0,100)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("Estimated total N-uptake (µg N g"*{}^-1*" DW)"), title = expression("Estimated total plant N uptake following labelled "*{}^15*"N")) + 
   theme_classic(base_size = 20) +
@@ -702,7 +703,7 @@ MinVeg_isoR_low_sum %>%
   #geom_point(aes(Round, PlantRecovery)) +
   geom_col(aes(Round, PlantRecovery),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
   theme_classic(base_size = 20) +
@@ -717,7 +718,7 @@ MinVeg_15N_sum %>%
   #geom_point(aes(Round, PlantRecovery)) +
   geom_col(aes(Round, PlantRecovery),color = "black") +
   #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("µg"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
   theme_classic(base_size = 20) +
@@ -741,7 +742,7 @@ MinVeg_N_sum %>%
   #geom_errorbar(aes(x = Round, y = Nconc, ymin=Nconc, ymax=Nconc+ci), position=position_dodge(.9)) +
   #coord_cartesian(ylim = c(0,100)) +
   scale_fill_viridis_d(labels = c("14N", "15N")) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   #scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
@@ -784,7 +785,7 @@ MinVeg_isoR %>%
   geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
   coord_cartesian(ylim = c(0,100)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 

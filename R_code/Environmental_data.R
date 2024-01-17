@@ -41,6 +41,9 @@ winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12"
 # Snow depth
 snowData <- read_xlsx("raw_data/Snow_depth.xlsx", col_names = TRUE)
 #
+# Core data on soils and days of labelling and harvest as well as soil moisture (FW and DW) and snowdepth
+coreData <- read_csv("clean_data/Core_data.csv", col_names = TRUE)
+#
 #
 #
 #=======  ###   Functions    ### =======
@@ -258,6 +261,339 @@ test3 %>%
 #
 #
 #------- # Soil Moisture # -------
+#
+# Check all sensors
+# Abisko
+Abisko_EM50 %>%
+  select(Date, A1N_VWC, A2N_VWC, A3N_VWC, A4N_VWC, A5N_VWC) %>%
+  ggplot() +
+  geom_hline(yintercept = 0, color = "#999999") +
+  geom_line(aes(x = date(Date), y = A1N_VWC, lty = "A1"), na.rm = TRUE) +
+  geom_line(aes(x = date(Date), y = A2N_VWC, lty = "A2"), na.rm = TRUE) +
+  geom_line(aes(x = date(Date), y = A3N_VWC, lty = "A3"), na.rm = TRUE) +
+  geom_line(aes(x = date(Date), y = A4N_VWC, lty = "A4"), na.rm = TRUE) +
+  geom_line(aes(x = date(Date), y = A5N_VWC, lty = "A5"), na.rm = TRUE) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = expression("Soil VWC ("*m^3*" "*m^-3*")"), title = "Abisko soil VWC") + 
+  guides(lty = "none") +
+  theme_bw(base_size = 17) +
+  theme(legend.position = "top")
+#
+# Vassijaure
+Vassijaure_EM50 %>%
+  select(V_Date, V1N_VWC, V2N_VWC, V3N_VWC, V4N_VWC, V5N_VWC) %>%
+  ggplot() +
+  geom_hline(yintercept = 0, color = "#999999") +
+  geom_line(aes(x = date(V_Date), y = V1N_VWC, lty = "V1"), na.rm = TRUE) +
+  geom_line(aes(x = date(V_Date), y = V2N_VWC, lty = "V2"), na.rm = TRUE) +
+  geom_line(aes(x = date(V_Date), y = V3N_VWC, lty = "V3"), na.rm = TRUE) +
+  geom_line(aes(x = date(V_Date), y = V4N_VWC, lty = "V4"), na.rm = TRUE) +
+  geom_line(aes(x = date(V_Date), y = V5N_VWC, lty = "V5"), na.rm = TRUE) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = expression("Soil VWC ("*m^3*" "*m^-3*")"), title = "Vassijaure soil VWC") + 
+  guides(lty = "none") +
+  theme_bw(base_size = 17) +
+  theme(legend.position = "top")
+#
+#
+# Mean Soil temperature
+Abisko_avgVWC <- Abisko_EM50 %>%
+  select(Date, A1N_VWC, A2N_VWC, A3N_VWC, A4N_VWC, A5N_VWC) %>%
+  # Remove soil temperatures below -15 C
+  # mutate(A1N_VWC = replace(A1N_VWC, A1N_VWC < -15, NA), # Has very low values in July 2019 and during winter
+  #        A2N_VWC = replace(A1N_VWC, A2N_VWC < -15, NA),
+  #        A3N_VWC = replace(A1N_VWC, A3N_VWC < -15, NA), # Has a single measure very low measure in March 2020
+  #        A4N_VWC = replace(A1N_VWC, A4N_VWC < -15, NA),
+  #        A5N_VWC = replace(A1N_VWC, A5N_VWC < -15, NA)) %>%
+  # mutate(A1N_VWC = if_else(month(Date) == 7 & A1N_VWC < 5, NA, A1N_VWC),
+  #        A2N_VWC = if_else(month(Date) == 7 & A2N_VWC < 0, NA, A1N_VWC),
+  #        A3N_VWC = if_else(month(Date) == 7 & A3N_VWC < 0, NA, A1N_VWC),
+  #        A4N_VWC = if_else(month(Date) == 7 & A4N_VWC < 0, NA, A1N_VWC),
+  #        A5N_VWC = if_else(month(Date) == 7 & A5N_VWC < 0, NA, A1N_VWC)) %>%
+  group_by(date(Date)) %>%
+  summarise(A1N_VWC = mean(A1N_VWC, na.rm = TRUE),
+            A2N_VWC = mean(A2N_VWC, na.rm = TRUE),
+            A3N_VWC = mean(A3N_VWC, na.rm = TRUE),
+            A4N_VWC = mean(A4N_VWC, na.rm = TRUE),
+            A5N_VWC = mean(A5N_VWC, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(Date)") %>%
+  mutate(Abisko = mean(c(A1N_VWC, A2N_VWC, A3N_VWC, A4N_VWC, A5N_VWC), na.rm = TRUE)) %>%
+  ungroup()
+#
+Vassijaure_avgVWC <- Vassijaure_EM50 %>%
+  select(V_Date, V1N_VWC, V2N_VWC, V3N_VWC, V4N_VWC, V5N_VWC) %>%
+  # Remove soil temperatures below -15 C
+  # mutate(V1N_VWC = replace(V1N_VWC, V1N_VWC < -15, NA), # Has very low values in July 2019 and during winter
+  #        V2N_VWC = replace(V2N_VWC, V2N_VWC < -15, NA),
+  #        V3N_VWC = replace(V3N_VWC, V3N_VWC < -15, NA), # Has a single measure very low measure in March 2020
+  #        V4N_VWC = replace(V4N_VWC, V4N_VWC < -15, NA),
+  #        V5N_VWC = replace(V5N_VWC, V5N_VWC < -15, NA)) %>%
+  group_by(date(V_Date)) %>%
+  summarise(V1N_VWC = mean(V1N_VWC, na.rm = TRUE),
+            V2N_VWC = mean(V2N_VWC, na.rm = TRUE),
+            V3N_VWC = mean(V3N_VWC, na.rm = TRUE),
+            V4N_VWC = mean(V4N_VWC, na.rm = TRUE),
+            V5N_VWC = mean(V5N_VWC, na.rm = TRUE),
+            .groups = "keep") %>%
+  rename("Date" = "date(V_Date)") %>%
+  mutate(Vassijaure = mean(c(V1N_VWC, V2N_VWC, V3N_VWC, V4N_VWC, V5N_VWC), na.rm = TRUE)) %>% # Average across plots
+  ungroup()
+#
+# Format wide: Abisko and Vassijaureseparate columns
+avgVWC_wide <- left_join(Abisko_avgVWC, Vassijaure_avgVWC, by = join_by(Date)) %>%
+  select(c(Date, Abisko, Vassijaure)) %>%
+  rename("Abisko_VWC" = Abisko,
+         "Vassijaure_VWC" = Vassijaure) %>%
+  mutate(Abisko_VWC = Abisko_VWC*100,
+         Vassijaure_VWC = Vassijaure_VWC*100) # % by Volume
+#
+# Format long: Abisko and Vassijaure as Site factor
+avgVWC_long <- left_join(Abisko_avgVWC, Vassijaure_avgVWC, by = join_by(Date)) %>%
+  dplyr::select(c(Date, Abisko, Vassijaure)) %>%
+  pivot_longer(2:3, names_to = "Site", values_to = "dielVWC_soil") %>%
+  mutate(dielVWC_soil = dielVWC_soil*100) # % by Volume
+#
+# Remove dates during the snow-covered period
+# For long dataset
+avgVWC_long2 <- avgVWC_long %>%
+  mutate(dielVWC_soil = case_when(Site == "Abisko" & ymd(Date) >= winterP$wstart[1] & ymd(Date) <= winterP$wend[1] ~ NA,
+                                  Site == "Vassijaure" & ymd(Date) >= winterP$wstart[2] & ymd(Date) <= winterP$wend[2] ~NA,
+                                  TRUE ~ dielVWC_soil))
+#
+# For wide dataset
+avgVWC_wide2 <- avgVWC_wide %>%
+  mutate(Abisko_VWC = case_when(ymd(Date) >= winterP$wstart[1] & ymd(Date) <= winterP$wend[1] ~ NA,
+                                TRUE ~ Abisko_VWC),
+         Vassijaure_VWC = case_when(ymd(Date) >= winterP$wstart[2] & ymd(Date) <= winterP$wend[2] ~ NA,
+                                    TRUE ~ Vassijaure_VWC))
+#
+#
+# Gravimetric water content (GWC) and estimated bulk density (BD)
+# Taken from coreData
+# Convert gravimetric to volumetric by estimating bulk density
+coreGWC <- coreData %>%
+  mutate(Soil_GWC = (SM_FW_g - SM_DW_g)/SM_DW_g*100,
+         Soil_GWC_FW = (SM_FW_g - SM_DW_g)/SM_FW_g*100,
+         Soil_RF_core_g_FW = Soil_RF_FW_g*Soil_mass_g,) %>%
+  mutate(Soil_BD_est = Soil_RF_core_g_FW*(DW_FW_frac/Soil_vol_cm3),
+         Soil_BD_est1 = case_when(Site == "Abisko" ~ 0.110854207987199, # Bulk density based on a few samples in the autumn 2019
+                                  Site == "Vassijaure" ~ 0.101975726059452,
+                                  TRUE ~ 0)) %>%
+  mutate(Soil_VWC_est = Soil_GWC*Soil_BD_est,
+         Soil_VWC_est1 = Soil_GWC*Soil_BD_est1) %>%
+  select(1:3, Day_of_harvest, Soil_GWC, Soil_GWC_FW, Soil_VWC_est, Soil_VWC_est1) %>%
+  rename("Date" = Day_of_harvest)
+#
+# Summarise with function
+# Estimate of BD from soil mass and water content
+coreGWC_1.1 <- summarySE(coreGWC, measurevar = "Soil_VWC_est", groupvars = c("Site", "MP", "Date")) %>%
+  rename("N_VWC" = N,
+         "sd_VWC" = sd,
+         "max_VWC" = max,
+         "min_VWC" = min,
+         "se_VWC" = se,
+         "ci_VWC" = ci)
+# Estimate of BD from a few samples autumn 2019
+coreGWC_1.2 <- summarySE(coreGWC, measurevar = "Soil_VWC_est1", groupvars = c("Site", "MP", "Date")) %>%
+  rename("N1" = N,
+         "sd1" = sd,
+         "max1" = max,
+         "min1" = min,
+         "se1" = se,
+         "ci1" = ci)
+#
+coreGWC_1.3 <- summarySE(coreGWC, measurevar = "Soil_GWC_FW", groupvars = c("Site", "MP", "Date")) %>%
+  rename("N_GWC" = N,
+         "sd_GWC" = sd,
+         "max_GWC" = max,
+         "min_GWC" = min,
+         "se_GWC" = se,
+         "ci_GWC" = ci)
+#
+# Combine both VWC estimates and GWC
+coreGWC_1 <- left_join(coreGWC_1.1, coreGWC_1.2, by = join_by(Site, MP, Date)) %>%
+  left_join(coreGWC_1.3, by = join_by(Site, MP, Date)) %>%
+  select(Site, Date, 5:10, 12:17, 19:24)
+#
+#
+# Combine VWC(sensor) and VWC(GWC)
+# Wide data
+avgVWC_wide3 <- avgVWC_wide2 %>%
+  left_join(coreGWC_1, by = join_by(Date))
+#
+# Long data
+avgVWC_long3 <- avgVWC_long2 %>%
+  left_join(coreGWC_1, by = join_by(Date, Site))
+#
+
+
+
+
+
+
+
+# First attempt at graphing
+
+avgVWC_wide2 %>% 
+  ggplot() +
+  annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
+  annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
+  geom_hline(yintercept = 0, color = "#999999") +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  scale_y_continuous(breaks = c(-5, 0, 5, 10, 15), sec.axis = sec_axis(~.*1, name = "Soil Moisture (% by volume)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = NULL, y = "Snow cover (cm)") +
+  guides(lty = "none") +
+  theme_bw(base_size = 17) +
+  theme(legend.position = "top")
+
+
+
+# Second attempt. Incl snow depth
+
+avgVWC_wide2 %>% 
+  left_join(snowData_2, by = join_by(Date)) %>%
+  ggplot() +
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site)) +
+  geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
+  #geom_point(aes(x = Date, y = Snow_depth_cm, shape = Site)) +
+  #geom_errorbar(aes(x = Date, y = Snow_depth_cm, ymin=min, ymax=max), position=position_dodge(.9)) +
+  scale_fill_grey() +
+  geom_hline(yintercept = 0, color = "#999999") +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% by volume)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") +
+  guides(fill = guide_legend(title = "Snow"), linetype = "none") +
+  theme_bw(base_size = 25) +
+  theme(legend.position = "bottom")
+
+
+
+
+
+
+
+
+avgVWC_wide3 %>% 
+  left_join(snowData_2, by = join_by(Date, Site)) %>%
+  ggplot() +
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site)) +
+  geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
+  #geom_point(aes(x = Date, y = Snow_depth_cm, shape = Site)) +
+  #geom_errorbar(aes(x = Date, y = Snow_depth_cm, ymin=min, ymax=max), position=position_dodge(.9)) +
+  scale_fill_grey() +
+  geom_hline(yintercept = 0, color = "#999999") +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% by volume)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") +
+  guides(fill = guide_legend(title = "Snow"), linetype = "none") +
+  theme_bw(base_size = 25) +
+  theme(legend.position = "bottom")
+
+
+
+
+x <- left_join(coreGWC_1, snowData_2, by = join_by(Date, Site))
+
+
+
+
+avgVWC_wide3 %>%
+  mutate(Site = case_when(Site == "Abisko" ~ "A",
+                          Site == "Vassijaure" ~ "V",
+                          TRUE ~ Site)) %>%
+  rename("SiteGWC" = Site) %>%
+  left_join(snowData_2, by = join_by(Date)) %>%
+  ggplot() +
+  geom_point(aes(x = Date, y = Soil_VWC_est, shape = SiteGWC), na.rm = TRUE) +
+  geom_errorbar(aes(x = Date, y = Soil_VWC_est, ymin=Soil_VWC_est-se_VWC, ymax=Soil_VWC_est+se_VWC), position=position_dodge(.9)) +
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site), na.rm = TRUE) +
+  geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
+  #geom_point(aes(x = Date, y = Snow_depth_cm, shape = Site)) +
+  
+  scale_fill_grey() +
+  geom_hline(yintercept = 0, color = "#999999") +
+  #geom_line(aes(x = Date, y = dielVWC_soil, linetype = Site), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  #geom_point(aes(x = Date, y = Abisko_GWC, shape = "Abisko"), na.rm = TRUE) +
+  #geom_point(aes(x = Date, y = Vassijaure_GWC, shape = "Vassijaure"), na.rm = TRUE) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% by volume)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") +
+  guides(fill = guide_legend(title = "Snow"), shape = guide_legend(title = "Soil GWC"), linetype = "none") +
+  theme_bw(base_size = 25) +
+  theme(legend.position = "bottom")
+
+
+
+
+
+
+
+
+# Potential graph update:
+
+
+
+avgVWC_wide3 %>%
+  mutate(Site = case_when(Site == "Abisko" ~ "A",
+                          Site == "Vassijaure" ~ "V",
+                          TRUE ~ Site)) %>%
+  rename("SiteGWC" = Site) %>%
+  left_join(snowData_2, by = join_by(Date)) %>%
+  ggplot() +
+  #
+  # GWC
+  # geom_point(aes(x = Date, y = Soil_GWC_FW, shape = SiteGWC), na.rm = TRUE) +
+  # geom_errorbar(aes(x = Date, y = Soil_GWC_FW, ymin=Soil_GWC_FW-se_GWC, ymax=Soil_GWC_FW+se_GWC), position=position_dodge(.9)) +
+  # VWC converted from GWC
+  geom_point(aes(x = Date, y = Soil_VWC_est, shape = SiteGWC), na.rm = TRUE) +
+  geom_errorbar(aes(x = Date, y = Soil_VWC_est, ymin=Soil_VWC_est-se_VWC, ymax=Soil_VWC_est+se_VWC), position=position_dodge(.9)) +
+  #
+  # Snow
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site), na.rm = TRUE) +
+  geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
+  scale_fill_grey(na.translate = F) +
+  #
+  # 0-line
+  geom_hline(yintercept = 0, color = "#999999") +
+  #
+  # VWC from sensors
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% by volume)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  scale_shape(na.translate = F) +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") +
+  guides(fill = guide_legend(title = "Snow"), shape = guide_legend(title = "Soil GWC"), linetype = "none") +
+  theme_bw(base_size = 25) +
+  theme(legend.position = "bottom")
+
+
+
+
+
+
+
+
+
+
+
+
 
 #
 #
@@ -401,7 +737,11 @@ avgT_wide2 %>% ggplot() +
   labs(x = "Time of year", y = "Air temperature °C", title = "Air and soil temperature") +
   guides(fill = guide_legend(title = "Soil temperature"), lty = guide_legend(title = "Air temperature")) +
   theme_bw(base_size = 15)
-
+#
+#
+# <><><><><> MAIN PLOT - FIG 1 <><><><><>
+#
+#
 # Air temperatures - all
 airT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
@@ -468,18 +808,19 @@ snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 17) + theme(legend.pos
 grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot.2, snowData_legend, ncol = 1, widths = c(2.7), heights = c(0.5, 3, 3, 3, 0.5))#, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
 #
 # Save important data from environmental:
-write_tsv(avgT_wide2, "export/Temperature_Air_Soil.tsv")
-write_tsv(snowData, "export/Snow.tsv")
-write_tsv(snowData_2, "export/Snow_avg.tsv")
+# write_tsv(avgT_wide2, "export/Temperature_Air_Soil.tsv")
+# write_tsv(snowData, "export/Snow.tsv")
+# write_tsv(snowData_2, "export/Snow_avg.tsv")
 #
 # For quick access to make the graphs above:
-#avgT_wide2 <- read_tsv("export/Temperature_Air_Soil.tsv")
-#snowData <- read_tsv("export/Snow.tsv")
-#snowData_2 <- read_tsv("export/Snow_avg.tsv")
+# avgT_wide2 <- read_tsv("export/Temperature_Air_Soil.tsv")
+# snowData <- read_tsv("export/Snow.tsv")
+# snowData_2 <- read_tsv("export/Snow_avg.tsv")
 #
 #
-# Core data on soils and days of labelling and harvest as well as snowdepth
-coreData <- read_csv("clean_data/Core_data.csv", col_names = TRUE)
+# <><><><><> END FIG 1 <><><><><>
+#
+#
 # Extract date for sample. Here using Day of harvest
 DayOf <- coreData %>%
   select(Site, Round, Day_of_harvest) %>%

@@ -1,6 +1,9 @@
 # Load weather data
 # From own data
 #
+# To get months in the right format (i.e. not in whatever local the computer has, e.g. Swedish)
+Sys.setlocale("LC_ALL", 'en_GB.UTF-8')
+#
 library(plyr)
 library(tidyverse)
 library(readr)
@@ -742,6 +745,12 @@ avgT_wide2 %>% ggplot() +
 # <><><><><> MAIN PLOT - FIG 1 <><><><><>
 #
 #
+# Snow depth on plot
+snowData_2 <- summarySE(snowData, measurevar = "Snow_depth_cm", groupvars = c("Site", "MP", "Date"))
+snowData_2 <- snowData_2 %>%
+  mutate(Date = ymd(Date))
+#
+#
 # Air temperatures - all
 airT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
@@ -753,14 +762,14 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
-  labs(x = NULL, y = "Air temperature (°C)") + # x = "Time of year",  , title = "Air temperature" 
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
+  labs(x = NULL, y = "Air (°C)") + # x = "Time of year",  , title = "Air temperature" 
   guides(lty = guide_legend(title = "Mean diel temperature"))+ #lty = guide_legend(title = "Mean diel temperature")) +
   theme_bw(base_size = 25) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
 #
 airT_legend <- get_legend(airT_plot)
-airT_plot.2 <- airT_plot + theme_bw(base_size = 17) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 15)) 
+airT_plot.2 <- airT_plot + theme_bw(base_size = 25) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 18))#, axis.title.y = element_text(size = 25)) 
 #airT_plot <- airT_plot + guides(lty = NULL)
 #
 # Soil temperatures - all
@@ -773,17 +782,17 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
   scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16")), ylim = c(-5,15)) +
-  labs(x = NULL, y = "Soil temperature (°C)") + # x = "Time of year", , title = "Soil temperature"
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26")), ylim = c(-5,15)) +
+  labs(x = NULL, y = "Soil (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
-  theme_bw(base_size = 17) +
-  theme(legend.position = "top")
+  theme_bw(base_size = 25) +
+  theme(legend.position = "top")#, axis.title.y = element_text(size = 25))
 #
-# Snow depth on plot
-snowData_2 <- summarySE(snowData, measurevar = "Snow_depth_cm", groupvars = c("Site", "MP", "Date"))
-snowData_2 <- snowData_2 %>%
-  mutate(Date = ymd(Date))
+# soilT_legend <- get_x_axis(soilT_plot) + theme_bw(base_size = 17)
+# soilT_plot.2 <- soilT_plot + theme_bw(base_size = 20) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 15)) 
+# #soilT_plot <- soilT_plot + guides(lty = NULL)
+#
 #
 snowDepth_plot <- snowData_2 %>%
   ggplot(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site)) +
@@ -791,21 +800,76 @@ snowDepth_plot <- snowData_2 %>%
   geom_line() +
   scale_fill_grey() +
   #scale_fill_viridis_d() +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
-  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-09-16"))) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") + #, title = "Snow cover measured over the entire plot (around all 15 patches)") +
   guides(fill = guide_legend(title = "Snow"), linetype = "none") +
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
-
 #
 snowData_legend <- get_legend(snowDepth_plot)
-snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 17) + theme(legend.position = "none") 
+snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_text(size = 25)) 
 #
 # Plot
 #grid.arrange(airT_plot, soilT_plot, snowDepth_plot)
 #grid.arrange(airT_plot, soilT_plot, snowDepth_plot, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
+#
+# Fig. 1: Air temperature, Soil temperature, and Snow depth
 grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot.2, snowData_legend, ncol = 1, widths = c(2.7), heights = c(0.5, 3, 3, 3, 0.5))#, top = grid::textGrob('Mean diel temperature', gp=grid::gpar(fontsize=20)))
+#
+#
+# Snow and moisture in one graph
+snowDepth_plot_2 <- avgVWC_wide3 %>%
+  mutate(Site = case_when(Site == "Abisko" ~ "A",
+                          Site == "Vassijaure" ~ "V",
+                          TRUE ~ Site)) %>%
+  rename("SiteGWC" = Site) %>%
+  left_join(snowData_2, by = join_by(Date)) %>%
+  ggplot() +
+  #
+  # GWC
+  # geom_point(aes(x = Date, y = Soil_GWC_FW, shape = SiteGWC), na.rm = TRUE) +
+  # geom_errorbar(aes(x = Date, y = Soil_GWC_FW, ymin=Soil_GWC_FW-se_GWC, ymax=Soil_GWC_FW+se_GWC), position=position_dodge(.9)) +
+  # VWC converted from GWC
+  geom_point(aes(x = Date, y = Soil_VWC_est, shape = SiteGWC), na.rm = TRUE) +
+  geom_errorbar(aes(x = Date, y = Soil_VWC_est, ymin=Soil_VWC_est-se_VWC, ymax=Soil_VWC_est+se_VWC), position=position_dodge(.9)) +
+  #
+  # Snow
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site), na.rm = TRUE) +
+  geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
+  scale_fill_grey(na.translate = F) +
+  #
+  # 0-line
+  geom_hline(yintercept = 0, color = "#999999") +
+  #
+  # VWC from sensors
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% vol)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
+  scale_shape(na.translate = F) +
+  coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
+  labs(x = "Time of year", y = "Snow cover (cm)") +
+  guides(fill = guide_legend(title = "Snow"), shape = guide_legend(title = "Soil GWC"), linetype = "none") +
+  theme_bw(base_size = 25) +
+  theme(legend.position = "bottom")
+#
+snowData_legend_2 <- get_legend(snowDepth_plot_2)
+snowData_yaxis_2 <- get_y_axis(snowDepth_plot_2)
+snowDepth_plot_2.2 <- snowDepth_plot_2 + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_blank()) 
+#
+#
+# Layout of final graph:
+hlay <- rbind(c(1,1),
+              c(2,NA),
+              c(3,NA),
+              c(4,4),
+              c(5,5))
+#
+# Final graph:
+# Fig. 1: Air temperature, Soil temperature, and Snow depth with soil moisture as VWC and converted GWC
+grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot_2.2, snowData_legend_2, widths = c(2.8,0.15), heights = c(0.5, 3, 3, 3.5, 0.5), layout_matrix=hlay)
+#
 #
 # Save important data from environmental:
 # write_tsv(avgT_wide2, "export/Temperature_Air_Soil.tsv")

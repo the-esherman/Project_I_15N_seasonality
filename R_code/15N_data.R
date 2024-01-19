@@ -384,6 +384,12 @@ N_fertilizer <- mineral_combined %>%
   select(1:4,inj_15N, Nconc_in0, deltaInj_pc, deltaInj_pc2)
 N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvars = c("Site", "Round"))
 #
+#
+#
+# <><><><><> FERTILIZER - SUPPL. FIG 4 <><><><><>
+#
+#
+#
 # Plot how much the injected N adds to the total N pool (incl. the label) at injection
 N_fertilizer_sum %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%
@@ -397,6 +403,11 @@ N_fertilizer_sum %>%
   labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END SUPPL. FIG 4 <><><><><>
+#
 #
 #
 # Calculate isotope ratio (isoR) at injection and harvest, then calculate it as an average for the 3 week period between label and harvest
@@ -680,6 +691,12 @@ MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_
 MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low_pr_DW", groupvars=c("Site", "Round"))
 MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", groupvars=c("Site", "Round"))
 #
+#
+#
+# <><><><><> TOTAL N UPTAKE - SUPPL. FIG 6.1 <><><><><>
+#
+#
+#
 # Plant total N uptake +/- 95% CI
 # High estimate
 MinVeg_isoR_high_sum %>%
@@ -696,6 +713,12 @@ MinVeg_isoR_high_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#
+#
+# <><><><><> END SUPPL. FIG 6.1 <><><><><>
+#
+#
+#
 # Low estimate
 MinVeg_isoR_low_sum %>%
   rename("PlantRecovery" = PlantRecovery_N_low_pr_DW) %>%
@@ -710,6 +733,12 @@ MinVeg_isoR_low_sum %>%
   labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> PLANT 15N UPTAKE - SUPPL. FIG 7 <><><><><>
+#
+#
 #
 # Plant 15N uptake per g DW
 MinVeg_15N_sum %>%
@@ -727,7 +756,11 @@ MinVeg_15N_sum %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
-
+#
+# <><><><><> END SUPPL. FIG 7 <><><><><>
+#
+#
+#
 MinVeg_isoR.2 <- MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_DW,
@@ -761,8 +794,13 @@ MinVeg_N_sum %>%
 
 
 
-
-
+#
+#
+#
+# <><><><><> 14N UPTAKE - SUPPL. FIG 6.2  <><><><><>
+#
+#
+#
 MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_DW,
@@ -794,7 +832,13 @@ MinVeg_isoR %>%
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
+#
+#
+#
+# <><><><><> END SUPPL. FIG 6.2 <><><><><>
+#
+#
+#
 
 
 
@@ -1980,6 +2024,12 @@ vegroot15N_prm2 <- vegroot15N %>%
   mutate(Biomass_DW_kg_m2 = Biomass_DW_g_m2/1000) %>%
   select(1:7, Biomass_DW_g, Biomass_DW_g_m2, Biomass_DW_kg_m2)
 #
+#
+#
+# <><><><><> BIOMASS - SUPPL. FIG 5 <><><><><>
+#
+#
+#
 # Plant biomass by organ + SE
 Biomass_plot <- vegroot15N_prm2 %>%
   group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
@@ -2043,6 +2093,11 @@ Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
 grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
+#
+# <><><><><> END SUPPL. FIG 5 <><><><><>
+#
+#
+#
 # Plant biomass by organ 95% CI
 vegroot15N_biom_sum <- summarySE(vegroot15N, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
 
@@ -2070,17 +2125,6 @@ vegroot15N_biom_sum %>%
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-  
-
-  
-  
-
-
-   
-  
-  
-  
-  
 #
 #
 #
@@ -2161,7 +2205,6 @@ vegroot15N_Organ %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
-#
 # Each species or part separated. For a quick overview of where patterns might come from
 vegroot15N %>%
   #group_by(across(c("Site", "Plot", "Round", "Organ", "Species"))) %>%
@@ -2228,6 +2271,12 @@ sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"
 #                    ci = qt(0.95/2 + .5, length(PlantRecovery)-1) * (sd(PlantRecovery)/sqrt(length(PlantRecovery))), # t-distribution of 95% (97.5% as 2.5% each end) for N-1 times standard error
 #                    .groups = "keep")
 #
+#
+#
+# <><><><><> ABSOLUTE TOTAL RECOVERY - FIG 2 <><><><><>
+#
+#
+#
 # Total ecosystem recovery +/- 95% CI
 sysRec_sum %>%  
   ggplot() + 
@@ -2241,6 +2290,12 @@ sysRec_sum %>%
   labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END FIG 2 <><><><><>
+#
+#
 #
 # Total ecosystem recovery stacked
 Rec15N %>%
@@ -2272,7 +2327,12 @@ Rec15N %>%
   guides(fill = guide_legend(title = "System type")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
+#
+#
+#
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 1 <><><><><>
+#
+#
 #
 # Plant total recovery +/- 95% CI
 vegroot15N_total_Plant_sum %>%  
@@ -2288,9 +2348,21 @@ vegroot15N_total_Plant_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#
+#
+# <><><><><> END SUPPL. FIG 1 <><><><><>
+#
+#
+#
 vegroot15N_total_Plant %>%
   ggplot() +
   geom_boxplot(aes(Round, PlantRecovery))
+#
+#
+#
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 2 <><><><><>
+#
+#
 #
 # Microbial total recovery +/- 95% CI
 Mic15N_sum %>%  
@@ -2305,6 +2377,16 @@ Mic15N_sum %>%
   labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END SUPPL. FIG 2 <><><><><>
+#
+#
+#
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 3 <><><><><>
+#
+#
 #
 # TDN total recovery +/- 95% CI 
 TDN15N_sum %>%  
@@ -2321,6 +2403,11 @@ TDN15N_sum %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
+#
+# <><><><><> END SUPPL. FIG 3 <><><><><>
+#
+#
+#
 # • Proportional to total recovery ----
 # Calculate means and 95% CI
 Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
@@ -2333,6 +2420,12 @@ plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp =
 #
 #
 vegroot15N_Organ_sum <- summarySE(vegroot15N_Organ, measurevar = "OrganRecovery", groupvars = c("Site", "Round", "Organ"))
+#
+#
+#
+# <><><><><> ORGAN RECOVERY - FIG 4 <><><><><>
+#
+#
 #
 vegroot15N_Organ_sum %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
@@ -2357,6 +2450,12 @@ vegroot15N_Organ_sum %>%
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END FIG 4 <><><><><>
+#
+#
 #
 # For the label to be correct
 vegroot15N_Organ_sum %>%
@@ -2386,6 +2485,7 @@ vegroot15N_Organ_sum %>%
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
 #
 vegroot15N_Organ_sum %>%
   ggplot() +
@@ -2464,6 +2564,12 @@ Rec15N_sum2 <- Rec15N_Plant_sum2 %>%
   bind_rows(Rec15N_MBN_sum2) %>%
   bind_rows(Rec15N_TDN_sum2)
 #
+#
+#
+# <><><><><> RECOVERY - FIG 3 <><><><><>
+#
+#
+#
 # Graph recovery by type and add 95% CI
 Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
@@ -2479,6 +2585,12 @@ Rec15N_sum2 %>%
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END FIG 3 <><><><><>
+#
+#
 #
 Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Site)) +

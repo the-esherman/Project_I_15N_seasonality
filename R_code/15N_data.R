@@ -6,6 +6,8 @@ library(plyr)
 library(tidyverse)
 library(car)
 library(nlme)
+library(gridExtra)
+library(cowplot)
 #
 #
 #
@@ -787,7 +789,7 @@ MinVeg_isoR %>%
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
   scale_x_discrete(labels = measuringPeriod_miner) +
   coord_cartesian(ylim = c(0,100)) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
@@ -1979,7 +1981,7 @@ vegroot15N_prm2 <- vegroot15N %>%
   select(1:7, Biomass_DW_g, Biomass_DW_g_m2, Biomass_DW_kg_m2)
 #
 # Plant biomass by organ + SE
-vegroot15N_prm2 %>%
+Biomass_plot <- vegroot15N_prm2 %>%
   group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
   summarise(TotalBiomass = sum(Biomass_DW_g_m2, na.rm = TRUE), .groups = "keep") %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
@@ -2002,13 +2004,43 @@ vegroot15N_prm2 %>%
   scale_x_discrete(labels = measuringPeriod) +
   scale_y_continuous(breaks = c(-2000, -1500, -1000, -500, 0, 500), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  facet_wrap( ~ Site, ncol = 2) +#, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("Biomass (g "*m^2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
-
+#
+# Plot for legend (swap Coarse and Fine roots in order, still have to manually change colors)
+Biomass_plotLegend <- vegroot15N_prm2 %>%
+  mutate(Organ = case_when(Organ == "S" ~ "Shoots",
+                           Organ == "CR" ~ "Fine roots", # A bit manipulative!
+                           Organ == "FR" ~ "Coarse roots",
+                           TRUE ~ Organ)) %>%
+  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
+  summarise(TotalBiomass = sum(Biomass_DW_g_m2, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
+  mutate(avgBiomass = if_else(Organ == "Shoots", avgBiomass, -avgBiomass),
+         se = if_else(Organ == "Shoots", se, -se),
+         avgR_SE = if_else(Organ == "Coarse roots", avgBiomass, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_SE = if_else(Organ == "Fine roots", cumsum(avgR_SE)+avgBiomass, avgBiomass)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("Shoots","Coarse roots","Fine roots"))), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20)
+#
+# Get Legend 
+Biomass_legend <- get_legend(Biomass_plotLegend)
+# Get Plot without legend
+Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
+#
+# Combine. OBS! Still have to swap colors manually
+grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
 # Plant biomass by organ 95% CI

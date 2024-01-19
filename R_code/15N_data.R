@@ -2092,6 +2092,8 @@ Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
 # Combine. OBS! Still have to swap colors manually
 grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
+# The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph
+#
 #
 #
 # <><><><><> END SUPPL. FIG 5 <><><><><>
@@ -2427,7 +2429,7 @@ vegroot15N_Organ_sum <- summarySE(vegroot15N_Organ, measurevar = "OrganRecovery"
 #
 #
 #
-vegroot15N_Organ_sum %>%
+OrganRec_plot <- vegroot15N_Organ_sum %>%
   group_by(across(c("Site", "Round", "Organ"))) %>%
   mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
          ci = if_else(Organ == "S", ci, -ci),
@@ -2445,11 +2447,42 @@ vegroot15N_Organ_sum %>%
   scale_x_discrete(labels = measuringPeriod) +
   scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Plot for legend (swap Coarse and Fine roots in order, still have to manually change colors)
+OrganRec_plotLegend <- vegroot15N_Organ_sum %>%
+  mutate(Organ = case_when(Organ == "S" ~ "Shoots",
+                           Organ == "CR" ~ "Fine roots", # A bit manipulative!
+                           Organ == "FR" ~ "Coarse roots",
+                           TRUE ~ Organ)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  mutate(OrganRecovery = if_else(Organ == "Shoots", OrganRecovery, -OrganRecovery),
+         ci = if_else(Organ == "Shots", ci, -ci),
+         avgR_CI = if_else(Organ == "Coarse roots", OrganRecovery, 0)) %>%
+  group_by(across(c("Site", "Round"))) %>%
+  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
+  group_by(across(c("Site", "Round", "Organ"))) %>%
+  # Plot 
+  ggplot() +
+  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("Shoots","Coarse roots","Fine roots"))), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_classic(base_size = 20)
+#
+#
+# Get Legend 
+OrganRec_legend <- get_legend(OrganRec_plotLegend)
+# Get Plot without legend
+OrganRec_plot.2 <- OrganRec_plot + theme(legend.position = "none")
+#
+# Combine. OBS! Still have to swap colors manually
+grid.arrange(OrganRec_plot.2, OrganRec_legend, ncol = 2, widths = c(2.7, 0.4))
+#
+# The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph
 #
 #
 #

@@ -2,7 +2,7 @@
 # By Emil A.S. Andersen
 # 
 #=======  ###   Libraries    ### =======
-library(plyr)
+#library(plyr)
 library(tidyverse)
 library(car)
 library(nlme)
@@ -77,7 +77,7 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   }
   # This does the summary. For each group's data frame, return a vector with
   # N, mean, and sd
-  datac <- ddply(data, groupvars, .drop=.drop,
+  datac <- plyr::ddply(data, groupvars, .drop=.drop,
                  .fun = function(xx, col) {
                    c(N    = length2(xx[[col]], na.rm=na.rm),
                      mean = mean   (xx[[col]], na.rm=na.rm),
@@ -396,7 +396,7 @@ N_fertilizer_sum %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
   ggplot(aes(x = Day_of_harvest, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
   geom_ribbon(alpha = 0.5) +
-  geom_line(size = 0.9) + 
+  geom_line(linewidth = 0.9) + 
   scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
   scale_fill_grey() +
   #scale_fill_viridis_d() +
@@ -528,7 +528,7 @@ min_isoR_2 <- min_isoR_2_high %>%
   mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
 #
 # Save data on isotopic ratio (14N)
-write_csv2(min_isoR_2, file = "clean_data/isotopicR_3.csv", na = "", col_names = TRUE)
+# write_csv2(min_isoR_2, file = "clean_data/isotopicR_3.csv", na = "", col_names = TRUE)
 #
 #
 # Average fractional abundance (isoF) and get 95% CI
@@ -551,7 +551,7 @@ min_isoF_2 <- min_isoF_2_high %>%
   mutate(across(c(4:7, 9:12, 14:17), ~num(., digits = 2)))
 #
 # Save data on isotopic ratio (14N)
-write_csv2(min_isoF_2, file = "clean_data/isotopicF_3.csv", na = "", col_names = TRUE)
+# write_csv2(min_isoF_2, file = "clean_data/isotopicF_3.csv", na = "", col_names = TRUE)
 #  
 #
 # Now the mineralization can be calculated
@@ -610,6 +610,99 @@ mineral_isoR %>%
   ggplot(aes(Round, isoR14_low_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
 mineral_isoR %>%
   ggplot(aes(Round, isoR14_high_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
+#
+#
+#
+# <><><><><> TOTAL N UPTAKE - SUPPL. FIG 6 <><><><><>
+#
+#
+#
+# N pr 15N +/- 95% CI
+# High estimate
+min_isoF_2 %>%
+  rename("Ratio" = isoF14_high_avg) %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = Ratio, ymin=Ratio, ymax=Ratio+ci_high), position=position_dodge(.9)) +
+  geom_col(aes(Round, Ratio),color = "black") +
+  coord_cartesian(ylim = c(0,6)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  facet_wrap( ~ Site, ncol = 2) + 
+  labs(x = "Measuring period (MP)", y = expression("N:"*{}^15*"N"), title = expression("Estimated total N ("*{}^15*"N + "*{}^14*"N) pr labelled"*{}^15*"N")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+# 14N per 15N +/- 95% CI
+# High estimate
+min_isoR_2 %>%
+  rename("Ratio" = isoR14_high_avg) %>%
+  ggplot() + 
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = Ratio, ymin=Ratio, ymax=Ratio+ci_high), position=position_dodge(.9)) +
+  geom_col(aes(Round, Ratio),color = "black") +
+  coord_cartesian(ylim = c(0,6)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  facet_wrap( ~ Site, ncol = 2) + 
+  labs(x = "Measuring period (MP)", y = expression(""*{}^14*"N:"*{}^15*"N"), title = expression("Estimated "*{}^14*"N per labelled "*{}^15*"N")) + 
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END SUPPL. FIG 6 <><><><><>
+#
+#
+#
+# <><><><><> 14N UPTAKE - SUPPL. FIG ??  <><><><><>
+#
+#
+#
+MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_DW,
+         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
+  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
+  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Isotope"))) %>%
+  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(MinVeg_isoR_high_sum, by = join_by(Site, Round)) %>%
+  select(1:4, PlantRecovery_N_high_pr_DW, ci) %>%
+  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
+  mutate(Isotope=factor(Isotope)) %>%
+  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
+  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
+                           Isotope == "Plant15N" ~ "15N")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  coord_cartesian(ylim = c(0,100)) +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END SUPPL. FIG ?? <><><><><>
+#
+#
+#
+
+
+
+
+
+
+
 #
 #
 #
@@ -693,7 +786,7 @@ MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", g
 #
 #
 #
-# <><><><><> TOTAL N UPTAKE - SUPPL. FIG 6.1 <><><><><>
+# <><><><><> TOTAL N UPTAKE - (former SUPPL. FIG 6) <><><><><>
 #
 #
 #
@@ -715,7 +808,7 @@ MinVeg_isoR_high_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 6.1 <><><><><>
+# <><><><><> END (former SUPPL. FIG 6.1) <><><><><>
 #
 #
 #
@@ -797,7 +890,7 @@ MinVeg_N_sum %>%
 #
 #
 #
-# <><><><><> 14N UPTAKE - SUPPL. FIG 6.2  <><><><><>
+# <><><><><> 14N UPTAKE - FIG 6  <><><><><>
 #
 #
 #
@@ -835,7 +928,7 @@ MinVeg_isoR %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 6.2 <><><><><>
+# <><><><><> END FIG 6 <><><><><>
 #
 #
 #

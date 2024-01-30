@@ -755,11 +755,11 @@ snowData_2 <- snowData_2 %>%
 airT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
   annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
-  geom_hline(yintercept = 0, color = "#999999") +
+  geom_hline(yintercept = 0, color = "#999999", linewidth = 1) +
   #geom_line(aes(x = Date, y = Katterjakk_Tair_SMHI, lty = "Katterjakk air temperature")) + 
-  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure"), na.rm = TRUE) + 
+  geom_line(aes(x = Date, y = Vassijaure_Tair, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) + 
   #geom_line(aes(x = Date, y = Abisko_Tair_SMHI, lty = "Abisko air temperature SMHI")) +
-  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_Tair, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
   scale_y_continuous(breaks = c(-10, 0, 10, 20), minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
@@ -776,11 +776,11 @@ airT_plot.2 <- airT_plot + theme_bw(base_size = 25) + theme(legend.position = "n
 soilT_plot <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow
   annotate("rect", xmin = winterP$wstart[1], xmax = winterP$wend[1], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.6) + # Abisko snow
-  geom_hline(yintercept = 0, color = "#999999") +
+  geom_hline(yintercept = 0, color = "#999999", linewidth = 1) +
   #annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -3, ymax = 0, fill = "white", alpha = 0.9) +
   #geom_hline(yintercept = -3, color = "#D55E00") +
-  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE) +
-  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) +
+  geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
   scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26")), ylim = c(-5,15)) +
@@ -797,7 +797,7 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
 snowDepth_plot <- snowData_2 %>%
   ggplot(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site)) +
   geom_ribbon(alpha = 0.5) +
-  geom_line() +
+  geom_line(linewidth = 1) +
   scale_fill_grey() +
   #scale_fill_viridis_d() +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
@@ -831,20 +831,20 @@ snowDepth_plot_2 <- avgVWC_wide3 %>%
   # geom_point(aes(x = Date, y = Soil_GWC_FW, shape = SiteGWC), na.rm = TRUE) +
   # geom_errorbar(aes(x = Date, y = Soil_GWC_FW, ymin=Soil_GWC_FW-se_GWC, ymax=Soil_GWC_FW+se_GWC), position=position_dodge(.9)) +
   # VWC converted from GWC
-  geom_point(aes(x = Date, y = Soil_VWC_est, shape = SiteGWC), na.rm = TRUE) +
+  geom_point(aes(x = Date, y = Soil_VWC_est, shape = SiteGWC), na.rm = TRUE, size = 2) +
   geom_errorbar(aes(x = Date, y = Soil_VWC_est, ymin=Soil_VWC_est-se_VWC, ymax=Soil_VWC_est+se_VWC), position=position_dodge(.9)) +
   #
   # Snow
-  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Snow_depth_cm, linetype = Site), na.rm = TRUE, linewidth = 1) +
   geom_ribbon(aes(x = Date, y = Snow_depth_cm, ymin = min, ymax = max, fill = Site, linetype = Site), alpha = 0.5) +
   scale_fill_grey(na.translate = F) +
   #
   # 0-line
-  geom_hline(yintercept = 0, color = "#999999") +
+  geom_hline(yintercept = 0, color = "#999999", linewidth = 1) +
   #
   # VWC from sensors
-  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE) +
-  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE) +
+  geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
+  geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) +
   scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% vol)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
   scale_shape(na.translate = F) +
@@ -875,11 +875,13 @@ grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot_2.2, snowData_
 # write_tsv(avgT_wide2, "export/Temperature_Air_Soil.tsv")
 # write_tsv(snowData, "export/Snow.tsv")
 # write_tsv(snowData_2, "export/Snow_avg.tsv")
+# write_tsv(avgVWC_wide3, "export/VWC_avg.tsv")
 #
 # For quick access to make the graphs above:
 # avgT_wide2 <- read_tsv("export/Temperature_Air_Soil.tsv")
 # snowData <- read_tsv("export/Snow.tsv")
 # snowData_2 <- read_tsv("export/Snow_avg.tsv")
+# avgVWC_wide3 <- read_tsv("export/VWC_avg.tsv")
 #
 #
 # <><><><><> END FIG 1 <><><><><>

@@ -2368,7 +2368,7 @@ sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"
 #
 #
 #
-# <><><><><> ABSOLUTE TOTAL RECOVERY - FIG 2 <><><><><>
+# <><><><><> ABSOLUTE TOTAL RECOVERY - former FIG 2 <><><><><>
 #
 #
 #
@@ -2388,7 +2388,7 @@ sysRec_sum %>%
 #
 #
 #
-# <><><><><> END FIG 2 <><><><><>
+# <><><><><> END former FIG 2 <><><><><>
 #
 #
 #
@@ -2690,31 +2690,95 @@ Rec15N_sum2 <- Rec15N_Plant_sum2 %>%
   bind_rows(Rec15N_MBN_sum2) %>%
   bind_rows(Rec15N_TDN_sum2)
 #
+# Combine recovery types, but absolute values
+# Plant
+vegroot15N_total_Plant_sum2 <- vegroot15N_total_Plant_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, PlantRecovery, ci, Day_of_harvest) %>%
+  add_column(Type = "Plant") %>%
+  rename(Recovery = "PlantRecovery")
+# MBN
+Mic15N_sum2 <- Mic15N_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, R_MBN, ci, Day_of_harvest) %>%
+  add_column(Type = "Microbial") %>%
+  rename(Recovery = "R_MBN")
+# TDN
+TDN15N_sum2 <- TDN15N_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, R_TDN, ci, Day_of_harvest) %>%
+  add_column(Type = "TDN") %>%
+  rename(Recovery = "R_TDN")
+# Ecosystem
+sysRec_sum2 <- sysRec_sum %>%
+  left_join(DayOf, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
+  select(Site, Round, sysRec, ci, Day_of_harvest)
+#
+Rec15N_abs_sum <- vegroot15N_total_Plant_sum2 %>%
+  bind_rows(Mic15N_sum2) %>%
+  bind_rows(TDN15N_sum2) %>%
+  select(-ci) %>%
+  left_join(sysRec_sum2, by = join_by(Site, Round, Day_of_harvest))
 #
 #
-# <><><><><> RECOVERY - FIG 3 <><><><><>
+#
+# <><><><><> RECOVERY - FIG 2 <><><><><>
 #
 #
 #
 # Graph recovery by type and add 95% CI
-Rec15N_sum2 %>%
+Rec_prop_plot <- Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   #geom_hline(yintercept = c(10,20), color = "red") +
-  geom_line() +
+  geom_line(linewidth = 1) +
   geom_ribbon(alpha = 0.5) +
   scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
-  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system"))+# to wrap the title properly around use atop() ))) +
+  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
+  guides(linetype = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery "))) +
   theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+  theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+Rec_prop_legend <- get_legend(Rec_prop_plot)
+Rec_prop_plot2 <- Rec_prop_plot + theme(legend.position = "none")
 #
 #
 #
-# <><><><><> END FIG 3 <><><><><>
+# Alternative: Fig 2 + Fig. 3
+Rec_Abs_plot <- Rec15N_abs_sum %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_errorbar(aes(x = Round, y = Recovery, ymin=sysRec+ci, ymax=sysRec), position=position_dodge(.9)) +
+  geom_col(aes(Round, Recovery, fill = factor(Type)), position = "stack", color = "black") +
+  scale_x_discrete(labels = measuringPeriod) +
+  scale_fill_viridis_d() +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") +
+  coord_cartesian(ylim = c(0,150)) +
+  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  guides(fill = guide_legend(title = expression(bold("(A)")~"Ecosystem absolute recovery "))) +
+  theme_classic(base_size = 20) +
+  theme(legend.position = "top", panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))
+#
+Rec_Abs_legend <- get_legend(Rec_Abs_plot)
+Rec_Abs_plot2 <- Rec_Abs_plot + theme(legend.position = "none")
+#
+#
+#
+grid.arrange(Rec_Abs_legend, Rec_Abs_plot2, Rec_prop_legend, Rec_prop_plot2, ncol = 1, heights = c(0.5, 5, 0.5, 5))
+#
+#
+#
+# <><><><><> END FIG 2 <><><><><>
 #
 #
 #

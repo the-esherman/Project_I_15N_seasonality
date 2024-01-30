@@ -4,7 +4,7 @@
 # To get months in the right format (i.e. not in whatever local the computer has, e.g. Swedish)
 Sys.setlocale("LC_ALL", 'en_GB.UTF-8')
 #
-library(plyr)
+#library(plyr)
 library(tidyverse)
 library(readr)
 library(lubridate)
@@ -67,7 +67,7 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
   }
   # This does the summary. For each group's data frame, return a vector with
   # N, mean, and sd
-  datac <- ddply(data, groupvars, .drop=.drop,
+  datac <- plyr::ddply(data, groupvars, .drop=.drop,
                  .fun = function(xx, col) {
                    c(N    = length2(xx[[col]], na.rm=na.rm),
                      mean = mean   (xx[[col]], na.rm=na.rm),

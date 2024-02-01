@@ -782,7 +782,7 @@ soilT_plot <- avgT_wide2 %>% ggplot() +
   geom_line(aes(x = Date, y = Vassijaure_Tsoil, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) +
   geom_line(aes(x = Date, y = Abisko_Tsoil, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
   scale_y_continuous(breaks = c(-5, 0, 5, 10, 15))+#, minor_breaks = c(-15, -5, 5, 15)) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26")), ylim = c(-5,15)) +
   labs(x = NULL, y = "Soil (°C)") + # x = "Time of year", , title = "Soil temperature"
   guides(lty = "none") + # guide_legend(title = "Soil temperature")
@@ -846,7 +846,7 @@ snowDepth_plot_2 <- avgVWC_wide3 %>%
   geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
   geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) +
   scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% vol)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b-%d") +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
   scale_shape(na.translate = F) +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") +

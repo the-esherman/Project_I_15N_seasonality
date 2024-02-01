@@ -29,8 +29,10 @@ winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20
 winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
 #
 # List of Measuring periods as they should appear in graphs
-measuringPeriod <- c("July-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
+measuringPeriod <- c("Jul-19",	"Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
+measuringPeriod2 <- c("Jul",	"Aug",	"Sep",	"Oct",	"Nov",	"Dec",	"Jan",	"Feb",	"Mar",	"Apr",	"Apr",	"May",	"Jun",	"Jul",	"Aug")
 measuringPeriod_miner <- c("Aug-19",	"Sep-19",	"Oct-19",	"Nov-19",	"Dec-19",	"Jan-20",	"Feb-20",	"Mar-20",	"Apr-20",	"Apr-20",	"May-20",	"Jun-20",	"Jul-20",	"Aug-20")
+measuringPeriod_miner2 <- c("Aug",	"Sep",	"Oct",	"Nov",	"Dec",	"Jan",	"Feb",	"Mar",	"Apr",	"Apr",	"May",	"Jun",	"Jul",	"Aug")
 #
 # Days between periods. Will need adjusting as not always 21 days from labeling to harvest and at some point Abisko and Vassijaure shifted which was done first = a few days difference!
 # Days between labeling and harvest
@@ -81,7 +83,9 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
                  .fun = function(xx, col) {
                    c(N    = length2(xx[[col]], na.rm=na.rm),
                      mean = mean   (xx[[col]], na.rm=na.rm),
-                     sd   = sd     (xx[[col]], na.rm=na.rm)
+                     sd   = sd     (xx[[col]], na.rm=na.rm),
+                     max  = max    (xx[[col]], na.rm=na.rm),
+                     min  = min    (xx[[col]], na.rm=na.rm)
                    )
                  },
                  measurevar
@@ -918,7 +922,7 @@ MinVeg_isoR %>%
   geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
+  scale_x_discrete(labels = measuringPeriod_miner2) +
   coord_cartesian(ylim = c(0,100)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
@@ -1130,6 +1134,20 @@ Contr_organ <- cbind(SvsR,CRvsFR)
 # Check contrasts are orthogonal
 crossprod(Contr_organ)
 #
+# Contrasts for graphs
+# Define the winter period as snow covered period
+seasonContr <- data.frame(Part = c("Summer", "Autumn", "Winter", "Spring"), pstart = c("01_Jul_19", "03_Sep_19", "05_Nov_19", "_20"), pend = c())
+
+
+winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
+winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
+winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
+
+data.frame(x = c(as.Date("2019-11-10"),as.Date("2019-11-12")), y = c(0,0,0,0)) %>%
+  ggplot(aes(x, y)) + geom_line(color = "red", linewidth = 1)
+
+#
+s
 #
 #
 #=======  ###   Statistics   ### =======
@@ -2537,7 +2555,7 @@ OrganRec_plot <- vegroot15N_Organ_sum %>%
   coord_cartesian(ylim = c(-125,75)) +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = OrganRecovery, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod2) +
   scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
@@ -2736,10 +2754,10 @@ Rec_prop_plot <- Rec15N_sum2 %>%
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   #geom_hline(yintercept = c(10,20), color = "red") +
   geom_line(linewidth = 1) +
-  geom_ribbon(alpha = 0.5) +
+  geom_ribbon(alpha = 0.7) +
   scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
   labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
@@ -2759,8 +2777,8 @@ Rec_Abs_plot <- Rec15N_abs_sum %>%
   ggplot() +
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = Recovery, ymin=sysRec+ci, ymax=sysRec), position=position_dodge(.9)) +
-  geom_col(aes(Round, Recovery, fill = factor(Type)), position = "stack", color = "black") +
-  scale_x_discrete(labels = measuringPeriod) +
+  geom_col(aes(Round, Recovery, fill = factor(Type)), position = "stack", color = "black", alpha = 0.8) +
+  scale_x_discrete(labels = measuringPeriod2) +
   scale_fill_viridis_d() +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") +
   coord_cartesian(ylim = c(0,150)) +

@@ -655,6 +655,45 @@ min_isoR_2 %>%
 #
 #
 # <><><><><> END SUPPL. FIG 6 <><><><><>
+
+
+
+
+
+
+
+
+#
+#
+#
+# • Testing on plant uptake ----
+#
+MinVeg <- vegroot15N %>%
+  mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g), # g 15N in excess
+         Rec15N_pr_DW = (Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100) # Unit not defined, but simply 15N pr DW (in practice that would be g 15N pr g DW)
+
+MinVeg2 <- MinVeg %>%
+  summarise(across(c(Biomass_DW_g, Recovery, Rec15N, Rec15N_pr_DW), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
+  rename("PlantRec15N" = Recovery) # Not that useful !!
+
+
+MinVeg_isoR <- mineral_isoR %>%
+  select(1:4, isoR14_high_avg, isoR14_low_avg, isoF14_high_avg, isoF14_low_avg) %>%
+  left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
+  #
+  # Calculated by using the 15N excess in plants (Rec15N) to get either N or 14N that followed along the excess 15N
+  # Values are in g
+  mutate(PlantRecovery_N_high = Rec15N*isoF14_high_avg,
+         PlantRecovery_N_low = Rec15N*isoF14_low_avg,
+         PlantRecovery_14N_high = Rec15N*isoR14_high_avg,
+         PlantRecovery_14N_low = Rec15N*isoR14_low_avg) %>%
+  # 
+  # All values are now in µg pr g DW
+  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
+         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
+         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
+         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
+         PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6)
 #
 #
 #
@@ -700,45 +739,6 @@ MinVeg_isoR %>%
 #
 #
 #
-
-
-
-
-
-
-
-#
-#
-#
-# • Testing on plant uptake ----
-#
-MinVeg <- vegroot15N %>%
-  mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g), # g 15N in excess
-         Rec15N_pr_DW = (Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100) # Unit not defined, but simply 15N pr DW (in practice that would be g 15N pr g DW)
-
-MinVeg2 <- MinVeg %>%
-  summarise(across(c(Biomass_DW_g, Recovery, Rec15N, Rec15N_pr_DW), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
-  rename("PlantRec15N" = Recovery) # Not that useful !!
-
-
-MinVeg_isoR <- mineral_isoR %>%
-  select(1:4, isoR14_high_avg, isoR14_low_avg, isoF14_high_avg, isoF14_low_avg) %>%
-  left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
-  #
-  # Calculated by using the 15N excess in plants (Rec15N) to get either N or 14N that followed along the excess 15N
-  # Values are in g
-  mutate(PlantRecovery_N_high = Rec15N*isoF14_high_avg,
-         PlantRecovery_N_low = Rec15N*isoF14_low_avg,
-         PlantRecovery_14N_high = Rec15N*isoR14_high_avg,
-         PlantRecovery_14N_low = Rec15N*isoR14_low_avg) %>%
-  # 
-  # All values are now in µg pr g DW
-  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
-         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
-         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
-         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
-         PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6)
-
 
 #
 #

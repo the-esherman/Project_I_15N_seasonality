@@ -167,8 +167,13 @@ vegroot <- vegroot %>%
 # Combine labelled with natural abundance
 vegroot15N_control_sum <- vegroot15N_control %>%
   group_by(Site, Organ) %>%
-  summarise(NatAb_d15N = mean(d15N, na.rm = TRUE), .groups = "keep") %>%
+  summarise(NatAb_d15N = mean(d15N, na.rm = TRUE), 
+            NatAb_atom = mean(Atom_pc, na.rm = TRUE), # Average with atom% instead of d15N ?
+            .groups = "keep") %>%
   mutate(NatAb_atom_pc = 100/(1+272/(1+NatAb_d15N/1000)))
+
+x <- vegroot15N_control_sum %>%
+  mutate(diff = NatAb_atom - NatAb_atom_pc) # it makes no noticeable difference if atom% is calculated from an average d15N or from an average atom%
 
 vegroot2 <- vegroot %>%
   left_join(vegroot15N_control_sum, by = join_by(Site, Organ)) %>%

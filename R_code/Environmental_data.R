@@ -1,3 +1,6 @@
+# WinterEcology I experiment
+# Script author: Emil A.S. Andersen
+#
 # Load weather data
 # From own data
 #

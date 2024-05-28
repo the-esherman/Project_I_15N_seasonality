@@ -1,3 +1,5 @@
+# WinterEcology I experiment
+# Script author: Emil A.S. Andersen
 #
 #
 # Load Libraries

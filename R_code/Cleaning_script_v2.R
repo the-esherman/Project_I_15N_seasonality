@@ -1,10 +1,12 @@
-# Cleaning script - Project I WinterEcology
+# WinterEcology I experiment
+# Script author: Emil A.S. Andersen
+#
+# Cleaning script
 # Version 2.0
 #
 # using all base information
 #
 # 15N vegetation, root, and soil data
-# By Emil A.S. Andersen
 # 
 #------- ### Libraries ### -------
 library(tidyverse)

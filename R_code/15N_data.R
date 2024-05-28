@@ -1,5 +1,7 @@
+# WinterEcology I experiment
+# Script author: Emil A.S. Andersen
+#
 # 15N vegetation and root data
-# By Emil A.S. Andersen
 # 
 #=======  ###   Libraries    ### =======
 #library(plyr)

@@ -130,6 +130,11 @@ plot_prop_Recovery <- function(dataF=NULL, plotvar, titleExp){
     theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 }
 #
+# Correlation function (Spearman)
+CorrFunc <- function(xx) {
+  return(data.frame(COR = cor(xx$Biomass, xx$OrganRecovery, method = "spearman")))
+}
+#
 #
 #
 #=======  ###   Main data    ### =======
@@ -1810,10 +1815,7 @@ vegroot15N_organBioCorr %>%
   #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
   facet_wrap( ~ Site)
 #
-CorrFunc <- function(xx) {
-  return(data.frame(COR = cor(xx$Biomass, xx$OrganRecovery, method = "spearman")))
-}
-ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
+plyr::ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
 # No correlation for most < 0.6
 #
 #

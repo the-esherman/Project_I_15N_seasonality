@@ -657,14 +657,6 @@ min_isoR_2 %>%
 #
 #
 # <><><><><> END SUPPL. FIG 6 <><><><><>
-
-
-
-
-
-
-
-
 #
 #
 #
@@ -696,52 +688,6 @@ MinVeg_isoR <- mineral_isoR %>%
          PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
          PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
          PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6)
-#
-#
-#
-# <><><><><> 14N UPTAKE - SUPPL. FIG ??  <><><><><>
-#
-#
-#
-MinVeg_isoR %>%
-  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
-  rename("Plant15N" = PlantRecovery_15N_pr_DW,
-         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
-  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
-  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
-  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Isotope"))) %>%
-  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
-  ungroup() %>%
-  left_join(MinVeg_isoR_high_sum, by = join_by(Site, Round)) %>%
-  select(1:4, PlantRecovery_N_high_pr_DW, ci) %>%
-  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
-  mutate(Isotope=factor(Isotope)) %>%
-  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
-  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
-                           Isotope == "Plant15N" ~ "15N")) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  coord_cartesian(ylim = c(0,100)) +
-  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
-  guides(fill = guide_legend(title = "Isotope")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> END SUPPL. FIG ?? <><><><><>
-#
-#
-#
-
 #
 #
 # Simple graph to check data
@@ -789,6 +735,48 @@ MinVeg_isoR %>%
 MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_DW", groupvars=c("Site", "Round"))
 MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low_pr_DW", groupvars=c("Site", "Round"))
 MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", groupvars=c("Site", "Round"))
+#
+#
+#
+# <><><><><> 14N UPTAKE - SUPPL. FIG ??  <><><><><>
+#
+#
+#
+MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_DW,
+         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
+  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
+  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Isotope"))) %>%
+  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(MinVeg_isoR_high_sum, by = join_by(Site, Round)) %>%
+  select(1:4, PlantRecovery_N_high_pr_DW, ci) %>%
+  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
+  mutate(Isotope=factor(Isotope)) %>%
+  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
+  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
+                           Isotope == "Plant15N" ~ "15N")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  coord_cartesian(ylim = c(0,100)) +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
+  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# <><><><><> END SUPPL. FIG ?? <><><><><>
 #
 #
 #

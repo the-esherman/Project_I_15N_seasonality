@@ -2187,8 +2187,8 @@ Biomass_plotLegend <- vegroot15N_prm2 %>%
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20)
 #
-# Get Legend 
-Biomass_legend <- get_legend(Biomass_plotLegend)
+# Get Legend
+Biomass_legend <- get_legend(Biomass_plotLegend) # Only works if legend position is "right"
 # Get Plot without legend
 Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
 #
@@ -2528,7 +2528,7 @@ vegroot15N_Organ_sum <- summarySE(vegroot15N_Organ, measurevar = "OrganRecovery"
 #
 #
 #
-# <><><><><> ORGAN RECOVERY - FIG 4 <><><><><>
+# <><><><><> ORGAN RECOVERY - FIG 3 <><><><><>
 #
 #
 #
@@ -2578,7 +2578,7 @@ OrganRec_plotLegend <- vegroot15N_Organ_sum %>%
 #
 #
 # Get Legend 
-OrganRec_legend <- get_legend(OrganRec_plotLegend)
+OrganRec_legend <- get_legend(OrganRec_plotLegend) # Only works if legend position is "right"
 # Get Plot without legend
 OrganRec_plot.2 <- OrganRec_plot + theme(legend.position = "none")
 #
@@ -2589,7 +2589,7 @@ grid.arrange(OrganRec_plot.2, OrganRec_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
 #
-# <><><><><> END FIG 4 <><><><><>
+# <><><><><> END FIG 3 <><><><><>
 #
 #
 #
@@ -2757,7 +2757,8 @@ Rec_prop_plot <- Rec15N_sum2 %>%
   theme_classic(base_size = 20) +
   theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
-Rec_prop_legend <- get_legend(Rec_prop_plot)
+#Rec_prop_legend <- get_legend(Rec_prop_plot) # Currently (as of 2024.10.24) not working when position is not "right"
+Rec_prop_legend <- get_plot_component(Rec_prop_plot, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 Rec_prop_plot2 <- Rec_prop_plot + theme(legend.position = "none")
 #
 #
@@ -2779,7 +2780,8 @@ Rec_Abs_plot <- Rec15N_abs_sum %>%
   theme_classic(base_size = 20) +
   theme(legend.position = "top", panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
-Rec_Abs_legend <- get_legend(Rec_Abs_plot)
+#Rec_Abs_legend <- get_legend(Rec_Abs_plot) # Currently (as of 2024.10.24) not working when position is not "right"
+Rec_Abs_legend <- get_plot_component(Rec_Abs_plot, "guide-box", return_all = TRUE)[[4]] # 1 is right, 2 is left, 3 is bottom, 4 is top
 Rec_Abs_plot2 <- Rec_Abs_plot + theme(legend.position = "none")
 #
 #

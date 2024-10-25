@@ -1145,7 +1145,6 @@ data.frame(x = c(as.Date("2019-11-10"),as.Date("2019-11-12")), y = c(0,0,0,0)) %
 s
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##     Q Zero     ## -------
 #
 Q0_ecosys_stat <- Rec15N %>%
@@ -1336,7 +1335,6 @@ Q0_season_V %>%
 #
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##       Q1       ## -------
 #
 # Model
@@ -1524,7 +1522,6 @@ Q1_season_V %>%
 #
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##       Q1a      ##  -------
 #
 # Model
@@ -1820,7 +1817,6 @@ plyr::ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
 #
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##       Q2       ##  -------
 #
 # Model
@@ -1865,7 +1861,6 @@ Anova(lme2, type=2)
 #
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##       TDN      ##  -------
 #
 Q_TDN <- soil15N %>%
@@ -2002,7 +1997,6 @@ Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_c
 #
 #
 #
-#=======  ###   Statistics   ### =======
 #-------   ##  Competition   ##  -------
 #
 # Model

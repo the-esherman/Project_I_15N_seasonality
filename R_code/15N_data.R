@@ -889,7 +889,7 @@ MinVeg_N_sum %>%
 #
 #
 #
-# <><><><><> 14N UPTAKE - FIG 6  <><><><><>
+# <><><><><> 14N UPTAKE - FIG 4  <><><><><>
 #
 #
 #
@@ -927,7 +927,7 @@ MinVeg_isoR %>%
 #
 #
 #
-# <><><><><> END FIG 6 <><><><><>
+# <><><><><> END FIG 4 <><><><><>
 #
 #
 #
@@ -2844,6 +2844,59 @@ Rec15N_3 %>%
   facet_wrap( ~ Site) +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+#-------   ## Inorganic N    ## -------
+#
+# For Inorganic N:
+# NH4 and NO3
+InorgN_plot <- soil15N %>%
+  left_join(Rec15N, by =  join_by(Site, Plot, MP)) %>%
+  relocate(Round, .after = MP) %>%
+  filter(Extr_type == "SE") %>%
+  select(1:4, Nconc_microg_pr_gDW, NH4_microg_pr_gDW, NO3_microg_pr_gDW, R_TDN, R_TDN_frac) %>%
+  rename("NH4" = NH4_microg_pr_gDW,
+         "NO3" = NO3_microg_pr_gDW) %>%
+  # Inorganic N concentration is equal to the sum of NH4 and NO3: [N]_in = [NH4] + [NO3] µg pr g DW
+  mutate(InorgN = NH4 + NO3)
+#
+InorgN_avg <- summarySE(InorgN_plot, measurevar="InorgN", groupvars=c("Site", "Round"))
+NH4_avg <- summarySE(InorgN_plot, measurevar="NH4", groupvars=c("Site", "Round"))
+NO3_avg <- summarySE(InorgN_plot, measurevar="NO3", groupvars=c("Site", "Round"))
+#
+#
+#
+# <><><><><> INORGANIC N - SUPPL. FIG C <><><><><>
+#
+#
+#
+InorgN_plot %>%
+  select(1:4, NH4, NO3) %>%
+  pivot_longer(5:6, names_to = "Type", values_to = "InorgN") %>%
+  group_by(across(c("Site", "Plot", "Round", "Type"))) %>%
+  summarise(TotalInorgN = sum(InorgN, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Type"))) %>%
+  summarise(avgInorgN = mean(TotalInorgN, na.rm = TRUE), se = sd(TotalInorgN)/sqrt(length(TotalInorgN)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(InorgN_avg, by = join_by(Site, Round)) %>%
+  select(1:4, InorgN, ci) %>%
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgInorgN, fill = factor(Type)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = InorgN, ymin=InorgN+ci, ymax=InorgN), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod2) +
+  coord_cartesian(ylim = c(0,50)) +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
+  labs(x = "Time of harvest", y = expression("µg N g"*{}^-1*" DW"), title = expression("Soil inorganic N")) + 
+  guides(fill = guide_legend(title = "")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))#, legend.position = "bottom")
+#
+#
+#
+# <><><><><> END SUPPL. FIG C <><><><><>
 #
 #
 #

@@ -2059,6 +2059,52 @@ Anova(lmeCompet, type=2)
 #
 #
 #
+#-------   ## Total N plants ##  -------
+#
+# Model
+# Response variable: Plant total N uptake (15N+14N) (µg N pr g DW)
+# Factors: Time, Site, Time*Site
+# Most important factor: Time
+#
+# Load data from excel instead of calculated combined
+TotN_plant_stat <- MinVeg_isoR %>%
+  select("Site", "Plot", "MP", "Round", "PlantRecovery_N_high_pr_DW") %>%
+  mutate(across(c("Plot", "MP"), as.character))%>%
+  mutate(across(c("Site", "MP", "Round"), as.factor))
+#
+# Transform data
+TotN_plant_stat <- TotN_plant_stat %>%
+  mutate(Recov = PlantRecovery_N_high_pr_DW) %>% # not really recovery as it also includes 14N
+  mutate(logRecov = log(Recov+1), # Good for low percentage values. Use here as values are in the low end
+         arcRecov = asin(sqrt(Recov/100))) # Use is for this most transformations in percent.
+#
+# Histogram
+hist(TotN_plant_stat$Recov)
+hist(TotN_plant_stat$logRecov)
+#
+#model:
+lme3<-lme(logRecov ~ Site*Round,
+          random = ~1|Plot/Site,
+          data = TotN_plant_stat, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme3), resid(lme3), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme3), main = "Normally distributed?")                 
+qqline(resid(lme3), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme3)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme3, type=2)
+# Log transformation
+# Significant for 
+# Round (χ^2 = 79.6132, p = 1.304e-11)
+# Site*Round (χ^2 = 23.3861, p = 0.03727)
+#
+#
+#
 #=======  ###    Plotting    ### =======
 #-------   ## Plant Biomass  ## -------
 #

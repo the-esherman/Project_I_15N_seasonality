@@ -2,8 +2,11 @@
 # Script author: Emil A.S. Andersen
 #
 # 15N vegetation and root data
-# 
+#
 #=======  ###   Libraries    ### =======
+# To get months in the right format (i.e. not in whatever local the computer has, e.g. Swedish)
+Sys.setlocale("LC_ALL", 'en_GB.UTF-8')
+#
 #library(plyr)
 library(tidyverse)
 library(car)
@@ -630,7 +633,7 @@ mineral_isoR %>%
 #
 # N pr 15N +/- 95% CI
 # High estimate
-min_isoF_2 %>%
+EstN_plot1 <- min_isoF_2 %>%
   rename("Ratio" = isoF14_high_avg) %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
@@ -639,14 +642,14 @@ min_isoF_2 %>%
   coord_cartesian(ylim = c(0,6)) +
   scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period (MP)", y = expression("N:"*{}^15*"N"), title = expression("Estimated total N ("*{}^15*"N + "*{}^14*"N) pr labelled"*{}^15*"N")) + 
+  labs(x = "Time of harvest", y = expression("N ("*{}^14*"N +"*{}^15*"N) :"*{}^15*"N"), title = expression("Estimated total N pr labelled"*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 # 14N per 15N +/- 95% CI
 # High estimate
-min_isoR_2 %>%
+EstN_plot2 <- min_isoR_2 %>%
   rename("Ratio" = isoR14_high_avg) %>%
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
@@ -655,10 +658,12 @@ min_isoR_2 %>%
   coord_cartesian(ylim = c(0,6)) +
   scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Measuring period (MP)", y = expression(""*{}^14*"N:"*{}^15*"N"), title = expression("Estimated "*{}^14*"N per labelled "*{}^15*"N")) + 
+  labs(x = "Time of harvest", y = expression(""*{}^14*"N:"*{}^15*"N"), title = expression("Estimated "*{}^14*"N per labelled "*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+EstN_plot1_noXaxis <- EstN_plot1 + labs(x = element_blank())
+grid.arrange(EstN_plot1_noXaxis, EstN_plot2, ncol = 1)
 #
 #
 # <><><><><> END SUPPL. FIG 6 <><><><><>
@@ -843,7 +848,7 @@ MinVeg_15N_sum %>%
   #coord_cartesian(ylim=c(0,50)) +
   scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("µg"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
+  labs(x = "Time of harvest", y = expression("µg"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -920,7 +925,7 @@ MinVeg_isoR %>%
   scale_x_discrete(labels = measuringPeriod_miner2) +
   coord_cartesian(ylim = c(0,100)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  labs(x = "Time of harvest", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2198,7 +2203,7 @@ Biomass_plot <- vegroot15N_prm2 %>%
   scale_y_continuous(breaks = c(-2000, -1500, -1000, -500, 0, 500), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2) +#, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Biomass (g "*m^2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Time of harvest", y = expression("Biomass (g "*m^2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2489,7 +2494,7 @@ vegroot15N_total_Plant_sum %>%
   coord_cartesian(ylim=c(0,30)) +
   scale_x_discrete(labels = measuringPeriod) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2519,7 +2524,7 @@ Mic15N_sum %>%
   scale_x_discrete(labels = measuringPeriod) +
   coord_cartesian(ylim = c(0,150)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2543,7 +2548,7 @@ TDN15N_sum %>%
   scale_x_discrete(labels = measuringPeriod) +
   coord_cartesian(ylim = c(0,1.5)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("TDN "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("TDN "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2591,7 +2596,7 @@ OrganRec_plot <- vegroot15N_Organ_sum %>%
   scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2791,7 +2796,7 @@ Rec_prop_plot <- Rec15N_sum2 %>%
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
-  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
+  labs(x = "Time of year", y = expression("% of total system recovered "*{}^15*"N")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
   guides(linetype = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery "))) +
   theme_classic(base_size = 20) +
@@ -2815,7 +2820,7 @@ Rec_Abs_plot <- Rec15N_abs_sum %>%
   scale_fill_viridis_d() +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") +
   coord_cartesian(ylim = c(0,150)) +
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
   guides(fill = guide_legend(title = expression(bold("(A)")~"Ecosystem absolute recovery "))) +
   theme_classic(base_size = 20) +
   theme(legend.position = "top", panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))
@@ -2907,7 +2912,7 @@ NO3_avg <- summarySE(InorgN_plot, measurevar="NO3", groupvars=c("Site", "Round")
 #
 #
 #
-# <><><><><> INORGANIC N - SUPPL. FIG C <><><><><>
+# <><><><><> INORGANIC N - SUPPL. FIG 8 <><><><><>
 #
 #
 #
@@ -2936,7 +2941,7 @@ InorgN_plot %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG C <><><><><>
+# <><><><><> END SUPPL. FIG 8 <><><><><>
 #
 #
 #

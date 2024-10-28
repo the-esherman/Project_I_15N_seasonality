@@ -400,7 +400,7 @@ N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvar
 #
 #
 #
-# <><><><><> FERTILIZER - SUPPL. FIG 4 <><><><><>
+# <><><><><> FERTILIZER - SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -420,7 +420,7 @@ N_fertilizer_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 4 <><><><><>
+# <><><><><> END SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -833,7 +833,7 @@ MinVeg_isoR_low_sum %>%
 #
 #
 #
-# <><><><><> PLANT 15N UPTAKE - SUPPL. FIG 7 <><><><><>
+# <><><><><> PLANT 15N UPTAKE - former SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -854,7 +854,7 @@ MinVeg_15N_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 7 <><><><><>
+# <><><><><> END former SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -2174,7 +2174,7 @@ vegroot15N_prm2 <- vegroot15N %>%
 #
 #
 #
-# <><><><><> BIOMASS - SUPPL. FIG 5 <><><><><>
+# <><><><><> BIOMASS - SUPPL. FIG 3 <><><><><>
 #
 #
 #
@@ -2244,7 +2244,7 @@ grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
 #
-# <><><><><> END SUPPL. FIG 5 <><><><><>
+# <><><><><> END SUPPL. FIG 3 <><><><><>
 #
 #
 #
@@ -2534,7 +2534,7 @@ Mic15N_sum %>%
 #
 #
 #
-# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 3 <><><><><>
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 4 <><><><><>
 #
 #
 #
@@ -2554,7 +2554,7 @@ TDN15N_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 3 <><><><><>
+# <><><><><> END SUPPL. FIG 4 <><><><><>
 #
 #
 #
@@ -2912,7 +2912,7 @@ NO3_avg <- summarySE(InorgN_plot, measurevar="NO3", groupvars=c("Site", "Round")
 #
 #
 #
-# <><><><><> INORGANIC N - SUPPL. FIG 8 <><><><><>
+# <><><><><> INORGANIC N - SUPPL. FIG 5 <><><><><>
 #
 #
 #
@@ -2941,7 +2941,7 @@ InorgN_plot %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 8 <><><><><>
+# <><><><><> END SUPPL. FIG 5 <><><><><>
 #
 #
 #

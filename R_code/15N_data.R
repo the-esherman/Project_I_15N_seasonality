@@ -2202,11 +2202,11 @@ Biomass_plot <- vegroot15N_prm2 %>%
   scale_fill_viridis_d() +
   #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Biomass") +
   geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod2) +
   scale_y_continuous(breaks = c(-2000, -1500, -1000, -500, 0, 500), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2) +#, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("Biomass (g "*m^2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Time of harvest", y = expression("Biomass (g "*m^-2*")"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2495,9 +2495,9 @@ vegroot15N_total_Plant_sum %>%
   #geom_point(aes(Round, PlantRecovery)) +
   geom_col(aes(Round, PlantRecovery),color = "black") +
   coord_cartesian(ylim=c(0,30)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod2) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("Plant recovery (% of added "*{}^15*"N)"), title = expression("Plant "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2524,10 +2524,10 @@ Mic15N_sum %>%
   geom_errorbar(aes(x = Round, y = R_MBN, ymin=R_MBN, ymax=R_MBN+ci), position=position_dodge(.9)) +
   geom_col(aes(Round, R_MBN),color = "black") +
   #coord_cartesian(ylim=c(0,30)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod2) +
   coord_cartesian(ylim = c(0,150)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("Microbial recovery (% of added "*{}^15*"N)"), title = expression("Microbial "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2548,10 +2548,10 @@ TDN15N_sum %>%
   geom_errorbar(aes(x = Round, y = R_TDN, ymin=R_TDN, ymax=R_TDN+ci), position=position_dodge(.9)) +
   geom_col(aes(Round, R_TDN),color = "black") +
   #coord_cartesian(ylim=c(0,30)) +
-  scale_x_discrete(labels = measuringPeriod) +
+  scale_x_discrete(labels = measuringPeriod2) +
   coord_cartesian(ylim = c(0,1.5)) +
   facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("TDN "*{}^15*"N tracer recovery")) + 
+  labs(x = "Time of harvest", y = expression("TDN recovery (% of added "*{}^15*"N)"), title = expression("TDN "*{}^15*"N tracer recovery")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2937,7 +2937,7 @@ InorgN_plot %>%
   scale_x_discrete(labels = measuringPeriod2) +
   coord_cartesian(ylim = c(0,50)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("µg N g"*{}^-1*" DW"), title = expression("Soil inorganic N")) + 
+  labs(x = "Time of harvest", y = expression("Inorganic N (µg N g"*{}^-1*" DW)"), title = expression("Soil inorganic N")) + 
   guides(fill = guide_legend(title = "")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))#, legend.position = "bottom")

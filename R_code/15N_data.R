@@ -630,7 +630,7 @@ mineral_isoR %>%
 #
 #
 #
-# <><><><><> TOTAL N UPTAKE - SUPPL. FIG 6 <><><><><>
+# <><><><><> TOTAL N UPTAKE - SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -645,7 +645,7 @@ EstN_plot1 <- min_isoF_2 %>%
   coord_cartesian(ylim = c(0,6)) +
   scale_x_discrete(labels = measuringPeriod_miner) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Time of harvest", y = expression("N ("*{}^14*"N +"*{}^15*"N) :"*{}^15*"N"), title = expression("Estimated total N pr labelled"*{}^15*"N")) + 
+  labs(x = "Time of harvest", y = expression("N ("*{}^14*"N +"*{}^15*"N) :"*{}^15*"N"), title = expression("Estimated total N per labelled"*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -669,7 +669,7 @@ EstN_plot1_noXaxis <- EstN_plot1 + labs(x = element_blank())
 grid.arrange(EstN_plot1_noXaxis, EstN_plot2, ncol = 1)
 #
 #
-# <><><><><> END SUPPL. FIG 6 <><><><><>
+# <><><><><> END SUPPL. FIG 7 <><><><><>
 #
 #
 #
@@ -836,7 +836,7 @@ MinVeg_isoR_low_sum %>%
 #
 #
 #
-# <><><><><> PLANT 15N UPTAKE - former SUPPL. FIG 7 <><><><><>
+# <><><><><> PLANT 15N UPTAKE - former SUPPL. FIG <><><><><>
 #
 #
 #
@@ -857,7 +857,7 @@ MinVeg_15N_sum %>%
 #
 #
 #
-# <><><><><> END former SUPPL. FIG 7 <><><><><>
+# <><><><><> END former SUPPL. FIG <><><><><>
 #
 #
 #
@@ -2177,7 +2177,7 @@ vegroot15N_prm2 <- vegroot15N %>%
 #
 #
 #
-# <><><><><> BIOMASS - SUPPL. FIG 3 <><><><><>
+# <><><><><> BIOMASS - SUPPL. FIG 4 <><><><><>
 #
 #
 #
@@ -2247,7 +2247,7 @@ grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
 #
-# <><><><><> END SUPPL. FIG 3 <><><><><>
+# <><><><><> END SUPPL. FIG 4 <><><><><>
 #
 #
 #
@@ -2426,7 +2426,7 @@ sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"
 #
 #
 #
-# <><><><><> ABSOLUTE TOTAL RECOVERY - former FIG 2 <><><><><>
+# <><><><><> ABSOLUTE TOTAL RECOVERY - former FIG <><><><><>
 #
 #
 #
@@ -2446,7 +2446,7 @@ sysRec_sum %>%
 #
 #
 #
-# <><><><><> END former FIG 2 <><><><><>
+# <><><><><> END former FIG <><><><><>
 #
 #
 #
@@ -2483,7 +2483,7 @@ Rec15N %>%
 #
 #
 #
-# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 1 <><><><><>
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 2 <><><><><>
 #
 #
 #
@@ -2503,7 +2503,7 @@ vegroot15N_total_Plant_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 1 <><><><><>
+# <><><><><> END SUPPL. FIG 2 <><><><><>
 #
 #
 #
@@ -2513,7 +2513,7 @@ vegroot15N_total_Plant %>%
 #
 #
 #
-# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 2 <><><><><>
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 3 <><><><><>
 #
 #
 #
@@ -2533,11 +2533,11 @@ Mic15N_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 2 <><><><><>
+# <><><><><> END SUPPL. FIG 3 <><><><><>
 #
 #
 #
-# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 4 <><><><><>
+# <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 5 <><><><><>
 #
 #
 #
@@ -2557,7 +2557,7 @@ TDN15N_sum %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 4 <><><><><>
+# <><><><><> END SUPPL. FIG 5 <><><><><>
 #
 #
 #
@@ -2915,7 +2915,7 @@ NO3_avg <- summarySE(InorgN_plot, measurevar="NO3", groupvars=c("Site", "Round")
 #
 #
 #
-# <><><><><> INORGANIC N - SUPPL. FIG 5 <><><><><>
+# <><><><><> INORGANIC N - SUPPL. FIG 6 <><><><><>
 #
 #
 #
@@ -2944,7 +2944,7 @@ InorgN_plot %>%
 #
 #
 #
-# <><><><><> END SUPPL. FIG 5 <><><><><>
+# <><><><><> END SUPPL. FIG 6 <><><><><>
 #
 #
 #

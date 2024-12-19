@@ -928,7 +928,7 @@ MinVeg_isoR %>%
   scale_x_discrete(labels = measuringPeriod_miner2) +
   coord_cartesian(ylim = c(0,100)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  labs(x = "Time of harvest", y = expression("Plant N uptake (µg N g"*{}^-1*" DW)"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2231,7 +2231,8 @@ Biomass_plotLegend <- vegroot15N_prm2 %>%
   # Plot 
   ggplot() +
   geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("Shoots","Coarse roots","Fine roots"))), position = "stack", color = "black") +
-  scale_fill_viridis_d() +
+  scale_fill_manual(values = c("#440154","#fde725", "#21918c")) + # Don't have to swap around the colors in image editor. Check that they match!
+  #scale_fill_viridis_d() +
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20)
 #
@@ -2240,7 +2241,7 @@ Biomass_legend <- get_legend(Biomass_plotLegend) # Only works if legend position
 # Get Plot without legend
 Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
 #
-# Combine. OBS! Still have to swap colors manually
+# Combine. OBS! Check that colors match!
 grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 # The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph
@@ -2599,7 +2600,7 @@ OrganRec_plot <- vegroot15N_Organ_sum %>%
   scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
   #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
+  labs(x = "Time of harvest", y = expression("Organ recovery (% of total plant recovered "*{}^15*"N)"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
@@ -2620,7 +2621,8 @@ OrganRec_plotLegend <- vegroot15N_Organ_sum %>%
   # Plot 
   ggplot() +
   geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("Shoots","Coarse roots","Fine roots"))), position = "stack", color = "black") +
-  scale_fill_viridis_d() +
+  scale_fill_manual(values = c("#440154","#fde725", "#21918c")) + # Don't have to swap around the colors in image editor. Check that they match!
+  #scale_fill_viridis_d() +
   guides(fill = guide_legend(title = "Plant organ")) +
   theme_classic(base_size = 20)
 #
@@ -2630,7 +2632,7 @@ OrganRec_legend <- get_legend(OrganRec_plotLegend) # Only works if legend positi
 # Get Plot without legend
 OrganRec_plot.2 <- OrganRec_plot + theme(legend.position = "none")
 #
-# Combine. OBS! Still have to swap colors manually
+# Combine. OBS! Check that colors match!
 grid.arrange(OrganRec_plot.2, OrganRec_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 # The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph

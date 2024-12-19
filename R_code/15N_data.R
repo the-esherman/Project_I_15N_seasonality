@@ -643,9 +643,9 @@ EstN_plot1 <- min_isoF_2 %>%
   geom_errorbar(aes(x = Round, y = Ratio, ymin=Ratio, ymax=Ratio+ci_high), position=position_dodge(.9)) +
   geom_col(aes(Round, Ratio),color = "black") +
   coord_cartesian(ylim = c(0,6)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
+  scale_x_discrete(labels = measuringPeriod_miner2) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Time of harvest", y = expression("N ("*{}^14*"N +"*{}^15*"N) :"*{}^15*"N"), title = expression("Estimated total N per labelled"*{}^15*"N")) + 
+  labs(x = "Time of harvest", y = expression("Fractional abundance ("*F^-1*"): N ("*{}^14*"N +"*{}^15*"N) :"*{}^15*"N"), title = expression("Estimated total N per labelled"*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -659,9 +659,9 @@ EstN_plot2 <- min_isoR_2 %>%
   geom_errorbar(aes(x = Round, y = Ratio, ymin=Ratio, ymax=Ratio+ci_high), position=position_dodge(.9)) +
   geom_col(aes(Round, Ratio),color = "black") +
   coord_cartesian(ylim = c(0,6)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
+  scale_x_discrete(labels = measuringPeriod_miner2) +
   facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = "Time of harvest", y = expression(""*{}^14*"N:"*{}^15*"N"), title = expression("Estimated "*{}^14*"N per labelled "*{}^15*"N")) + 
+  labs(x = "Time of harvest", y = expression("Isotopic ratio ("*R^-1*"): "*{}^14*"N:"*{}^15*"N"), title = expression("Estimated "*{}^14*"N per labelled "*{}^15*"N")) + 
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #

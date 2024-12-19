@@ -252,16 +252,16 @@ test2 %>% ggplot() +
   theme(legend.position = "top")
 
 
-test3 <- avgT_wide2 %>%
-  dplyr::filter(Date >= winterP_date$wstart[1]) %>%
-  dplyr::filter(Date <= winterP_date$wend[2])
+# test3 <- avgT_wide2 %>%
+#   dplyr::filter(Date >= winterP_date$wstart[1]) %>%
+#   dplyr::filter(Date <= winterP_date$wend[2])
 
-avgT_wide2 %>%
-  ggplot(aes(x = Abisko_Tair, y = Abisko_Tsoil)) +
-  geom_point()
-test3 %>%
-  ggplot(aes(x = Vassijaure_Tair, y = Vassijaure_Tsoil)) +
-  geom_point()
+# avgT_wide2 %>%
+#   ggplot(aes(x = Abisko_Tair, y = Abisko_Tsoil)) +
+#   geom_point()
+# test3 %>%
+#   ggplot(aes(x = Vassijaure_Tair, y = Vassijaure_Tsoil)) +
+#   geom_point()
 
 #
 #
@@ -771,7 +771,8 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   theme_bw(base_size = 25) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
 #
-airT_legend <- get_legend(airT_plot)
+airT_legend <- get_plot_component(airT_plot, "guide-box", return_all = TRUE)[[4]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+airT_legend
 airT_plot.2 <- airT_plot + theme_bw(base_size = 25) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 18))#, axis.title.y = element_text(size = 25)) 
 #airT_plot <- airT_plot + guides(lty = NULL)
 #
@@ -810,7 +811,7 @@ snowDepth_plot <- snowData_2 %>%
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 #
-snowData_legend <- get_legend(snowDepth_plot)
+snowData_legend <- get_plot_component(snowDepth_plot, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_text(size = 25)) 
 #
 # Plot
@@ -848,16 +849,18 @@ snowDepth_plot_2 <- avgVWC_wide3 %>%
   # VWC from sensors
   geom_line(aes(x = Date, y = Abisko_VWC, lty = "Abisko"), na.rm = TRUE, linewidth = 1) +
   geom_line(aes(x = Date, y = Vassijaure_VWC, lty = "Vassijaure"), na.rm = TRUE, linewidth = 1) +
+  #
   scale_y_continuous(sec.axis = sec_axis(~.*1, name = "Soil Moisture (% vol)"))+#, minor_breaks = c(-15, -5, 5, 15)) +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
-  scale_shape(na.translate = F) +
+  #scale_shape(na.translate = F) +
+  scale_shape_manual(values = c(19, 1), na.translate = F) +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") +
-  guides(fill = guide_legend(title = "Snow"), shape = guide_legend(title = "Soil GWC"), linetype = "none") +
+  guides(fill = guide_legend(title = "Snow", order = 1), shape = guide_legend(title = "Soil GWC", order = 2), linetype = "none") +
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 #
-snowData_legend_2 <- get_legend(snowDepth_plot_2)
+snowData_legend_2 <- get_plot_component(snowDepth_plot_2, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 snowData_yaxis_2 <- get_y_axis(snowDepth_plot_2)
 snowDepth_plot_2.2 <- snowDepth_plot_2 + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_blank()) 
 #

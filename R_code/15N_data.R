@@ -2799,11 +2799,11 @@ Rec_prop_plot <- Rec15N_sum2 %>%
   geom_ribbon(alpha = 0.7) +
   scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
   scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%d-%b") +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b") +
   scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
-  labs(x = "Time of year", y = expression("% of total system recovered "*{}^15*"N")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
+  labs(x = "Time of year", y = expression("Relative recovery (% of total recovered "*{}^15*"N)")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
   facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
-  guides(linetype = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(B)")~"Ecosystem relative recovery "))) +
+  guides(linetype = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery "))) +
   theme_classic(base_size = 20) +
   theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
@@ -2825,8 +2825,8 @@ Rec_Abs_plot <- Rec15N_abs_sum %>%
   scale_fill_viridis_d() +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") +
   coord_cartesian(ylim = c(0,150)) +
-  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
-  guides(fill = guide_legend(title = expression(bold("(A)")~"Ecosystem absolute recovery "))) +
+  labs(x = "Time of harvest", y = expression("Recovery (% of added "*{}^15*"N)")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  guides(fill = guide_legend(title = expression(bold("(a)")~"Ecosystem absolute recovery "))) +
   theme_classic(base_size = 20) +
   theme(legend.position = "top", panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #

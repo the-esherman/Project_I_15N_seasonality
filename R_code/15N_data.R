@@ -64,6 +64,9 @@ K_EN = 0.4
 DayOf <- coreData %>%
   select(Site, Round, Day_of_harvest) %>%
   distinct(Day_of_harvest, .keep_all = TRUE)
+DayOfinj <- coreData %>%
+  select(Site, Round, Day_of_label) %>%
+  distinct(Day_of_label, .keep_all = TRUE)
 #
 #
 #=======  ###   Functions    ### =======
@@ -400,27 +403,27 @@ N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvar
 #
 #
 #
-# <><><><><> FERTILIZER - SUPPL. FIG 7 <><><><><>
+# <><><><><> FERTILIZER - SUPPL. FIG 8 <><><><><>
 #
 #
 #
 # Plot how much the injected N adds to the total N pool (incl. the label) at injection
 N_fertilizer_sum %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  ggplot(aes(x = Day_of_harvest, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
+  left_join(DayOfinj, by = join_by(Site, Round)) %>%
+  mutate(across(Day_of_label, ~ as.Date(.x))) %>%
+  ggplot(aes(x = Day_of_label, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
   geom_ribbon(alpha = 0.5) +
   geom_line(linewidth = 0.9) + 
   scale_x_date(date_breaks = "4 week", date_minor_breaks = "5 day") +
   scale_fill_grey() +
   #scale_fill_viridis_d() +
-  labs(x = "Time of harvest", y = expression("% = "*frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (µg N pr g DW)"), title = "Label [N] as % of total inorganic [N] at time of injection") +
+  labs(x = "Time of injection", y = expression(frac("[N]"*{}[label],"[N]"*{}[inorg] + "[N]"*{}[label])*symbol("\264")*100*" (%)"), title = "Label N contribution to total inorganic N pool at time of injection") +
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #
-# <><><><><> END SUPPL. FIG 7 <><><><><>
+# <><><><><> END SUPPL. FIG 8 <><><><><>
 #
 #
 #

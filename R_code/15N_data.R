@@ -2844,6 +2844,176 @@ grid.arrange(Rec_Abs_legend, Rec_Abs_plot2, Rec_prop_legend, Rec_prop_plot2, nco
 #
 #
 #
+# <><><><><> RECOVERY - Thesis graph <><><><><>
+#
+#
+#
+# Months
+measuringPeriod2_circle <- c("2019\nJul",	"Aug",	"Sep",	"Oct",	"Nov",	"Dec",	"2020\nJan",	"Feb",	"Mar",	"Apr",	"Apr",	"May",	"Jun",	"Jul",	"Aug")
+# Colors for the 8 seasons
+seasonFill <- c("#fcffa4", "#d44842", "#f57d15", "#280b53", "#000004", "#65156e", "#9f2a63", "#fac228")
+#
+# Absolute recovery:
+Rec15N_abs_sum %>%
+  mutate(Seasons8 = case_when(Round == "01_Jul_19" | Round == "14_Jul_20" ~ "Geassi",
+                              Round == "02_Aug_19" | Round == "15_Aug_20" ~ "Čakčageassi",
+                              Round == "03_Sep_19" | Round == "04_Oct_19" ~ "Čakča",
+                              Round == "05_Nov_19" | Round == "06_Dec_19" ~ "Čakčadálvi",
+                              Round == "07_Jan_20" | Round == "08_Feb_20" ~ "Dálvi",
+                              Round == "09_Mar_20" | Round == "10_Apr_20" | Round == "11_Apr_20" ~ "Giđđadálvi",
+                              Round == "12_May_20" ~ "Giđđa",
+                              Round == "13_Jun_20" ~ "Giđđageassi",
+                              TRUE ~ "YoYo_missing")) %>%
+  mutate(across(Seasons8, ~factor(.x, levels = c("Geassi", "Čakčageassi", "Čakča", "Čakčadálvi", "Dálvi", "Giđđadálvi", "Giđđa", "Giđđageassi")))) %>%
+  # group_by(Site) %>%
+  # group_modify(~ add_row(.x, .before = 0)) %>%
+  # ungroup() %>%
+  #
+  # Plot 
+  ggplot() +
+  # The seasons:
+  geom_col(aes(x = Round, y = 50, fill = Seasons8), alpha = 0.3) +
+  scale_fill_manual(values = seasonFill, na.value = NA) +
+  labs(fill = "Sámi Seasons") +
+  ggnewscale::new_scale_fill() +
+  #
+  geom_errorbar(aes(x = Round, y = Recovery, ymin=sysRec+ci, ymax=sysRec), position=position_dodge(.9)) +
+  geom_col(aes(Round, Recovery, fill = factor(Type)), position = "stack", color = "black", alpha = 0.8) +
+  scale_x_discrete(labels = measuringPeriod2_circle) +
+  #scale_y_continuous(limits = c(0,160)) +
+  scale_fill_viridis_d() +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") +
+  labs(x = element_blank(), y = expression("Recovery (% of added "*{}^15*"N)")) + #, title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
+  guides(fill = guide_legend(title = expression("Ecosystem absolute recovery "))) +
+  theme_minimal(base_size = 15) +
+  theme(
+    panel.grid.major.x = element_blank()
+  ) +
+  coord_radial(start = 0, end = 1.8*pi, inner.radius = 0.1)
+#
+# Relative recovery of Plant part
+Thesis_plant_relRecov_circ <- Rec15N_sum2 %>%
+  filter(Type == "Plant_frac") %>%
+  mutate(Seasons8 = case_when(Round == "01_Jul_19" | Round == "14_Jul_20" ~ "Geassi",
+                              Round == "02_Aug_19" | Round == "15_Aug_20" ~ "Čakčageassi",
+                              Round == "03_Sep_19" | Round == "04_Oct_19" ~ "Čakča",
+                              Round == "05_Nov_19" | Round == "06_Dec_19" ~ "Čakčadálvi",
+                              Round == "07_Jan_20" | Round == "08_Feb_20" ~ "Dálvi",
+                              Round == "09_Mar_20" | Round == "10_Apr_20" | Round == "11_Apr_20" ~ "Giđđadálvi",
+                              Round == "12_May_20" ~ "Giđđa",
+                              Round == "13_Jun_20" ~ "Giđđageassi",
+                              TRUE ~ "YoYo_missing")) %>%
+  mutate(across(Seasons8, ~factor(.x, levels = c("Geassi", "Čakčageassi", "Čakča", "Čakčadálvi", "Dálvi", "Giđđadálvi", "Giđđa", "Giđđageassi")))) %>%
+  #
+  # Plot 
+  ggplot() +
+  #The seasons:
+  geom_col(aes(x = Round, y = 100, fill = Seasons8), alpha = 0.5) +
+  scale_fill_manual(values = seasonFill, na.value = NA) +
+  labs(fill = "Sámi Seasons") +
+  ggnewscale::new_scale_fill() +
+  #
+  geom_errorbar(aes(x = Round, y = Recov_frac, ymin = Recov_frac, ymax = Recov_frac+ci), position=position_dodge(.9), linewidth = 0.3) + 
+  geom_col(aes(x = Round, y = Recov_frac), fill = "#21918c", color = "black") +
+  scale_x_discrete(labels = measuringPeriod2_circle) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100)) +
+  labs(x = element_blank(), y = expression("Plant relative recovery (% of total recovered "*{}^15*"N)"), title = expression("Plant relative "*{}^15*"N tracer recovery")) +
+  facet_wrap( ~ Site, ncol = 2)+
+  theme_minimal(base_size = 10) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    # panel.spacing.x = unit(0.8, "lines"),
+    # axis.text = element_text(size = 4),
+    # #legend.position = "bottom",
+    # legend.key.size = unit(3, "mm"), #change legend key size
+    # legend.key.height = unit(3, "mm"), #change legend key height
+    # legend.key.width = unit(3, "mm"), #change legend key width
+    # legend.title = element_text(size = 5),
+    # legend.text = element_text(size = 5)
+  ) +
+  coord_radial(start = 0, end = 1.7*pi, inner.radius = 0.1)
+#
+# Save
+ggsave("Thesis_Plant_rel_recovery_circle4.2.1200.png", plot = Thesis_plant_relRecov_circ, path = "images", width = 20, height = 10, units = "cm", dpi = 1200, bg = "white")
+
+
+
+
+#
+# Circle of the date ones
+Rec15N_sum2 %>%
+  ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  #geom_hline(yintercept = c(10,20), color = "red") +
+  geom_line(linewidth = 1) +
+  geom_ribbon(alpha = 0.7) +
+  scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
+  scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
+  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b") +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
+  labs(x = "Time of year", y = expression("Relative recovery (% of total recovered "*{}^15*"N)")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
+  facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
+  guides(linetype = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery "))) +
+  theme_minimal(base_size = 15) +
+  theme(
+    panel.grid.minor.x = element_blank()
+  ) +
+  coord_radial(start = 0, end = 1.8*pi, inner.radius = 0.1)
+
+
+
+
+# Organ
+vegroot15N_Organ_sum %>%
+  # group_by(across(c("Site", "Round", "Organ"))) %>%
+  # mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
+  #        ci = if_else(Organ == "S", ci, -ci),
+  #        avgR_CI = if_else(Organ == "CR", OrganRecovery, 0)) %>%
+  # group_by(across(c("Site", "Round"))) %>%
+  # mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
+  # group_by(across(c("Site", "Round", "Organ"))) %>%
+  mutate(Seasons8 = case_when(Round == "01_Jul_19" | Round == "14_Jul_20" ~ "Geassi",
+                              Round == "02_Aug_19" | Round == "15_Aug_20" ~ "Čakčageassi",
+                              Round == "03_Sep_19" | Round == "04_Oct_19" ~ "Čakča",
+                              Round == "05_Nov_19" | Round == "06_Dec_19" ~ "Čakčadálvi",
+                              Round == "07_Jan_20" | Round == "08_Feb_20" ~ "Dálvi",
+                              Round == "09_Mar_20" | Round == "10_Apr_20" | Round == "11_Apr_20" ~ "Giđđadálvi",
+                              Round == "12_May_20" ~ "Giđđa",
+                              Round == "13_Jun_20" ~ "Giđđageassi",
+                              TRUE ~ "YoYo_missing")) %>%
+  mutate(across(Seasons8, ~factor(.x, levels = c("Geassi", "Čakčageassi", "Čakča", "Čakčadálvi", "Dálvi", "Giđđadálvi", "Giđđa", "Giđđageassi")))) %>%
+  # Plot 
+  ggplot() +
+  #The seasons:
+  geom_col(aes(x = Round, y = 40, fill = Seasons8), alpha = 0.3) +
+  scale_fill_manual(values = seasonFill, na.value = NA) +
+  labs(fill = "Sámi Seasons") +
+  ggnewscale::new_scale_fill() +
+  #
+  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","CR","FR"))), position = "stack", color = "black") +
+  #scale_fill_viridis_d() +
+  scale_fill_manual(values = c("#440154","#fde725", "#21918c")) + # Don't have to swap around the colors in image editor. Check that they match!
+  scale_x_discrete(labels = measuringPeriod2_circle) +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100)) +
+  facet_wrap( ~ Site, ncol = 2) + 
+  labs(x = element_blank(), y = expression("Organ recovery (% of total plant recovered "*{}^15*"N)"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) +
+  guides(fill = guide_legend(title = "Plant organ")) +
+  theme_minimal(base_size = 15) +
+  theme(
+    panel.grid.major.x = element_blank()
+  ) +
+  coord_radial(start = 0, end = 1.7*pi, inner.radius = 0.1)
+
+
+
+
+#
+#
+#
+# <><><><><> END Thesis graph <><><><><>
+#
+#
+#
 Rec15N_sum2 %>%
   ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Site)) +
   geom_line() +

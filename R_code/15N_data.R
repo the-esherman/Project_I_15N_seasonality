@@ -2932,9 +2932,10 @@ Thesis_plant_relRecov_circ <- Rec15N_sum2 %>%
     # legend.text = element_text(size = 5)
   ) +
   coord_radial(start = 0, end = 1.7*pi, inner.radius = 0.1)
+  #coord_radial(start = -0.8*pi, end = 1.1*pi, inner.radius = 0.1) # to rotate better
 #
 # Save
-ggsave("Thesis_Plant_rel_recovery_circle4.2.1200.png", plot = Thesis_plant_relRecov_circ, path = "images", width = 20, height = 10, units = "cm", dpi = 1200, bg = "white")
+#ggsave("Thesis_Plant_rel_recovery_circle4.2.1200_rotated.png", plot = Thesis_plant_relRecov_circ, path = "images", width = 20, height = 10, units = "cm", dpi = 1200, bg = "white")
 
 
 

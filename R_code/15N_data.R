@@ -1083,47 +1083,92 @@ AvsV<-c(1,-1)
 # Abisko
 # Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
 # MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-Abi_SnowvsNot   <- c(-8,-8,-8,-8, 7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow found on plots from November to May
-Abi_SnowCvsW    <- c( 0, 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
-Abi_freeWvsC    <- c( 2, 2,-5,-5, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2) # Warm vs cold part of the snow-free period
-# The rest of the contrasts: Necessary for balanced test, but not interesting
-Abi_Cont4       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-4, 1, 1)
-Abi_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
-Abi_Cont6       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
-Abi_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
-Abi_Cont8       <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
-Abi_Cont9       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Abi_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
-Abi_Cont11      <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Abi_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Abi_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
-Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+# Abi_SnowvsNot   <- c(-8,-8,-8,-8, 7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow found on plots from November to May
+# Abi_SnowCvsW    <- c( 0, 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
+# Abi_freeWvsC    <- c( 2, 2,-5,-5, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2) # Warm vs cold part of the snow-free period
+# # The rest of the contrasts: Necessary for balanced test, but not interesting
+# Abi_Cont4       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-4, 1, 1)
+# Abi_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+# Abi_Cont6       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
+# Abi_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
+# Abi_Cont8       <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+# Abi_Cont9       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Abi_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
+# Abi_Cont11      <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Abi_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Abi_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
+# Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+# #
+# Contr_Abisko_MP <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
 #
-Contr_Abisko_MP <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
+# Vassijaure
+# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+# Vas_SnowvsNot   <- c(-7,-7,-7,-7, 8, 8, 8, 8, 8, 8, 8, 8, 8,-7,-7) # Snow found on plots from November to June
+# Vas_SnowCvsW    <- c( 0, 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
+# Vas_freeWvsC    <- c( 2, 2,-4,-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2) # Warm vs cold part of the snow-free period
+# # The rest of the contrasts: Necessary for balanced test, but not interesting
+# Vas_Cont4       <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Vas_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+# Vas_Cont6       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Vas_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
+# Vas_Cont8       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
+# Vas_Cont9       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
+# Vas_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0)
+# Vas_Cont11      <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+# Vas_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+# Vas_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
+# Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+# #
+# Contr_Vassijaure_MP <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+#
+#
+# New contrasts:
+# Summer vs the cold season and autumn vs snow-covered
+# Abisko
+# Month               ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                  ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Abi_SummervsColdS <- c(10,10,-5,-5,-5,-5,-5,-5,-5,-5,-5,-5,10,10,10) # Summer vs the cold season
+Abi_AutumnvsSnow  <- c( 0, 0,-4,-4, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0) # Autumn vs the snow-covered period
+Abi_SnowCvsW      <- c( 0, 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
+# The rest of the contrasts: Necessary for balanced test, but not interesting
+Abi_Cont4         <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-4, 1, 1) # June vs July-Aug (both 2019 and 2020)
+Abi_Cont5         <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+Abi_Cont6         <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # July vs Aug 2019
+Abi_Cont7         <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1) # July vs Aug 2020
+Abi_Cont8         <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
+Abi_Cont9         <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # April (early) vs April (late)
+Abi_Cont10        <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Sept vs Oct
+Abi_Cont11        <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Abi_Cont12        <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Nov vs Dec
+Abi_Cont13        <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0) # Jan-Feb vs Mar
+Abi_Cont14        <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0) # Jan vs Feb
+#
+Contr_Abisko_MP <- cbind(Abi_SummervsColdS, Abi_AutumnvsSnow, Abi_SnowCvsW, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
 #
 # Check contrasts are orthogonal
 crossprod(Contr_Abisko_MP)
 #
 # Vassijaure
-# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-Vas_SnowvsNot   <- c(-7,-7,-7,-7, 8, 8, 8, 8, 8, 8, 8, 8, 8,-7,-7) # Snow found on plots from November to June
-Vas_SnowCvsW    <- c( 0, 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
-Vas_freeWvsC    <- c( 2, 2,-4,-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2) # Warm vs cold part of the snow-free period
+# Month                 ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                    ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
+Vas_SummervsColdS   <- c(11,11,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,11,11) # Summer vs the cold season
+Vas_AutumnvsSnow    <- c( 0, 0,-9,-9, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0) # Autumn vs the snow-covered period
+Vas_SnowCvsW        <- c( 0, 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
 # The rest of the contrasts: Necessary for balanced test, but not interesting
-Vas_Cont4       <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Vas_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
-Vas_Cont6       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Vas_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
-Vas_Cont8       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
-Vas_Cont9       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
-Vas_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0)
-Vas_Cont11      <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
-Vas_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-Vas_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
-Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
+Vas_Cont4           <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Sept vs Oct
+Vas_Cont5           <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+Vas_Cont6           <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # July vs Aug 2019
+Vas_Cont7           <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1) # July vs Aug 2020
+Vas_Cont8           <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
+Vas_Cont9           <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # April (early) vs April (late)
+Vas_Cont10          <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0) # May vs June
+Vas_Cont11          <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Vas_Cont12          <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Nov vs Dec
+Vas_Cont13          <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0) # Jan-Feb vs Mar
+Vas_Cont14          <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0) # Jan vs Feb
 #
-Contr_Vassijaure_MP <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+Contr_Vassijaure_MP <- cbind(Vas_SummervsColdS, Vas_AutumnvsSnow, Vas_SnowCvsW, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
 #
 # Check contrasts are orthogonal
 crossprod(Contr_Vassijaure_MP)
@@ -1150,7 +1195,6 @@ data.frame(x = c(as.Date("2019-11-10"),as.Date("2019-11-12")), y = c(0,0,0,0)) %
   ggplot(aes(x, y)) + geom_line(color = "red", linewidth = 1)
 
 #
-s
 #
 #
 #-------   ##     Q Zero     ## -------

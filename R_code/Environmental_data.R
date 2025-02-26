@@ -906,6 +906,70 @@ DayOfLH <- DayOf %>%
   left_join(DayOfL, by = join_by(Site, Round)) %>%
   filter(Site == "Abisko")
 
+
+
+soilT_plot.MP <- soilT_plot +
+  # From label to harvest
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[1]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[1]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[2]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[2]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[3]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[3]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[4]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[4]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[5]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[5]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[6]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[6]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[7]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[7]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[8]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[8]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[9]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[9]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[10]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[10]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[11]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[11]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[12]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[12]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[13]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[13]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[14]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[14]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[15]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[15]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3)
+
+airT_plot.2.MP <- airT_plot.2 +
+  # From label to harvest
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[1]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[1]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[2]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[2]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[3]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[3]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[4]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[4]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[5]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[5]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[6]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[6]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[7]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[7]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[8]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[8]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[9]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[9]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[10]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[10]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[11]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[11]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[12]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[12]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[13]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[13]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[14]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[14]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[15]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[15]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3)
+
+snowDepth_plot_2.2.MP <- snowDepth_plot_2.2 +
+  # From label to harvest
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[1]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[1]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[2]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[2]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[3]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[3]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[4]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[4]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[5]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[5]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[6]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[6]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[7]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[7]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[8]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[8]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[9]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[9]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[10]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[10]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[11]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[11]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[12]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[12]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[13]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[13]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[14]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[14]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3) +
+  annotate("rect", xmin = as.Date(DayOfLH$Day_of_label[15]), ymin = -Inf, xmax = as.Date(DayOfLH$Day_of_harvest[15]), ymax = Inf, linewidth = 0.9, fill = "#D55E00", alpha = 0.3)
+
+
+# Final graph 2, with dates of measurements:
+# Fig. 1: Air temperature, Soil temperature, and Snow depth with soil moisture as VWC and converted GWC
+grid.arrange(airT_legend, airT_plot.2.MP, soilT_plot.MP, snowDepth_plot_2.2, snowData_legend_2, widths = c(2.8,0.15), heights = c(0.5, 3, 3, 3.5, 0.5), layout_matrix=hlay)
+
+
+
+
 # Air temperatures - all
 airT_plot2 <- avgT_wide2 %>% ggplot() +
   annotate("rect", xmin = winterP$wstart[2], xmax = winterP$wend[2], ymin = -Inf, ymax = Inf, fill = "grey", alpha = 0.3) + # Vassijaure snow

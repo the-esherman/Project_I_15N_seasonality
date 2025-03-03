@@ -1198,7 +1198,56 @@ winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12"
 
 data.frame(x = c(as.Date("2019-11-10"),as.Date("2019-11-12")), y = c(0,0,0,0)) %>%
   ggplot(aes(x, y)) + geom_line(color = "red", linewidth = 1)
-
+#
+# New contrasts for the estimated N-uptake:
+# Summer vs the cold season and autumn vs snow-covered
+# Abisko
+# Month                ( A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                   ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14)
+Abi_SummervsColdS2 <- c(10,-4,-4,-4,-4,-4,-4,-4,-4,-4,-4,10,10,10) # Summer vs the cold season
+Abi_AutumnvsSnow2  <- c( 0,-4,-4, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0) # Autumn vs the snow-covered period
+Abi_SnowCvsW2      <- c( 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
+# The rest of the contrasts: Necessary for balanced test, but not interesting
+Abi_Cont4.2        <- c( 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-3, 1, 1) # June vs Jul-Aug (both 2019 and 2020)
+Abi_Cont5.2        <- c( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+# Abi_Cont6.2                                                      # Removed
+Abi_Cont7.2        <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1) # July vs Aug 2020
+Abi_Cont8.2        <- c( 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
+Abi_Cont9.2        <- c( 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # April (early) vs April (late)
+Abi_Cont10.2       <- c( 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Sept vs Oct
+Abi_Cont11.2       <- c( 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Abi_Cont12.2       <- c( 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Nov vs Dec
+Abi_Cont13.2       <- c( 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0) # Jan-Feb vs Mar
+Abi_Cont14.2       <- c( 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0) # Jan vs Feb
+#
+Contr_Abisko_MP.2 <- cbind(Abi_SummervsColdS2, Abi_AutumnvsSnow2, Abi_SnowCvsW2, Abi_Cont4.2, Abi_Cont5.2, Abi_Cont7.2, Abi_Cont8.2, Abi_Cont9.2, Abi_Cont10.2, Abi_Cont11.2, Abi_Cont12.2, Abi_Cont13.2, Abi_Cont14.2)
+#
+# Check contrasts are orthogonal
+crossprod(Contr_Abisko_MP.2)
+#
+# Vassijaure
+# Month                  ( A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
+# MP                     ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14)
+Vas_SummervsColdS2   <- c(11,-3,-3,-3,-3,-3,-3,-3,-3,-3,-3,-3,11,11) # Summer vs the cold season
+Vas_AutumnvsSnow2    <- c( 0,-9,-9, 2, 2, 2, 2, 2, 2, 2, 2, 2, 0, 0) # Autumn vs the snow-covered period
+Vas_SnowCvsW2        <- c( 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
+# The rest of the contrasts: Necessary for balanced test, but not interesting
+Vas_Cont4.2          <- c( 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Sept vs Oct
+Vas_Cont5.2          <- c( 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
+# Vas_Cont6.2                                                        # Removed
+Vas_Cont7.2          <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1) # July vs Aug 2020
+Vas_Cont8.2          <- c( 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
+Vas_Cont9.2          <- c( 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0) # April (early) vs April (late)
+Vas_Cont10.2         <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0) # May vs June
+Vas_Cont11.2         <- c( 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
+Vas_Cont12.2         <- c( 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0) # Nov vs Dec
+Vas_Cont13.2         <- c( 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0) # Jan-Feb vs Mar
+Vas_Cont14.2         <- c( 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0) # Jan vs Feb
+#
+Contr_Vassijaure_MP.2 <- cbind(Vas_SummervsColdS2, Vas_AutumnvsSnow2, Vas_SnowCvsW2, Vas_Cont4.2, Vas_Cont5.2, Vas_Cont7.2, Vas_Cont8.2, Vas_Cont9.2, Vas_Cont10.2, Vas_Cont11.2, Vas_Cont12.2, Vas_Cont13.2, Vas_Cont14.2)
+#
+# Check contrasts are orthogonal
+crossprod(Contr_Vassijaure_MP.2)
 #
 #
 #
@@ -2159,6 +2208,72 @@ Anova(lme3, type=2)
 # Significant for 
 # Round (χ^2 = 79.6132, p = 1.304e-11)
 # Site*Round (χ^2 = 23.3861, p = 0.03727)
+#
+# Per site
+QTotN_plant_stat_A <- TotN_plant_stat %>%
+  filter(Site == "Abisko")
+QTotN_plant_stat_V <- TotN_plant_stat %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts Abisko
+contrasts(QTotN_plant_stat_A$Round) <- Contr_Abisko_MP.2
+#
+# transform data
+QTotN_plant_stat_A <- QTotN_plant_stat_A %>%
+  mutate(Recov = PlantRecovery_N_high_pr_DW)
+QTotN_plant_stat_A <- QTotN_plant_stat_A %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lmeTotN_A<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = QTotN_plant_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_A), resid(lmeTotN_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_A), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_A, type=2)
+#
+summary(lmeTotN_A)
+#
+#
+# Contrasts Vassijaure
+contrasts(QTotN_plant_stat_V$Round) <- Contr_Vassijaure_MP.2
+#
+# transform data
+QTotN_plant_stat_V <- QTotN_plant_stat_V %>%
+  mutate(Recov = PlantRecovery_N_high_pr_DW)
+QTotN_plant_stat_V <- QTotN_plant_stat_V %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lmeTotN_V<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = QTotN_plant_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_V), resid(lmeTotN_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_V), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_V, type=2)
+#
+summary(lmeTotN_V)
 #
 #
 #

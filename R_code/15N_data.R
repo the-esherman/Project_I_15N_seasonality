@@ -1647,23 +1647,23 @@ vegroot15N_Organ_A <- vegroot15N_Organ_A %>%
          arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
 #
 # model:
-lme1_A<-lme(logRecov ~ Round*Organ,
+lme1a_A<-lme(arcRecov ~ Round*Organ,
             random = ~1|Plot,
             data = vegroot15N_Organ_A, na.action = na.exclude, method = "REML")
 #
 # Checking assumptions:
 par(mfrow = c(1,2))
-plot(fitted(lme1_A), resid(lme1_A), 
+plot(fitted(lme1a_A), resid(lme1a_A), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme1_A), main = "Normally distributed?")                 
-qqline(resid(lme1_A), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme1_A)
+qqnorm(resid(lme1a_A), main = "Normally distributed?")                 
+qqline(resid(lme1a_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1a_A)
 par(mfrow = c(1,1))
 #
 # model output
-Anova(lme1_A, type=2)
+Anova(lme1a_A, type=2)
 # Not significant
-summary(lme1_A)
+summary(lme1a_A)
 # Trend for summer vs autumn (t = 1.86572, p = 0.0635)
 # 
 #
@@ -1725,23 +1725,23 @@ vegroot15N_Organ_V <- vegroot15N_Organ_V %>%
          arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
 #
 # model:
-lme1_V<-lme(logRecov ~ Round*Organ,
+lme1a_V<-lme(arcRecov ~ Round*Organ,
             random = ~1|Plot,
             data = vegroot15N_Organ_V, na.action = na.exclude, method = "REML")
 #
 # Checking assumptions:
 par(mfrow = c(1,2))
-plot(fitted(lme1_V), resid(lme1_V), 
+plot(fitted(lme1a_V), resid(lme1a_V), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lme1_V), main = "Normally distributed?")                 
-qqline(resid(lme1_V), main = "Homogeneity of Variances?", col = 2) #OK
-plot(lme1_V)
+qqnorm(resid(lme1a_V), main = "Normally distributed?")                 
+qqline(resid(lme1a_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme1a_V)
 par(mfrow = c(1,1))
 #
 # model output
-Anova(lme1_V, type=2)
+Anova(lme1a_V, type=2)
 # 
-summary(lme1_V)
+summary(lme1a_V)
 # Not significant
 #
 #

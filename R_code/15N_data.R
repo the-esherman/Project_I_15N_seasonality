@@ -749,6 +749,11 @@ MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_
 MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low_pr_DW", groupvars=c("Site", "Round"))
 MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", groupvars=c("Site", "Round"))
 #
+# write_csv(MinVeg_isoR_high_sum, "export/TotalNplantUptake.csv", na = "", col_names = TRUE)
+# x <- MinVeg_isoR %>%
+#   select(1:4, PlantRecovery_N_high_pr_DW)
+# write_csv(x, "export/TotalNplantUptake_all.csv", na = "", col_names = TRUE)
+#
 #
 #
 # <><><><><> 14N UPTAKE - SUPPL. FIG ??  <><><><><>

@@ -1769,6 +1769,7 @@ summary(lme1a)
 # Highly significant for organ (χ^2 = 669.9609, p < 2.2e-16) 
 # and all interactions (Round:Organ χ^2 = 190.0375, p < 2.2e-16 ; Site:Organ χ^2 = 16.2061, p = 0.0003026; Round:Site:Organ χ^2 = 64.6419, p = 0.0001006) except Round:Site
 #
+#
 # Per site
 vegroot15N_Organ_A <- vegroot15N_Organ %>%
   filter(Site == "Abisko")
@@ -1810,19 +1811,27 @@ summary(lme1a_A)
 #
 Q1a_season_A <- vegroot15N_Organ_A %>%
   select(1:4, Organ, OrganRecovery) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15, "Summer", "Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 ~ "Snow",
+                                  TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
                             MP == 10 | MP == 11 | MP == 12 ~ "Warm",
-                            TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
-                            MP == 3 | MP == 4 ~ "Cold",
                             TRUE ~ NA))
 #
 Q1a_season_A %>%
-  summarise(OrganRecovery = mean(OrganRecovery), .by = c(Snow, Organ))
-# S:  Clear 6.35; Snow 13.9
-# CR: Clear 20.1; Snow 27.6
-# FR: Clear 73.5; Snow 58.5
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(SummerVsCold, Organ))
+# S:  Summer 8.05; Cold season 11.5
+# CR: Summer 21.7; Cold season 25.4
+# FR: Summer 70.3; Cold season 63.1
+#
+Q1a_season_A %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(AutumnVsSnow, Organ))
+# Snow-free
+# S:  Autumn 2.09; Snow 2.09
+# CR: Autumn 16.2; Snow 27.6
+# FR: Autumn 81.7; Snow 13.9
 #
 Q1a_season_A %>%
   filter(!is.na(SnowCW)) %>%
@@ -1832,23 +1841,12 @@ Q1a_season_A %>%
 # CR: Cold 23.9; Warm 33.8
 # FR: Cold 60.6; Warm 54.9
 #
-Q1a_season_A %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(OrganRecovery = mean(OrganRecovery), .by = c(FreeWC, Organ))
-# Snow-free
-# S: Warm 8.05; Cold 2.09
-# CR: Warm 21.7; Cold 16.2
-# FR: Warm 70.3; Cold 81.7
-#
-Q1a_season_A %>%
-  summarise(sysRec_season = mean(OrganRecovery), .by = c(Snow, Organ))
-#
-summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("Snow", "Organ"))
+summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("SummerVsCold", "Organ"))
+summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("AutumnVsSnow", "Organ"))
 summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
-summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("FreeWC", "Organ"))
 #
 Q1a_season_A %>%
-  ggplot(aes(x = Round, y = OrganRecovery, fill = FreeWC)) +
+  ggplot(aes(x = Round, y = OrganRecovery, fill = SummerVsCold)) +
   geom_boxplot() +
   facet_wrap(~Organ)
   #facet_grid(rows = vars(Organ), cols = vars(Site))
@@ -1888,19 +1886,27 @@ summary(lme1a_V)
 #
 Q1a_season_V <- vegroot15N_Organ_V %>%
   select(1:4, Organ, OrganRecovery) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 14 | MP == 15, "Summer","Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Snow",
+                                  TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
                             MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
-                            TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
-                            MP == 3 | MP == 4 ~ "Cold",
                             TRUE ~ NA))
 #
 Q1a_season_V %>%
-  summarise(OrganRecovery = mean(OrganRecovery), .by = c(Snow, Organ))
-# CR: Clear 26.2; Snow 31.3
-# FR: Clear 68.1; Snow 48.2
-# S: Clear 5.71; Snow 20.5
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(SummerVsCold, Organ))
+# S:  Summer 7.25; Cold season 17.2
+# CR: Summer 22.2; Cold season 31.8
+# FR: Summer 70.5; Cold season 50.9
+#
+Q1a_season_V %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(OrganRecovery = mean(OrganRecovery), .by = c(AutumnVsSnow, Organ))
+# Snow-free
+# S:  Autumn 2.63; Snow 20.5
+# CR: Autumn 34.2; Snow 31.3
+# FR: Autumn 63.1; Snow 48.2
 #
 Q1a_season_V %>%
   filter(!is.na(SnowCW)) %>%
@@ -1910,23 +1916,12 @@ Q1a_season_V %>%
 # CR: Cold 31.7; Warm 30.8
 # FR: Cold 54.8; Warm 40.1
 #
-Q1a_season_V %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(OrganRecovery = mean(OrganRecovery), .by = c(FreeWC, Organ))
-# Snow-free
-# S: Warm 7.25; Cold 2.63
-# CR: Warm 22.2; Cold 34.2
-# FR: Warm 70.5; Cold 63.1
-#
-Q1a_season_V %>%
-  summarise(sysRec_season = mean(OrganRecovery), .by = c(Snow, Organ))
-#
-summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("Snow", "Organ"))
+summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("SummerVsCold", "Organ"))
+summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("AutumnVsSnow", "Organ"))
 summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
-summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("FreeWC", "Organ"))
 #
 Q1a_season_V %>%
-  ggplot(aes(x = Round, y = OrganRecovery, fill = FreeWC)) +
+  ggplot(aes(x = Round, y = OrganRecovery, fill = SummerVsCold)) +
   geom_boxplot() +
   facet_wrap(~Organ)
 #

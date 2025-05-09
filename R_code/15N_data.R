@@ -1621,39 +1621,36 @@ summary(lme1_A)
 #
 Q1_season_A <- Q1_veg_stat_A %>%
   select(1:4, PlantRecovery) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15, "Summer", "Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 ~ "Snow",
+                            TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
                             MP == 10 | MP == 11 | MP == 12 ~ "Warm",
-                            TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
-                            MP == 3 | MP == 4 ~ "Cold",
                             TRUE ~ NA))
 #
 Q1_season_A %>%
-  summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
-# Snow: 6.17 Clear: 6.00
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(SummerVsCold))
+# Summer: 5.35 Cold season: 6.46
+#
+Q1_season_A %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(AutumnVsSnow))
+# Autumn: 7.63 Snow: 6.17
 #
 Q1_season_A %>%
   filter(!is.na(SnowCW)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
 # Snow-covered
-# Cold: 7.63 Warm: 3.73
+# Warm: 3.73 Cold: 7.63
 #
-Q1_season_A %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
-# Snow-free
-# warm: 5.35 Cold: 7.63
 #
-Q1_season_A %>%
-  summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
-#
-summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("Snow"))
+summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("SummerVsCold"))
+summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("AutumnVsSnow"))
 summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
-summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("FreeWC"))
 #
 Q1_season_A %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = FreeWC)) +
+  ggplot(aes(x = Round, y = PlantRecovery, fill = SummerVsCold)) +
   geom_boxplot() +
   facet_wrap(~Site)
 #
@@ -1690,39 +1687,34 @@ summary(lme1_V)
 #
 Q1_season_V <- Q1_veg_stat_V %>%
   select(1:4, PlantRecovery) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 14 | MP == 15, "Summer","Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Snow",
+                                  TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
                             MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
-                            TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
-                            MP == 3 | MP == 4 ~ "Cold",
                             TRUE ~ NA))
 #
 Q1_season_V %>%
-  summarise(PlantRecovery = mean(PlantRecovery), .by = c(Snow))
-# Snow: 5.64 Clear: 6.46
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(SummerVsCold))
+# Summer: 6.94 Cold season: 5.61
+#
+Q1_season_V %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(PlantRecovery = mean(PlantRecovery), .by = c(AutumnVsSnow))
+# Autumn: 5.50 Snow: 5.64
 #
 Q1_season_V %>%
   filter(!is.na(SnowCW)) %>%
   summarise(PlantRecovery = mean(PlantRecovery), .by = c(SnowCW))
-# Snow-covered
 # Cold: 6.64 Warm: 4.38
 #
-Q1_season_V %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(PlantRecovery = mean(PlantRecovery), .by = c(FreeWC))
-# Snow-free
-# Warm: 6.94 Cold: 5.50
-#
-Q1_season_V %>%
-  summarise(sysRec_season = mean(PlantRecovery), .by = c(Snow))
-#
-summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("Snow"))
+summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("SummerVsCold"))
+summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("AutumnVsSnow"))
 summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
-summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("FreeWC"))
 #
 Q1_season_V %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = FreeWC)) +
+  ggplot(aes(x = Round, y = PlantRecovery, fill = SummerVsCold)) +
   geom_boxplot() +
   facet_wrap(~Site)
 #

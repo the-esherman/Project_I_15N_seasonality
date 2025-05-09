@@ -1966,6 +1966,73 @@ Anova(lme2, type=2)
 # For absolute recovery: Highly significant for Round (χ^2 = 39.8375, p = 0.0002704)
 #
 #
+# Per site
+Q2_MBN_stat_A <- Q2_MBN_stat %>%
+  filter(Site == "Abisko")
+Q2_MBN_stat_V <- Q2_MBN_stat %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts Abisko
+contrasts(Q2_MBN_stat_A$Round) <- Contr_Abisko_MP
+#
+# transform data
+Q2_MBN_stat_A <- Q2_MBN_stat_A %>%
+  mutate(Recov = R_MBN)
+Q2_MBN_stat_A <- Q2_MBN_stat_A %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme2_A<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q2_MBN_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme2_A), resid(lme2_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme2_A), main = "Normally distributed?")                 
+qqline(resid(lme2_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme2_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme2_A, type=2)
+# Tendency
+summary(lme2_A)
+#
+#
+# Contrasts Vassijaure
+contrasts(Q2_MBN_stat_V$Round) <- Contr_Vassijaure_MP
+#
+# transform data
+Q2_MBN_stat_V <- Q2_MBN_stat_V %>%
+  mutate(Recov = R_MBN)
+Q2_MBN_stat_V <- Q2_MBN_stat_V %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lme2_V<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q2_MBN_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme2_V), resid(lme2_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme2_V), main = "Normally distributed?")                 
+qqline(resid(lme2_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme2_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lme2_V, type=2)
+summary(lme2_V)
+# Highly significant
+#
+#
 #
 #-------   ##       TDN      ##  -------
 #
@@ -2058,7 +2125,6 @@ NH4_conc <- Q_TDN_Nconc %>%
 NO3_conc <- Q_TDN_Nconc %>%
   select(Site, Plot, Round, NO3) %>%
   summarise(NO3 = mean(NO3), .by = c(Round))
-
 #
 #
 # --- # TDN 15N recovery # ---
@@ -2074,7 +2140,7 @@ Q_TDN_stat <- Q_TDN %>%
 #
 # transform data
 Q_TDN_stat <- Q_TDN_stat %>%
-  mutate(Recov = R_TDN_frac)
+  mutate(Recov = R_TDN)
 Q_TDN_stat <- Q_TDN_stat %>%
   mutate(logRecov = log(Recov),
          arcRecov = asin(sqrt(Recov/100)))
@@ -2098,8 +2164,72 @@ Anova(lmeTDN, type=2)
 # Absolute: Highly significant for Round (χ^2 = 77.0616, p = 9.886e-11)
 # Proportional: Highly significant for Round (χ^2 = 87.5372, p = 1.105e-12)
 #
-Q_TDN_stat %>% ggplot(aes(x = Round, y = R_TDN_frac)) + geom_boxplot() + coord_cartesian(ylim = c(0,3)) + facet_wrap(~Site)
-
+#
+# Per site
+Q_TDN_stat_A <- Q_TDN_stat %>%
+  filter(Site == "Abisko")
+Q_TDN_stat_V <- Q_TDN_stat %>%
+  filter(Site == "Vassijaure")
+#
+#
+# Contrasts Abisko
+contrasts(Q_TDN_stat_A$Round) <- Contr_Abisko_MP
+#
+# transform data
+Q_TDN_stat_A <- Q_TDN_stat_A %>%
+  mutate(Recov = R_TDN)
+Q_TDN_stat_A <- Q_TDN_stat_A %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lmeTDN_A<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q_TDN_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN_A), resid(lmeTDN_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN_A), main = "Normally distributed?")                 
+qqline(resid(lmeTDN_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTDN_A, type=2)
+# Round: χ^2 = 33.715, p = 0.00227
+summary(lmeTDN_A)
+#
+#
+# Contrasts Vassijaure
+contrasts(Q_TDN_stat_V$Round) <- Contr_Vassijaure_MP
+#
+# transform data
+Q_TDN_stat_V <- Q_TDN_stat_V %>%
+  mutate(Recov = R_TDN)
+Q_TDN_stat_V <- Q_TDN_stat_V %>%
+  mutate(logRecov = log(Recov+1), # Good for low percentage values.
+         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+#
+# model:
+lmeTDN_V<-lme(logRecov ~ Round,
+            random = ~1|Plot,
+            data = Q_TDN_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTDN_V), resid(lmeTDN_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTDN_V), main = "Normally distributed?")                 
+qqline(resid(lmeTDN_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTDN_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTDN_V, type=2)
+summary(lmeTDN_V)
+# Not significant
 #
 #
 #

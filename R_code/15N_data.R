@@ -679,14 +679,24 @@ MinVeg <- vegroot15N %>%
   mutate(Rec15N = ((Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100 * Biomass_DW_g), # g 15N in excess
          Rec15N_pr_DW = (Atom_pc - NatAb_atom_pc)/100 * Nconc_pc/100) # Unit not defined, but simply 15N pr DW (in practice that would be g 15N pr g DW)
 
+# Combine biomass and recovery from all of plant
 MinVeg2 <- MinVeg %>%
   summarise(across(c(Biomass_DW_g, Recovery, Rec15N, Rec15N_pr_DW), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
-  rename("PlantRec15N" = Recovery) # Not that useful !!
-
-
+  rename("PlantRec15N" = Recovery) %>% # Not that useful !!
+  left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
+  select(1:8, Soil_diameter_cm)
+#
+# Get biomass of just fine roots
+MinVegFR <- MinVeg %>%
+  filter(Organ == "FR") %>%
+  summarise(across(c(Biomass_DW_g), ~sum(., na.rm = TRUE)), .by = c("Site", "Plot", "MP", "Round")) %>%
+  rename("Biomass_DW_FR_g" = Biomass_DW_g) # Should be the only important part
+#
+# Combine and calculate 15N excess in plants
 MinVeg_isoR <- mineral_isoR %>%
   select(1:4, isoR14_high_avg, isoR14_low_avg, isoF14_high_avg, isoF14_low_avg) %>%
   left_join(MinVeg2, by = join_by(Site, Plot, MP, Round)) %>%
+  left_join(MinVegFR, by = join_by(Site, Plot, MP, Round)) %>%
   #
   # Calculated by using the 15N excess in plants (Rec15N) to get either N or 14N that followed along the excess 15N
   # Values are in g
@@ -696,11 +706,24 @@ MinVeg_isoR <- mineral_isoR %>%
          PlantRecovery_14N_low = Rec15N*isoR14_low_avg) %>%
   # 
   # All values are now in µg pr g DW
-  mutate(PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
-         PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
-         PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
-         PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
-         PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6)
+  mutate(# Pr DW of total plant biomass
+    PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
+    PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
+    PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
+    PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
+    PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6,
+    # Pr g DW of fine root (FR)
+    PlantRecovery_N_high_pr_DW_FR = PlantRecovery_N_high/Biomass_DW_FR_g*10^6,
+    PlantRecovery_N_low_pr_DW_FR = PlantRecovery_N_low/Biomass_DW_FR_g*10^6,
+    PlantRecovery_14N_high_pr_DW_FR = PlantRecovery_14N_high/Biomass_DW_FR_g*10^6,
+    PlantRecovery_14N_low_pr_DW_FR = PlantRecovery_14N_low/Biomass_DW_FR_g*10^6,
+    PlantRecovery_15N_pr_DW_FR = Rec15N/Biomass_DW_FR_g*10^6,
+    # Pr m2
+    PlantRecovery_N_high_pr_m2 = PlantRecovery_N_high/((Soil_diameter_cm/200)^2*pi)*10^3,
+    PlantRecovery_N_low_pr_m2 = PlantRecovery_N_low/((Soil_diameter_cm/200)^2*pi)*10^3,
+    PlantRecovery_14N_high_pr_m2 = PlantRecovery_14N_high/((Soil_diameter_cm/200)^2*pi)*10^3,
+    PlantRecovery_14N_low_pr_m2 = PlantRecovery_14N_low/((Soil_diameter_cm/200)^2*pi)*10^3,
+    PlantRecovery_15N_pr_m2 = Rec15N/((Soil_diameter_cm/200)^2*pi)*10^3)
 #
 #
 # Simple graph to check data
@@ -746,12 +769,16 @@ MinVeg_isoR %>%
 #
 # Average and get 95% CI
 MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_DW", groupvars=c("Site", "Round"))
+MinVeg_isoR_high_sum_FR <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_DW_FR", groupvars=c("Site", "Round"))
+MinVeg_isoR_high_sum_m2 <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_m2", groupvars=c("Site", "Round"))
 MinVeg_isoR_low_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_low_pr_DW", groupvars=c("Site", "Round"))
 MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", groupvars=c("Site", "Round"))
 #
 # write_csv(MinVeg_isoR_high_sum, "export/TotalNplantUptake.csv", na = "", col_names = TRUE)
+# write_csv(MinVeg_isoR_high_sum_FR, "export/TotalNplantUptakeFR.csv", na = "", col_names = TRUE)
+# write_csv(MinVeg_isoR_high_sum_m2, "export/TotalNplantUptakem2.csv", na = "", col_names = TRUE)
 # x <- MinVeg_isoR %>%
-#   select(1:4, PlantRecovery_N_high_pr_DW)
+#   select(1:4, PlantRecovery_N_high_pr_DW, PlantRecovery_N_high_pr_DW_FR, PlantRecovery_N_high_pr_m2)
 # write_csv(x, "export/TotalNplantUptake_all.csv", na = "", col_names = TRUE)
 #
 #
@@ -906,6 +933,7 @@ MinVeg_N_sum %>%
 #
 #
 #
+# Per g DW total plant biomass
 MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_DW,
@@ -934,6 +962,78 @@ MinVeg_isoR %>%
   coord_cartesian(ylim = c(0,100)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Time of harvest", y = expression("Plant N uptake (µg N g"*{}^-1*" DW)"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+#
+#
+# Part 2
+#
+# Per g DW fine roots
+MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_DW_FR, PlantRecovery_14N_high_pr_DW_FR) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_DW_FR,
+         "Plant14N" = PlantRecovery_14N_high_pr_DW_FR) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
+  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
+  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Isotope"))) %>%
+  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(MinVeg_isoR_high_sum_FR, by = join_by(Site, Round)) %>%
+  select(1:4, PlantRecovery_N_high_pr_DW_FR, ci) %>%
+  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
+  mutate(Isotope=factor(Isotope)) %>%
+  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
+  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
+                           Isotope == "Plant15N" ~ "15N")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW_FR, ymin=PlantRecovery_N_high_pr_DW_FR+ci, ymax=PlantRecovery_N_high_pr_DW_FR), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  coord_cartesian(ylim = c(0,350)) +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
+  labs(x = "Time of harvest", y = expression("Plant N uptake (µg N g"*{}^-1*" DW fine roots)"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) +
+  guides(fill = guide_legend(title = "Isotope")) +
+  theme_classic(base_size = 20) +
+  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+#
+# Part 3
+#
+# Per m2
+MinVeg_isoR %>%
+  select(1:4, PlantRecovery_15N_pr_m2, PlantRecovery_14N_high_pr_m2) %>%
+  rename("Plant15N" = PlantRecovery_15N_pr_m2,
+         "Plant14N" = PlantRecovery_14N_high_pr_m2) %>%
+  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
+  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
+  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
+  group_by(across(c("Site", "Round", "Isotope"))) %>%
+  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
+  ungroup() %>%
+  left_join(MinVeg_isoR_high_sum_m2, by = join_by(Site, Round)) %>%
+  select(1:4, PlantRecovery_N_high_pr_m2, ci) %>%
+  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
+  mutate(Isotope=factor(Isotope)) %>%
+  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
+  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
+                           Isotope == "Plant15N" ~ "15N")) %>%
+  #
+  # Plot 
+  ggplot() +
+  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
+  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
+  scale_fill_viridis_d() +
+  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_m2, ymin=PlantRecovery_N_high_pr_m2+ci, ymax=PlantRecovery_N_high_pr_m2), position=position_dodge(.9)) +
+  scale_x_discrete(labels = measuringPeriod_miner) +
+  coord_cartesian(ylim = c(0,160)) +
+  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
+  labs(x = "Time of harvest", y = expression("Plant N uptake (mg N m"*{}^-2*")"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) +
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))

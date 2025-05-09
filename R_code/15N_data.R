@@ -2404,21 +2404,28 @@ Anova(lmeCompet, type=2)
 #
 # Load data from excel instead of calculated combined
 TotN_plant_stat <- MinVeg_isoR %>%
-  select("Site", "Plot", "MP", "Round", "PlantRecovery_N_high_pr_DW") %>%
+  select("Site", "Plot", "MP", "Round", "PlantRecovery_N_high_pr_DW", "PlantRecovery_N_high_pr_DW_FR", "PlantRecovery_N_high_pr_m2") %>%
   mutate(across(c("Plot", "MP"), as.character))%>%
   mutate(across(c("Site", "MP", "Round"), as.factor))
 #
 # Transform data
 TotN_plant_stat <- TotN_plant_stat %>%
-  mutate(Recov = PlantRecovery_N_high_pr_DW) %>% # not really recovery as it also includes 14N
+  mutate(Recov = PlantRecovery_N_high_pr_DW,
+         RecovFR = PlantRecovery_N_high_pr_DW_FR,
+         Recovm2 = PlantRecovery_N_high_pr_m2) %>% # not really recovery as it also includes 14N
   mutate(logRecov = log(Recov+1), # Good for low percentage values. Use here as values are in the low end
-         arcRecov = asin(sqrt(Recov/100))) # Use is for this most transformations in percent.
+         arcRecov = asin(sqrt(Recov/100)), # Use is for this most transformations in percent.
+         logRecovFR = log(RecovFR+1),
+         logRecovm2 = log(Recovm2+1)) 
 #
 # Histogram
 hist(TotN_plant_stat$Recov)
 hist(TotN_plant_stat$logRecov)
+hist(TotN_plant_stat$logRecovFR)
+hist(TotN_plant_stat$logRecovm2)
 #
 #model:
+# pr g DW total plant biomass
 lme3<-lme(logRecov ~ Site*Round,
           random = ~1|Plot/Site,
           data = TotN_plant_stat, na.action = na.exclude , method = "REML")
@@ -2439,24 +2446,69 @@ Anova(lme3, type=2)
 # Round (χ^2 = 79.6132, p = 1.304e-11)
 # Site*Round (χ^2 = 23.3861, p = 0.03727)
 #
-# Per site
+#
+#model:
+# pr g DW fine roots
+lme3FR<-lme(logRecovFR ~ Site*Round,
+          random = ~1|Plot/Site,
+          data = TotN_plant_stat, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme3FR), resid(lme3FR), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme3FR), main = "Normally distributed?")                 
+qqline(resid(lme3FR), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme3FR)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme3FR, type=2)
+# Log transformation
+# Significant for 
+# Round (χ^2 = 84.7734, p = 1.383e-12)
+# Site*Round (χ^2 = 22.9405, p = 0.0424)
+#
+#
+#model:
+# pr m2
+lme3m2<-lme(logRecovm2 ~ Site*Round,
+            random = ~1|Plot/Site,
+            data = TotN_plant_stat, na.action = na.exclude , method = "REML")
+#
+#Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lme3m2), resid(lme3m2), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lme3m2), main = "Normally distributed?")                 
+qqline(resid(lme3m2), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lme3m2)
+par(mfrow = c(1,1))
+#
+#model output
+Anova(lme3m2, type=2)
+# Log transformation
+# Significant for 
+# Round (χ^2 = 49.6405, p = 3.436e-6)
+#
+#
+# Plant N uptake per site
+# Abisko and Vassijaure
+#
+#
+# Divide per site
 QTotN_plant_stat_A <- TotN_plant_stat %>%
   filter(Site == "Abisko")
 QTotN_plant_stat_V <- TotN_plant_stat %>%
   filter(Site == "Vassijaure")
 #
 #
-# Contrasts Abisko
+# For Abisko
+# Contrasts
 contrasts(QTotN_plant_stat_A$Round) <- Contr_Abisko_MP.2
 #
-# transform data
-QTotN_plant_stat_A <- QTotN_plant_stat_A %>%
-  mutate(Recov = PlantRecovery_N_high_pr_DW)
-QTotN_plant_stat_A <- QTotN_plant_stat_A %>%
-  mutate(logRecov = log(Recov+1), # Good for low percentage values.
-         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
-#
 # model:
+# pr g DW total plant biomass
 lmeTotN_A<-lme(logRecov ~ Round,
             random = ~1|Plot,
             data = QTotN_plant_stat_A, na.action = na.exclude, method = "REML")
@@ -2472,21 +2524,58 @@ par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTotN_A, type=2)
-#
+# Significant
 summary(lmeTotN_A)
 #
 #
-# Contrasts Vassijaure
-contrasts(QTotN_plant_stat_V$Round) <- Contr_Vassijaure_MP.2
+# model:
+# pr g DW fine roots
+lmeTotN_FR_A<-lme(logRecovFR ~ Round,
+               random = ~1|Plot,
+               data = QTotN_plant_stat_A, na.action = na.exclude, method = "REML")
 #
-# transform data
-QTotN_plant_stat_V <- QTotN_plant_stat_V %>%
-  mutate(Recov = PlantRecovery_N_high_pr_DW)
-QTotN_plant_stat_V <- QTotN_plant_stat_V %>%
-  mutate(logRecov = log(Recov+1), # Good for low percentage values.
-         arcRecov = asin(sqrt(Recov/100))) # General use is for this transformation.
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_FR_A), resid(lmeTotN_FR_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_FR_A), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_FR_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_FR_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_FR_A, type=2)
+# Significant
+summary(lmeTotN_FR_A)
+#
 #
 # model:
+# pr m2
+lmeTotN_m2_A<-lme(logRecovm2 ~ Round,
+                  random = ~1|Plot,
+                  data = QTotN_plant_stat_A, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_m2_A), resid(lmeTotN_m2_A), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_m2_A), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_m2_A), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_m2_A)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_m2_A, type=2)
+# Significant
+summary(lmeTotN_m2_A)
+#
+#
+# For Vassijaure
+# Contrasts
+contrasts(QTotN_plant_stat_V$Round) <- Contr_Vassijaure_MP.2
+#
+# model:
+# pr g DW total plant biomass
 lmeTotN_V<-lme(logRecov ~ Round,
             random = ~1|Plot,
             data = QTotN_plant_stat_V, na.action = na.exclude, method = "REML")
@@ -2495,15 +2584,57 @@ lmeTotN_V<-lme(logRecov ~ Round,
 par(mfrow = c(1,2))
 plot(fitted(lmeTotN_V), resid(lmeTotN_V), 
      xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
-qqnorm(resid(lmeTotN_V), main = "Normally distributed?")                 
+qqnorm(resid(lmeTotN_V), main = "Normally distributed?")
 qqline(resid(lmeTotN_V), main = "Homogeneity of Variances?", col = 2) #OK
 plot(lmeTotN_V)
 par(mfrow = c(1,1))
 #
 # model output
 Anova(lmeTotN_V, type=2)
-#
+# Significant
 summary(lmeTotN_V)
+#
+#
+# model:
+# pr g DW fine roots
+lmeTotN_FR_V<-lme(logRecovFR ~ Round,
+                  random = ~1|Plot,
+                  data = QTotN_plant_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_FR_V), resid(lmeTotN_FR_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_FR_V), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_FR_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_FR_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_FR_V, type=2)
+# Significant
+summary(lmeTotN_FR_V)
+#
+#
+# model:
+# pr m2
+lmeTotN_m2_V<-lme(logRecovm2 ~ Round,
+                  random = ~1|Plot,
+                  data = QTotN_plant_stat_V, na.action = na.exclude, method = "REML")
+#
+# Checking assumptions:
+par(mfrow = c(1,2))
+plot(fitted(lmeTotN_m2_V), resid(lmeTotN_m2_V), 
+     xlab = "fitted", ylab = "residuals", main="Fitted vs. Residuals") 
+qqnorm(resid(lmeTotN_m2_V), main = "Normally distributed?")                 
+qqline(resid(lmeTotN_m2_V), main = "Homogeneity of Variances?", col = 2) #OK
+plot(lmeTotN_m2_V)
+par(mfrow = c(1,1))
+#
+# model output
+Anova(lmeTotN_m2_V, type=2)
+# Trend
+summary(lmeTotN_m2_V)
 #
 #
 #

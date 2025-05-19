@@ -1289,7 +1289,7 @@ crossprod(Contr_organ)
 #
 # Contrasts for graphs
 # Define the winter period as snow covered period
-seasonContr <- data.frame(Part = c("Summer", "Autumn", "Winter", "Spring"), pstart = c("01_Jul_19", "03_Sep_19", "05_Nov_19", "_20"), pend = c())
+#seasonContr <- data.frame(Part = c("Summer", "Autumn", "Winter", "Spring"), pstart = c("01_Jul_19", "03_Sep_19", "05_Nov_19", "_20"), pend = c())
 
 
 winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
@@ -1828,10 +1828,9 @@ Q1a_season_A %>%
 Q1a_season_A %>%
   filter(!is.na(AutumnVsSnow)) %>%
   summarise(OrganRecovery = mean(OrganRecovery), .by = c(AutumnVsSnow, Organ))
-# Snow-free
-# S:  Autumn 2.09; Snow 2.09
+# S:  Autumn 2.09; Snow 13.9
 # CR: Autumn 16.2; Snow 27.6
-# FR: Autumn 81.7; Snow 13.9
+# FR: Autumn 81.7; Snow 58.5
 #
 Q1a_season_A %>%
   filter(!is.na(SnowCW)) %>%
@@ -1903,7 +1902,6 @@ Q1a_season_V %>%
 Q1a_season_V %>%
   filter(!is.na(AutumnVsSnow)) %>%
   summarise(OrganRecovery = mean(OrganRecovery), .by = c(AutumnVsSnow, Organ))
-# Snow-free
 # S:  Autumn 2.63; Snow 20.5
 # CR: Autumn 34.2; Snow 31.3
 # FR: Autumn 63.1; Snow 48.2

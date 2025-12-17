@@ -771,7 +771,7 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   theme_bw(base_size = 25) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
 #
-airT_legend <- get_plot_component(airT_plot, "guide-box", return_all = TRUE)[[4]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+airT_legend <- get_plot_component(airT_plot, "guide-box", return_all = TRUE)#[[4]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 airT_legend
 airT_plot.2 <- airT_plot + theme_bw(base_size = 25) + theme(legend.position = "none", axis.text.x = element_blank(), axis.text.y = element_text(size = 18))#, axis.title.y = element_text(size = 25)) 
 #airT_plot <- airT_plot + guides(lty = NULL)
@@ -811,7 +811,7 @@ snowDepth_plot <- snowData_2 %>%
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 #
-snowData_legend <- get_plot_component(snowDepth_plot, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+snowData_legend <- get_plot_component(snowDepth_plot, "guide-box", return_all = TRUE)#[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 snowDepth_plot.2 <- snowDepth_plot + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_text(size = 25)) 
 #
 # Plot
@@ -860,7 +860,7 @@ snowDepth_plot_2 <- avgVWC_wide3 %>%
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 #
-snowData_legend_2 <- get_plot_component(snowDepth_plot_2, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+snowData_legend_2 <- get_plot_component(snowDepth_plot_2, "guide-box", return_all = TRUE)#[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 snowData_yaxis_2 <- get_y_axis(snowDepth_plot_2)
 snowDepth_plot_2.2 <- snowDepth_plot_2 + theme_bw(base_size = 25) + theme(legend.position = "none")#, axis.title.y = element_blank()) 
 #

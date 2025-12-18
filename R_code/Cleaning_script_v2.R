@@ -85,8 +85,8 @@ Core2 <- Core %>%
          DW_FW_frac = SM_DW_g/SM_FW_g, # The soil Dry weight to Fresh weight ratio
          Injection_N_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_N_frac, # Actual added amount of N, assuming 19mL vol of solution per plot, 1mL per hole
          Injection_15N_mg_pr_patch = Label_conc_mg/(Label_conc_mL/1000)*(19/1000)*Label_15N_frac, # Actual added amount of labelled 15N, assuming 19mL vol of solution per plot, 1mL per hole
-         Soil_RF_FW_g = Soil_subRF_mass_g/Soil_sub_mass_g) %>% # Mass of root free soil in FW
-  mutate(Soil_RF_DW_g = Soil_RF_FW_g*Soil_mass_g*DW_FW_frac) # Mass of root free soil in DW
+         Soil_RF_FW_ratio = Soil_subRF_mass_g/Soil_sub_mass_g) %>% # Mass of root free soil in FW
+  mutate(Soil_RF_DW_g = Soil_RF_FW_ratio*Soil_mass_g*DW_FW_frac) # Mass of root free soil in DW
 
 #
 Core3 <- Core2 %>%

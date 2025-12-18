@@ -705,20 +705,20 @@ MinVeg_isoR <- mineral_isoR %>%
          PlantRecovery_14N_high = Rec15N*isoR14_high_avg,
          PlantRecovery_14N_low = Rec15N*isoR14_low_avg) %>%
   # 
-  # All values are now in µg pr g DW
-  mutate(# Pr DW of total plant biomass
+  # All values are transformed to µg or mg
+  mutate(# µg pr g DW of total plant biomass
     PlantRecovery_N_high_pr_DW = PlantRecovery_N_high/Biomass_DW_g*10^6,
     PlantRecovery_N_low_pr_DW = PlantRecovery_N_low/Biomass_DW_g*10^6,
     PlantRecovery_14N_high_pr_DW = PlantRecovery_14N_high/Biomass_DW_g*10^6,
     PlantRecovery_14N_low_pr_DW = PlantRecovery_14N_low/Biomass_DW_g*10^6,
     PlantRecovery_15N_pr_DW = Rec15N/Biomass_DW_g*10^6,
-    # Pr g DW of fine root (FR)
+    # µg pr g DW of fine root (FR)
     PlantRecovery_N_high_pr_DW_FR = PlantRecovery_N_high/Biomass_DW_FR_g*10^6,
     PlantRecovery_N_low_pr_DW_FR = PlantRecovery_N_low/Biomass_DW_FR_g*10^6,
     PlantRecovery_14N_high_pr_DW_FR = PlantRecovery_14N_high/Biomass_DW_FR_g*10^6,
     PlantRecovery_14N_low_pr_DW_FR = PlantRecovery_14N_low/Biomass_DW_FR_g*10^6,
     PlantRecovery_15N_pr_DW_FR = Rec15N/Biomass_DW_FR_g*10^6,
-    # Pr m2
+    # mg pr m2
     PlantRecovery_N_high_pr_m2 = PlantRecovery_N_high/((Soil_diameter_cm/200)^2*pi)*10^3,
     PlantRecovery_N_low_pr_m2 = PlantRecovery_N_low/((Soil_diameter_cm/200)^2*pi)*10^3,
     PlantRecovery_14N_high_pr_m2 = PlantRecovery_14N_high/((Soil_diameter_cm/200)^2*pi)*10^3,

@@ -3318,7 +3318,7 @@ Rec_prop_plot <- Rec15N_sum2 %>%
   theme(legend.position = "bottom", panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
 #Rec_prop_legend <- get_legend(Rec_prop_plot) # Currently (as of 2024.10.24) not working when position is not "right"
-Rec_prop_legend <- get_plot_component(Rec_prop_plot, "guide-box", return_all = TRUE)[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
+Rec_prop_legend <- get_plot_component(Rec_prop_plot, "guide-box", return_all = TRUE)#[[3]]  # 1 is right, 2 is left, 3 is bottom, 4 is top
 Rec_prop_plot2 <- Rec_prop_plot + theme(legend.position = "none")
 #
 #
@@ -3341,7 +3341,7 @@ Rec_Abs_plot <- Rec15N_abs_sum %>%
   theme(legend.position = "top", panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))
 #
 #Rec_Abs_legend <- get_legend(Rec_Abs_plot) # Currently (as of 2024.10.24) not working when position is not "right"
-Rec_Abs_legend <- get_plot_component(Rec_Abs_plot, "guide-box", return_all = TRUE)[[4]] # 1 is right, 2 is left, 3 is bottom, 4 is top
+Rec_Abs_legend <- get_plot_component(Rec_Abs_plot, "guide-box", return_all = TRUE)#[[4]] # 1 is right, 2 is left, 3 is bottom, 4 is top
 Rec_Abs_plot2 <- Rec_Abs_plot + theme(legend.position = "none")
 #
 #

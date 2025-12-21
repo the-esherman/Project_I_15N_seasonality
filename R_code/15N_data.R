@@ -995,7 +995,7 @@ MinVeg_isoR %>%
   geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW_FR, ymin=PlantRecovery_N_high_pr_DW_FR+ci, ymax=PlantRecovery_N_high_pr_DW_FR), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
+  scale_x_discrete(labels = measuringPeriod_miner2) +
   coord_cartesian(ylim = c(0,350)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Time of harvest", y = expression("Plant N uptake (µg N g"*{}^-1*" DW fine roots)"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) +
@@ -1030,7 +1030,7 @@ MinVeg_isoR %>%
   geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
   scale_fill_viridis_d() +
   geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_m2, ymin=PlantRecovery_N_high_pr_m2+ci, ymax=PlantRecovery_N_high_pr_m2), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
+  scale_x_discrete(labels = measuringPeriod_miner2) +
   coord_cartesian(ylim = c(0,160)) +
   facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
   labs(x = "Time of harvest", y = expression("Plant N uptake (mg N m"*{}^-2*")"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) +

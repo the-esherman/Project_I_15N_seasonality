@@ -2349,6 +2349,9 @@ Anova(lmeTDN_V, type=2)
 summary(lmeTDN_V)
 # Not significant
 #
+summarySE(Rec15N, measurevar = "R_TDN", groupvars = c("Site", "Round"))
+# Absolute recovery in TDN <1%
+#
 #
 #
 #-------   ##  Competition   ##  -------

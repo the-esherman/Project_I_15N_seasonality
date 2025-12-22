@@ -1435,34 +1435,36 @@ summary(lme0_A)
 #
 Q0_season_A <- Q0_ecosys_stat_A %>%
   select(1:4, sysRec) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15, "Summer", "Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 ~ "Snow",
+                                  TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
-                              MP == 10 | MP == 11 | MP == 12 ~ "Warm",
-                              TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Warm",
-                              MP == 3 | MP == 4 ~ "Cold",
-                              TRUE ~ NA))
+                            MP == 10 | MP == 11 | MP == 12 ~ "Warm",
+                            TRUE ~ NA))
 #
+Q0_season_A %>%
+  summarise(sysRec = mean(sysRec), .by = c(SummerVsCold))
+# Summer: 45.5 Cold season: 58.3
+#
+Q0_season_A %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(AutumnVsSnow))
+# Autumn: 64.7 Snow: 56.7
 #
 Q0_season_A %>%
   filter(!is.na(SnowCW)) %>%
   summarise(sysRec = mean(sysRec), .by = c(SnowCW))
 # Snow-covered
-# Cold: 66.1 Warm: 41.1
-#
-Q0_season_A %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(sysRec = mean(sysRec), .by = c(FreeWC))
-# Snow-free
-# Warm: 45.5 Cold: 64.7
+# Warm: 41.1 Cold: 66.1
 #
 Q0_season_A %>%
   summarise(sysRec_season = mean(sysRec), .by = c(Snow))
 #
-summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("Snow"))
+summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("SummerVsCold"))
+summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("AutumnVsSnow"))
 summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("SnowCW"))
-summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("FreeWC"))
-
+#
 Q0_season_A %>%
   ggplot(aes(x = Round, y = sysRec, fill = FreeWC)) +
   geom_boxplot() +
@@ -1506,34 +1508,33 @@ summary(lme0_V)
 #
 Q0_season_V <- Q0_ecosys_stat_V %>%
   select(1:4, sysRec) %>%
-  mutate(Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13, "Snow","Clear"),
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 14 | MP == 15, "Summer","Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Snow",
+                                  TRUE ~ NA),
          SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
                             MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
-                            TRUE ~ NA),
-         FreeWC = case_when(MP == 1 | MP == 2 | MP == 14 | MP == 15 ~ "Warm",
-                            MP == 3 | MP == 4 ~ "Cold",
                             TRUE ~ NA))
 #
+Q0_season_V %>%
+  summarise(sysRec = mean(sysRec), .by = c(SummerVsCold))
+# Summer: 46.1 Cold season: 49.2
+#
+Q0_season_V %>%
+  filter(!is.na(AutumnVsSnow)) %>%
+  summarise(sysRec = mean(sysRec), .by = c(AutumnVsSnow))
+# Autumn: 37.8 Snow: 51.7
 #
 Q0_season_V %>%
   filter(!is.na(SnowCW)) %>%
   summarise(sysRec = mean(sysRec), .by = c(SnowCW))
 # Snow-covered
-# Cold: 65.2 Warm: 34.8
+# Warm: 34.8 Cold: 65.2
 #
-Q0_season_V %>%
-  filter(!is.na(FreeWC)) %>%
-  summarise(sysRec = mean(sysRec), .by = c(FreeWC))
-# Snow-free
-# Warm: 46.1 Cold: 37.8
-#
-Q0_season_V %>%
-  summarise(sysRec_season = mean(sysRec), .by = c(Snow))
-#
-summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("Snow"))
+summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("SummerVsCold"))
+summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("AutumnVsSnow"))
 summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("SnowCW"))
-summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("FreeWC"))
-
+#
 Q0_season_V %>%
   ggplot(aes(x = Round, y = sysRec, fill = SnowCW)) +
   geom_boxplot() +

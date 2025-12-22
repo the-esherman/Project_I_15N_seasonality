@@ -2088,6 +2088,20 @@ Anova(lme2_A, type=2)
 # Tendency
 summary(lme2_A)
 #
+Q2_season_A <- Q2_MBN_stat_A %>%
+  select(1:4, R_MBN) %>%
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15, "Summer", "Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 ~ "Snow",
+                                  TRUE ~ NA),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 ~ "Warm",
+                            TRUE ~ NA))
+#
+summarySE(Q2_season_A, measurevar = "R_MBN", groupvars = c("SummerVsCold"))
+summarySE(Q2_season_A, measurevar = "R_MBN", groupvars = c("AutumnVsSnow"))
+summarySE(Q2_season_A, measurevar = "R_MBN", groupvars = c("SnowCW"))
+#
 #
 # Contrasts Vassijaure
 contrasts(Q2_MBN_stat_V$Round) <- Contr_Vassijaure_MP
@@ -2117,6 +2131,20 @@ par(mfrow = c(1,1))
 Anova(lme2_V, type=2)
 summary(lme2_V)
 # Highly significant
+#
+Q2_season_V <- Q2_MBN_stat_V %>%
+  select(1:4, R_MBN) %>%
+  mutate(SummerVsCold = if_else(MP == 1 | MP == 2 | MP == 14 | MP == 15, "Summer","Cold"),
+         AutumnVsSnow = case_when(MP == 3 | MP == 4 ~ "Autumn",
+                                  MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Snow",
+                                  TRUE ~ NA),
+         SnowCW = case_when(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Cold",
+                            MP == 10 | MP == 11 | MP == 12 | MP == 13 ~ "Warm",
+                            TRUE ~ NA))
+#
+summarySE(Q2_season_V, measurevar = "R_MBN", groupvars = c("SummerVsCold"))
+summarySE(Q2_season_V, measurevar = "R_MBN", groupvars = c("AutumnVsSnow"))
+summarySE(Q2_season_V, measurevar = "R_MBN", groupvars = c("SnowCW"))
 #
 #
 #

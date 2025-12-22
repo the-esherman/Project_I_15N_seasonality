@@ -2147,6 +2147,10 @@ summarySE(Q2_season_V, measurevar = "R_MBN", groupvars = c("AutumnVsSnow"))
 summarySE(Q2_season_V, measurevar = "R_MBN", groupvars = c("SnowCW"))
 #
 #
+summarySE(Rec15N, measurevar = "R_MBN_frac", groupvars = c("Site", "Round"))
+# Relative recovery in MBN: 72.4-94.1%
+#
+#
 #
 #-------   ##       TDN      ##  -------
 #

@@ -304,20 +304,9 @@ Vassijaure_EM50 %>%
   theme(legend.position = "top")
 #
 #
-# Mean Soil temperature
+# Mean Soil moisture
 Abisko_avgVWC <- Abisko_EM50 %>%
   select(Date, A1N_VWC, A2N_VWC, A3N_VWC, A4N_VWC, A5N_VWC) %>%
-  # Remove soil temperatures below -15 C
-  # mutate(A1N_VWC = replace(A1N_VWC, A1N_VWC < -15, NA), # Has very low values in July 2019 and during winter
-  #        A2N_VWC = replace(A1N_VWC, A2N_VWC < -15, NA),
-  #        A3N_VWC = replace(A1N_VWC, A3N_VWC < -15, NA), # Has a single measure very low measure in March 2020
-  #        A4N_VWC = replace(A1N_VWC, A4N_VWC < -15, NA),
-  #        A5N_VWC = replace(A1N_VWC, A5N_VWC < -15, NA)) %>%
-  # mutate(A1N_VWC = if_else(month(Date) == 7 & A1N_VWC < 5, NA, A1N_VWC),
-  #        A2N_VWC = if_else(month(Date) == 7 & A2N_VWC < 0, NA, A1N_VWC),
-  #        A3N_VWC = if_else(month(Date) == 7 & A3N_VWC < 0, NA, A1N_VWC),
-  #        A4N_VWC = if_else(month(Date) == 7 & A4N_VWC < 0, NA, A1N_VWC),
-  #        A5N_VWC = if_else(month(Date) == 7 & A5N_VWC < 0, NA, A1N_VWC)) %>%
   group_by(date(Date)) %>%
   summarise(A1N_VWC = mean(A1N_VWC, na.rm = TRUE),
             A2N_VWC = mean(A2N_VWC, na.rm = TRUE),
@@ -331,12 +320,6 @@ Abisko_avgVWC <- Abisko_EM50 %>%
 #
 Vassijaure_avgVWC <- Vassijaure_EM50 %>%
   select(V_Date, V1N_VWC, V2N_VWC, V3N_VWC, V4N_VWC, V5N_VWC) %>%
-  # Remove soil temperatures below -15 C
-  # mutate(V1N_VWC = replace(V1N_VWC, V1N_VWC < -15, NA), # Has very low values in July 2019 and during winter
-  #        V2N_VWC = replace(V2N_VWC, V2N_VWC < -15, NA),
-  #        V3N_VWC = replace(V3N_VWC, V3N_VWC < -15, NA), # Has a single measure very low measure in March 2020
-  #        V4N_VWC = replace(V4N_VWC, V4N_VWC < -15, NA),
-  #        V5N_VWC = replace(V5N_VWC, V5N_VWC < -15, NA)) %>%
   group_by(date(V_Date)) %>%
   summarise(V1N_VWC = mean(V1N_VWC, na.rm = TRUE),
             V2N_VWC = mean(V2N_VWC, na.rm = TRUE),
@@ -348,7 +331,7 @@ Vassijaure_avgVWC <- Vassijaure_EM50 %>%
   mutate(Vassijaure = mean(c(V1N_VWC, V2N_VWC, V3N_VWC, V4N_VWC, V5N_VWC), na.rm = TRUE)) %>% # Average across plots
   ungroup()
 #
-# Format wide: Abisko and Vassijaureseparate columns
+# Format wide: Abisko and Vassijaure separate columns
 avgVWC_wide <- left_join(Abisko_avgVWC, Vassijaure_avgVWC, by = join_by(Date)) %>%
   select(c(Date, Abisko, Vassijaure)) %>%
   rename("Abisko_VWC" = Abisko,

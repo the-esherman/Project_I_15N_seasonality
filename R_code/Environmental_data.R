@@ -179,15 +179,15 @@ Abisko_avgTsoil <- Abisko_EM50 %>%
   select(Date, A1N_Tsoil, A2N_Tsoil, A3N_Tsoil, A4N_Tsoil, A5N_Tsoil) %>%
   # Remove soil temperatures below -15 C
   mutate(A1N_Tsoil = replace(A1N_Tsoil, A1N_Tsoil < -15, NA), # Has very low values in July 2019 and during winter
-         A2N_Tsoil = replace(A1N_Tsoil, A2N_Tsoil < -15, NA),
-         A3N_Tsoil = replace(A1N_Tsoil, A3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
-         A4N_Tsoil = replace(A1N_Tsoil, A4N_Tsoil < -15, NA),
-         A5N_Tsoil = replace(A1N_Tsoil, A5N_Tsoil < -15, NA)) %>%
+         A2N_Tsoil = replace(A2N_Tsoil, A2N_Tsoil < -15, NA),
+         A3N_Tsoil = replace(A3N_Tsoil, A3N_Tsoil < -15, NA), # Has a single measure very low measure in March 2020
+         A4N_Tsoil = replace(A4N_Tsoil, A4N_Tsoil < -15, NA),
+         A5N_Tsoil = replace(A5N_Tsoil, A5N_Tsoil < -15, NA)) %>%
   mutate(A1N_Tsoil = if_else(month(Date) == 7 & A1N_Tsoil < 5, NA, A1N_Tsoil),
-         A2N_Tsoil = if_else(month(Date) == 7 & A2N_Tsoil < 0, NA, A1N_Tsoil),
-         A3N_Tsoil = if_else(month(Date) == 7 & A3N_Tsoil < 0, NA, A1N_Tsoil),
-         A4N_Tsoil = if_else(month(Date) == 7 & A4N_Tsoil < 0, NA, A1N_Tsoil),
-         A5N_Tsoil = if_else(month(Date) == 7 & A5N_Tsoil < 0, NA, A1N_Tsoil)) %>%
+         A2N_Tsoil = if_else(month(Date) == 7 & A2N_Tsoil < 0, NA, A2N_Tsoil),
+         A3N_Tsoil = if_else(month(Date) == 7 & A3N_Tsoil < 0, NA, A3N_Tsoil),
+         A4N_Tsoil = if_else(month(Date) == 7 & A4N_Tsoil < 0, NA, A4N_Tsoil),
+         A5N_Tsoil = if_else(month(Date) == 7 & A5N_Tsoil < 0, NA, A5N_Tsoil)) %>%
   group_by(date(Date)) %>%
   summarise(A1N_Tsoil = mean(A1N_Tsoil, na.rm = TRUE),
             A2N_Tsoil = mean(A2N_Tsoil, na.rm = TRUE),

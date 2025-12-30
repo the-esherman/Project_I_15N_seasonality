@@ -228,8 +228,8 @@ avgTsoil_long <- left_join(Abisko_avgTsoil, Vassijaure_avgTsoil) %>%
 #
 #
 # Combine all temperatures
-avgT_wide <- left_join(avgTair_wide, avgTsoil_wide)
-avgT_long <- left_join(avgTair_long, avgTsoil_long)
+avgT_wide <- left_join(avgTair_wide, avgTsoil_wide) %>% ungroup()
+avgT_long <- left_join(avgTair_long, avgTsoil_long) %>% ungroup()
 #
 # Add confidence interval
 # 95% CI
@@ -606,7 +606,8 @@ Abisko_avgPAR <- Abisko_EM50 %>%
             A5_PAR = mean(A5_PAR, na.rm = TRUE),
             .groups = "keep") %>%
   rename("Date" = "date(Date)") %>%
-  mutate(Abisko = mean(c(A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR), na.rm = TRUE))
+  mutate(Abisko = mean(c(A1_PAR, A2_PAR, A3_PAR, A4_PAR, A5_PAR), na.rm = TRUE)) %>%
+  ungroup()
 #
 # Vassijaure
 Vassijaure_avgPAR <- Vassijaure_EM50 %>%
@@ -619,7 +620,8 @@ Vassijaure_avgPAR <- Vassijaure_EM50 %>%
             V5_PAR = mean(V5_PAR, na.rm = TRUE),
             .groups = "keep") %>%
   rename("Date" = "date(V_Date)") %>%
-  mutate(Vassijaure = mean(c(V1_PAR, V2_PAR, V3_PAR, V4_PAR, V5_PAR), na.rm = TRUE))
+  mutate(Vassijaure = mean(c(V1_PAR, V2_PAR, V3_PAR, V4_PAR, V5_PAR), na.rm = TRUE)) %>%
+  ungroup()
 
   
   # mutate(A1_PAR = if_else(month(Date) == 7 & A1_PAR < 5, NA, A1_PAR),
@@ -654,7 +656,8 @@ SMHI_Abisko_Tair <- SMHI_Abisko_Tair %>%
 SMHI_A_avgTair <- SMHI_Abisko_Tair %>%
   group_by(date(Datum)) %>%
   summarise(Abisko_Tair_SMHI = mean(Lufttemperatur, na.rm = TRUE), .groups = "keep") %>%
-  rename("Date" = "date(Datum)")
+  rename("Date" = "date(Datum)") %>%
+  ungroup()
 #
 # Katterjåkk (closest station to Vassijaure)
 SMHI_Katterjakk_Tair <- SMHI_Katterjakk_Tair %>%
@@ -668,7 +671,8 @@ SMHI_Katterjakk_Tair <- SMHI_Katterjakk_Tair %>%
 SMHI_K_avgTair <- SMHI_Katterjakk_Tair %>%
   group_by(date(Datum)) %>%
   summarise(Katterjakk_Tair_SMHI = mean(Lufttemperatur, na.rm = TRUE), .groups = "keep") %>%
-  rename("Date" = "date(Datum)")
+  rename("Date" = "date(Datum)") %>%
+  ungroup()
 #
 # Combine
 

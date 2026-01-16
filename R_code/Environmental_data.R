@@ -754,7 +754,7 @@ airT_plot <- avgT_wide2 %>% ggplot() +
   scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day") +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
   labs(x = NULL, y = "Air (°C)") + # x = "Time of year",  , title = "Air temperature" 
-  guides(lty = guide_legend(title = "Mean diel temperature"))+ #lty = guide_legend(title = "Mean diel temperature")) +
+  #guides(lty = guide_legend(title = "Mean diel temperature"))+ #lty = guide_legend(title = "Mean diel temperature")) +
   theme_bw(base_size = 25) +
   theme(legend.position = "top", axis.text.x = element_blank(), axis.text.y = element_text(size = 15))
 #
@@ -843,7 +843,7 @@ snowDepth_plot_2 <- avgVWC_wide3 %>%
   scale_shape_manual(values = c(19, 1), na.translate = F) +
   coord_cartesian(xlim = c(as.Date("2019-08-06"),as.Date("2020-08-26"))) +
   labs(x = "Time of year", y = "Snow cover (cm)") +
-  guides(fill = guide_legend(title = "Snow", order = 1), shape = guide_legend(title = "Soil GWC", order = 2), linetype = "none") +
+  guides(fill = guide_legend(title = "", order = 1), shape = guide_legend(title = "Soil GWC", order = 2), linetype = "none") +
   theme_bw(base_size = 25) +
   theme(legend.position = "bottom")
 #

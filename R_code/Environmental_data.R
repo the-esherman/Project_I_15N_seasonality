@@ -811,9 +811,9 @@ grid.arrange(airT_legend, airT_plot.2, soilT_plot, snowDepth_plot.2, snowData_le
 #
 # Snow and moisture in one graph
 snowDepth_plot_2 <- avgVWC_wide3 %>%
-  mutate(Site = case_when(Site == "Abisko" ~ "A",
-                          Site == "Vassijaure" ~ "V",
-                          TRUE ~ Site)) %>%
+  # mutate(Site = case_when(Site == "Abisko" ~ "A",
+  #                         Site == "Vassijaure" ~ "V",
+  #                         TRUE ~ Site)) %>%
   rename("SiteGWC" = Site) %>%
   left_join(snowData_2, by = join_by(Date)) %>%
   ggplot() +

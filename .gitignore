@@ -13,6 +13,7 @@ export/*
 
 # Removed code
 R_code/15N_data_removed.R
+R_code/Final_trim.R
 
 # Drafts and raw calculations
 R_code/Loose_calculations.R

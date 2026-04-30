@@ -2433,7 +2433,7 @@ Rec_Abs_plot2 <- Rec_Abs_plot + theme(legend.position = "none")
 #
 Fig_Recov <- grid.arrange(Rec_Abs_legend, Rec_Abs_plot2, Rec_prop_legend, Rec_prop_plot2, ncol = 1, heights = c(0.5, 5, 0.5, 5))
 #
-#ggsave("Fig_3_Recovery2.png", plot = Fig_Recov, path = "images", width = 28, height = 28, units = "cm", dpi = 600, bg = "white")
+#ggsave("Fig_3_Recovery2.png", plot = Fig_Recov, path = "images", width = 28, height = 28, units = "cm", dpi = 300, bg = "white")
 #
 #
 #

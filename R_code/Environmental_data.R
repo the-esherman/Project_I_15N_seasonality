@@ -613,7 +613,7 @@ hlay <- rbind(c(1,1),
 # Fig. 2: Air temperature, Soil temperature, and Snow depth with soil moisture as VWC and converted GWC
 env_plot <- grid.arrange(airT_legend, airT_plot.2, soilT_plot.2, MP_plot, snowDepth_plot_2.2, snowData_legend_2, widths = c(2.8,0.15), heights = c(0.7, 4, 4, 1.3, 4.7, 0.7), layout_matrix=hlay)
 
-ggsave("Fig_2_EnvironmentalData.4.png", plot = env_plot, path = "images", width = 50, height = 27, units = "cm", dpi = 1200, bg = "white")
+#ggsave("Fig_2_EnvironmentalData.6.png", plot = env_plot, path = "images", width = 50, height = 27, units = "cm", dpi = 300, bg = "white")
 
 #env_plot.flux <- plot_grid(airT_plot, soilT_plot.2, soilM_plot.2, PAR_plot.2, Flux_period_plot, align = "v", ncol = 1, rel_heights = c(3,3,2.5,3.5,1.5))
 #plot_grid(env_plot.flux, soilT_legend, ncol = 1, rel_heights = c(9, 1))

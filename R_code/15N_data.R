@@ -7,7 +7,6 @@
 # To get months in the right format (i.e. not in whatever local the computer has, e.g. Swedish)
 Sys.setlocale("LC_ALL", 'en_GB.UTF-8')
 #
-#library(plyr)
 library(tidyverse)
 library(car)
 library(nlme)
@@ -190,16 +189,6 @@ Mic15N <- Mic15N %>%
                      (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6)))/
                     K_EN * Soil_RF_DW_g)/(Injection_15N_mg_pr_patch/1000) * 100) %>%
   mutate(R_MBN = if_else(R_MBN < 0, 0, R_MBN)) # Recovery cannot be negative
-  # # Method 2:
-  # # {15N_lab} & {15N_NatAb}
-  # mutate( # {15N_lab}
-  #         MBN_15N_lab = (Atom_pc_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6))*Soil_RF_DW_g/K_EN,
-  #        # {15N_NatAb}
-  #        MBN_15N_NatAb = (Atom_pc_NatAb_SEF/100 * Nconc_microg_pr_gDW_SEF*10^(-6) - Atom_pc_NatAb_SE/100 * Nconc_microg_pr_gDW_SE*10^(-6))*Soil_RF_DW_g/K_EN) %>%
-  # # Recovery:
-  # # ({15N_lab} - {15N_NatAb})/15N_inj * 100 
-  # mutate(R_MBN2 = ((MBN_15N_lab - MBN_15N_NatAb)*100)/(Injection_15N_mg_pr_patch/1000))
-  # Gives exactly the same results
 #
 # Calculate recovery as a proportion of total recovered in each plot
 Rec15N <- vegroot15N_total_Plant %>%
@@ -211,11 +200,6 @@ Rec15N <- vegroot15N_total_Plant %>%
          R_TDN_frac = R_TDN/sysRec*100,
          R_MBN_frac = R_MBN/sysRec*100) %>%
   ungroup()
-#
-# How much 15N was added
-Added_N <- coreData %>%
-  mutate(N_pr_m2 = Injection_N_mg_pr_patch/((Soil_diameter_cm/2/100)^2*pi)) %>%
-  select(1:5, N_pr_m2)
 #
 #
 #
@@ -349,30 +333,6 @@ for (i in 2:15) { # 15MP excluding first round
   }
 }
 #
-# Checking if the mineralization fits the approx. 1 week after previous harvest linear interpolation
-plot_min_test <- mineral %>%
-  left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
-  left_join(mineral_V, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
-  # Values alternate between Abisko and Vassijaure and should be combined into one value
-  mutate(Nconc_in0 = if_else(!is.na(Nconc_in0.A), Nconc_in0.A, Nconc_in0.V)) %>% 
-  select(!c(Nconc_in0.A, Nconc_in0.V)) %>%
-  relocate(Soil_RF_DW_g, .after = Extr_type)
-#
-# Plot average inorganic [N] at harvest (Nconc_inorg) and the interpolated inorganic [N] at injection
-plot_min_test %>%
-  mutate(Plot = as.character(Plot)) %>%
-  ggplot() + 
-  geom_point(aes(x = MP-0.75, y = Nconc_in0, color = Plot)) + 
-  geom_line(aes(x = MP, y = Nconc_inorg, color = Plot)) + facet_wrap(~Site)
-#
-# Plot average inorganic [N] at harvest (Nconc_inorg) and the interpolated inorganic [N] at injection
-plot_min_test %>%
-  summarise(across(c(Nconc_inorg, Nconc_in0), ~mean(.x, na.rm = TRUE)), .by = c(Site, MP)) %>%
-  ggplot() + 
-  geom_point(aes(x = MP-0.75, y = Nconc_in0, color = Site)) + 
-  geom_line(aes(x = MP, y = Nconc_inorg, color = Site))
-# Everything good. Note that small deviations from the actual value is because it was not always a perfect 28 days between harvests
-#
 # Combine Abisko and Vassijaure and join the values
 mineral_combined <- mineral %>%
   left_join(mineral_A, by = join_by(Site, Plot, MP, Round, Extr_type)) %>%
@@ -403,12 +363,12 @@ N_fertilizer_sum <- summarySE(N_fertilizer, measurevar = "deltaInj_pc", groupvar
 #
 #
 #
-# <><><><><> FERTILIZER - SUPPL. FIG 8 <><><><><>
+# <><><><><> FERTILIZER - SUPPL. FIG 9 <><><><><>
 #
 #
 #
 # Plot how much the injected N adds to the total N pool (incl. the label) at injection
-N_fertilizer_sum %>%
+FigS_fert <- N_fertilizer_sum %>%
   left_join(DayOfinj, by = join_by(Site, Round)) %>%
   mutate(across(Day_of_label, ~ as.Date(.x))) %>%
   ggplot(aes(x = Day_of_label, y = deltaInj_pc, ymin = deltaInj_pc-ci, ymax = deltaInj_pc+ci, fill = Site, linetype = Site)) + 
@@ -421,9 +381,12 @@ N_fertilizer_sum %>%
   theme_classic(base_size = 20) +
   theme(axis.text.x=element_text(angle=60, hjust=1))
 #
+#ggsave("Fig_S9_FertilizerEffect.png", plot = FigS_fert, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+
 #
 #
-# <><><><><> END SUPPL. FIG 8 <><><><><>
+#
+# <><><><><> END SUPPL. FIG 9 <><><><><>
 #
 #
 #
@@ -471,59 +434,6 @@ mineral_isoR <- mineral_combined %>% filter(!is.na(DaysHH)) %>%
          isoF14_high_avg = isoF15_high_avg^-1,
          isoF14_low_avg = isoF15_low_avg^-1,
          isoF14_low2_avg = isoF15_low2_avg^-1)
-#
-# Plot the different estimates against each other
-# Using 14N/15N ratio
-mineral_isoR %>%
-  select(1:4, isoR14_high_avg:isoR14_low2_avg) %>%
-  rename("High" = isoR14_high_avg,
-         "Low" = isoR14_low_avg,
-         "Low2" = isoR14_low2_avg) %>%
-  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "isoR14") %>%
-  #summarise(isoR14 = mean(isoR14), .by = c(Site, MP, Estimate)) %>%
-  ggplot(aes(x = MP, y = isoR14, color = Estimate)) + geom_point() + facet_wrap(~Site)
-#
-# Using 15N/14N ratio inverted (should be same as above)
-mineral_isoR %>%
-  select(1:4, isoR15_high_avg:isoR15_low2_avg) %>%
-  rename("High" = isoR15_high_avg,
-         "Low" = isoR15_low_avg,
-         "Low2" = isoR15_low2_avg) %>%
-  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "isoR15") %>%
-  ggplot(aes(x = MP, y = isoR15^-1, color = Estimate)) + geom_point() + facet_wrap(~Site)
-# The estimates are very similar
-#
-# Plot harvest concentrations
-# As points
-mineral_isoR %>%
-  select(1:4, conc15N_harv_high:conc15N_harv_low2) %>%
-  rename("High" = conc15N_harv_high,
-         "Low" = conc15N_harv_low,
-         "Low2" = conc15N_harv_low2) %>%
-  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "conc15N") %>%
-  ggplot(aes(x = MP, y = conc15N, color = Estimate)) + geom_point() + facet_wrap(~Site)
-#
-# As average line
-mineral_isoR %>%
-  select(1:4, conc15N_harv_high:conc15N_harv_low2) %>%
-  rename("High" = conc15N_harv_high,
-         "Low" = conc15N_harv_low,
-         "Low2" = conc15N_harv_low2) %>%
-  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "conc15N") %>%
-  summarise(conc15N = mean(conc15N, rm.na = TRUE), .by = c(Site, MP, Estimate)) %>%
-  ggplot(aes(x = MP, y = conc15N, color = Estimate)) + geom_line() + facet_wrap(~Site)
-# The concentration is very low for all estimates at harvest
-#
-# Plot AP for harvest
-mineral_combined %>%
-  select(1:4, atom_pc_in_harvest_high, atom_pc_in_harvest_low, atom_pc_in_harvest_low2) %>%
-  rename("High" = atom_pc_in_harvest_high,
-         "Low" = atom_pc_in_harvest_low,
-         "Low2" = atom_pc_in_harvest_low2) %>%
-  pivot_longer(cols = 5:7, names_to = "Estimate", values_to = "AP_harv") %>%
-  ggplot(aes(x = MP, y = AP_harv, color = Estimate)) + geom_point() + facet_wrap(~Site)
-# Even though the AP is very different, if the concentration is very low, the ratio will be very similar
-#
 #
 # Average isotopic ratio (isoR) and get 95% CI
 min_isoR_2_high <- summarySE(mineral_isoR, measurevar = "isoR14_high_avg", groupvars = c("Site", "Round"), na.rm = TRUE)
@@ -601,34 +511,6 @@ mineral_combined <- mineral_combined %>%
          ) # gross consumption
 #
 #
-mineral_combined %>%
-  ggplot(aes(Round, gross_p_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-mineral_combined %>%
-  ggplot(aes(Round, gross_p_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-mineral_combined %>%
-  ggplot(aes(Round, gross_c_low2)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-mineral_combined %>%
-  ggplot(aes(Round, gross_c_high)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-mineral_combined %>%
-  ggplot(aes(Round, Nconc_inorg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-# How does the 15N/14N ratio change
-mineral_isoR %>%
-  ggplot(aes(Round, isoR15_low_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_isoR %>%
-  ggplot(aes(Round, isoR15_high_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-# How does the 14N/15N ratio change
-mineral_isoR %>%
-  ggplot(aes(Round, isoR14_low_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-mineral_isoR %>%
-  ggplot(aes(Round, isoR14_high_avg)) + geom_boxplot() + facet_wrap(vars(Site), scales = "free")
-#
-#
 #
 # <><><><><> TOTAL N UPTAKE - SUPPL. FIG 7 <><><><><>
 #
@@ -666,7 +548,9 @@ EstN_plot2 <- min_isoR_2 %>%
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 EstN_plot1_noXaxis <- EstN_plot1 + labs(x = element_blank())
-grid.arrange(EstN_plot1_noXaxis, EstN_plot2, ncol = 1)
+FigS_EstNuptake <- grid.arrange(EstN_plot1_noXaxis, EstN_plot2, ncol = 1)
+#
+#ggsave("Fig_S7_EstNuptake.png", plot = FigS_EstNuptake, path = "images", width = 30, height = 30, units = "cm", dpi = 600, bg = "white")
 #
 #
 # <><><><><> END SUPPL. FIG 7 <><><><><>
@@ -726,46 +610,12 @@ MinVeg_isoR <- mineral_isoR %>%
     PlantRecovery_15N_pr_m2 = Rec15N/((Soil_diameter_cm/200)^2*pi)*10^3)
 #
 #
-# Simple graph to check data
-MinVeg_isoR %>%
-  ggplot(aes(x = Round, y = PlantRecovery_N_low)) + geom_boxplot() + facet_wrap(~Site)
-MinVeg_isoR %>%
-  ggplot(aes(x = Round, y = PlantRecovery_N_high)) + geom_boxplot() + facet_wrap(~Site)
-#
 # isotopic fraction in soil (inverted)
 # High estimate
 MinVeg_isoR_F14_high_sum <- summarySE(MinVeg_isoR, measurevar="isoF14_high_avg", groupvars=c("Site", "Round"))
-MinVeg_isoR_F14_high_sum %>%  
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = isoF14_high_avg, ymin=isoF14_high_avg, ymax=isoF14_high_avg+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, isoF14_high_avg)) +
-  geom_col(aes(Round, isoF14_high_avg),color = "black") +
-  #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, high estimate")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
 # Low estimate
 MinVeg_isoR_F14_low_sum <- summarySE(MinVeg_isoR, measurevar="isoF14_low_avg", groupvars=c("Site", "Round"))
-MinVeg_isoR_F14_low_sum %>%  
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = isoF14_low_avg, ymin=isoF14_low_avg, ymax=isoF14_low_avg+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, isoF14_low_avg)) +
-  geom_col(aes(Round, isoF14_low_avg),color = "black") +
-  #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("N ("*{}^15*"N + "*{}^14*"N) per "*{}^15*"N"), title = expression("Inorganic "*{}^15*F^-1*" = total N ("*{}^15*"N + "*{}^14*"N)  along with "*{}^15*"N, low estimate")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-MinVeg_isoR %>%
-  ggplot() + geom_point(aes(x = MP, y = isoF14_high_avg))
 #
 # Average and get 95% CI
 MinVeg_isoR_high_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_N_high_pr_DW", groupvars=c("Site", "Round"))
@@ -783,158 +633,12 @@ MinVeg_15N_sum <- summarySE(MinVeg_isoR, measurevar="PlantRecovery_15N_pr_DW", g
 #
 #
 #
-# <><><><><> 14N UPTAKE - SUPPL. FIG ??  <><><><><>
-#
-#
-#
-MinVeg_isoR %>%
-  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
-  rename("Plant15N" = PlantRecovery_15N_pr_DW,
-         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
-  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc") %>%
-  group_by(across(c("Site", "Plot", "Round", "Isotope"))) %>%
-  summarise(TotalNconc = sum(Nconc, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Isotope"))) %>%
-  summarise(avgNconc = mean(TotalNconc, na.rm = TRUE), se = sd(TotalNconc)/sqrt(length(TotalNconc)), .groups = "keep") %>%
-  ungroup() %>%
-  left_join(MinVeg_isoR_high_sum, by = join_by(Site, Round)) %>%
-  select(1:4, PlantRecovery_N_high_pr_DW, ci) %>%
-  mutate(ci = if_else(Isotope == "Plant14N", ci, 0)) %>%
-  mutate(Isotope=factor(Isotope)) %>%
-  mutate(Isotope = fct_relevel(Isotope, c("Plant14N", "Plant15N"))) %>%
-  mutate(Isotope=case_when(Isotope == "Plant14N" ~ "14N",
-                           Isotope == "Plant15N" ~ "15N")) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgNconc, fill = factor(Isotope)), position = "stack", color = "black") +
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = PlantRecovery_N_high_pr_DW, ymin=PlantRecovery_N_high_pr_DW+ci, ymax=PlantRecovery_N_high_pr_DW), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  coord_cartesian(ylim = c(0,100)) +
-  facet_wrap( ~ Site, ncol = 2) + #, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("µg N g"*{}^-1*" DW"), title = expression("Plant total N uptake with "*{}^15*"N recovered, "*{}^14*"N estimated")) + 
-  guides(fill = guide_legend(title = "Isotope")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> END SUPPL. FIG ?? <><><><><>
-#
-#
-#
-# <><><><><> TOTAL N UPTAKE - (former SUPPL. FIG 6) <><><><><>
-#
-#
-#
-# Plant total N uptake +/- 95% CI
-# High estimate
-MinVeg_isoR_high_sum %>%
-  rename("PlantRecovery" = PlantRecovery_N_high_pr_DW) %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, PlantRecovery)) +
-  geom_col(aes(Round, PlantRecovery),color = "black") +
-  coord_cartesian(ylim = c(0,100)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Estimated total N-uptake (µg N g"*{}^-1*" DW)"), title = expression("Estimated total plant N uptake following labelled "*{}^15*"N")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> END (former SUPPL. FIG 6.1) <><><><><>
-#
-#
-#
-# Low estimate
-MinVeg_isoR_low_sum %>%
-  rename("PlantRecovery" = PlantRecovery_N_low_pr_DW) %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, PlantRecovery)) +
-  geom_col(aes(Round, PlantRecovery),color = "black") +
-  #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Total N uptaken along with labelled "*{}^15*"N per g DW"), title = expression("Plant total N ("*{}^15*"N + "*{}^14*"N) uptake along with "*{}^15*"N recovered, low estimate")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> PLANT 15N UPTAKE - former SUPPL. FIG <><><><><>
-#
-#
-#
-# Plant 15N uptake per g DW
-MinVeg_15N_sum %>%
-  rename("PlantRecovery" = PlantRecovery_15N_pr_DW) %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
-  #geom_point(aes(Round, PlantRecovery)) +
-  geom_col(aes(Round, PlantRecovery),color = "black") +
-  #coord_cartesian(ylim=c(0,50)) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Time of harvest", y = expression("µg"*{}^15*"N g"*{}^-1*" DW"), title = expression("Plant "*{}^15*"N uptake per biomass")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> END former SUPPL. FIG <><><><><>
-#
-#
-#
-MinVeg_isoR.2 <- MinVeg_isoR %>%
-  select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
-  rename("Plant15N" = PlantRecovery_15N_pr_DW,
-         "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
-  pivot_longer(5:6, names_to = "Isotope", values_to = "Nconc")
-
-MinVeg_N_sum <- summarySE(MinVeg_isoR.2, measurevar="Nconc", groupvars=c("Site", "Round", "Isotope"))
-
-
-MinVeg_N_sum %>%
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, Nconc, fill = factor(Isotope, levels=c("Plant14N","Plant15N"))), position = "stack", color = "black") +
-  #geom_errorbar(aes(x = Round, y = Nconc, ymin=Nconc, ymax=Nconc+ci), position=position_dodge(.9)) +
-  #coord_cartesian(ylim = c(0,100)) +
-  scale_fill_viridis_d(labels = c("14N", "15N")) +
-  scale_x_discrete(labels = measuringPeriod_miner) +
-  #scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "Isotope")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
-
-
-
-
-
-
-
-
-
-#
-#
-#
-# <><><><><> 14N UPTAKE - FIG 5  <><><><><>
+# <><><><><> 14N UPTAKE - FIG 5 & Suppl. Fig. 8 <><><><><>
 #
 #
 #
 # Per g DW total plant biomass
-MinVeg_isoR %>%
+FigS_plantNup1 <- MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_DW, PlantRecovery_14N_high_pr_DW) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_DW,
          "Plant14N" = PlantRecovery_14N_high_pr_DW) %>%
@@ -966,12 +670,14 @@ MinVeg_isoR %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#ggsave("Fig_S8_EstNuptake1.png", plot = FigS_plantNup1, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+#
 #
 #
 # Part 2
 #
 # Per g DW fine roots
-MinVeg_isoR %>%
+FigS_plantNup2 <- MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_DW_FR, PlantRecovery_14N_high_pr_DW_FR) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_DW_FR,
          "Plant14N" = PlantRecovery_14N_high_pr_DW_FR) %>%
@@ -1003,10 +709,13 @@ MinVeg_isoR %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#
+#ggsave("Fig_S8_EstNuptake2.png", plot = FigS_plantNup2, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+#
 # Part 3
 #
 # Per m2
-MinVeg_isoR %>%
+Fig_plantNup3 <- MinVeg_isoR %>%
   select(1:4, PlantRecovery_15N_pr_m2, PlantRecovery_14N_high_pr_m2) %>%
   rename("Plant15N" = PlantRecovery_15N_pr_m2,
          "Plant14N" = PlantRecovery_14N_high_pr_m2) %>%
@@ -1037,142 +746,12 @@ MinVeg_isoR %>%
   guides(fill = guide_legend(title = "Isotope")) +
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
+
+#ggsave("Fig_5_PlantTotalNup.png", plot = Fig_plantNup3, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
 #
 #
 #
 # <><><><><> END FIG 5 <><><><><>
-#
-#
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Why is A_3_6 so high??
-# ═══════════════════════════════════════╗
-mineral_isoR %>% #                       ▼
-  ggplot(aes(x = Nconc_in0_l, y = Nconc_inorg)) + geom_point() + facet_wrap(~Site)
-# ══════════════════════════════╗
-mineral_isoR %>% #              ▼
-  ggplot(aes(x = Round, y = isoF14_high_avg)) + geom_point() + facet_wrap(~Site)
-# ══════════════════════════════╗
-mineral_isoR %>% #              ▼
-  ggplot(aes(x = Round, y = isoF15_high_avg)) + geom_point() + facet_wrap(~Site)
-mineral_isoR %>%
-  ggplot(aes(x = conc15N_avg_high, y = Nconc_in_avg)) + geom_point() + facet_wrap(~Site)
-mineral_isoR %>%
-  ggplot(aes(x = Round, y = Nconc_in_avg)) + geom_point() + facet_wrap(~Site)
-# ═══════════════════════════════════╗
-mineral_isoR %>% #                   ▼
-  ggplot(aes(x = Round, y = conc15N_avg_high)) + geom_point() + facet_wrap(~Site)
-# ═════════════════════════════════════════╗
-mineral_isoR %>% #                         ▼
-  ggplot(aes(x = conc15N_inj, y = conc15N_harv_high)) + geom_point() + facet_wrap(~Site)
-# ═════════════════════════════════╗
-mineral_isoR %>% #                 ▼
-  ggplot(aes(x = Round, y = Nconc_inorg)) + geom_point() + facet_wrap(~Site)
-# ═══════════════════════════╗
-mineral_isoR %>% #           ▼
-  ggplot(aes(x = Round, y = NH4_microg_pr_gDW)) + geom_point() + facet_wrap(~Site)
-# ═══════════════════════════╗
-mineral_isoR %>% #           ▼
-  ggplot(aes(x = Round, y = NO3_microg_pr_gDW)) + geom_point() + facet_wrap(~Site)
-# Both NH4 and NO3 have a very high value in December (MP6), but from different plots. It is NH4 that is high on plot 3!
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Rec15N_isoN <- mineral_isoR %>%
-  select(1:4, isoF14_high_avg, isoF14_low_avg) %>%
-  left_join(Rec15N, by = join_by(Site, Plot, MP, Round)) %>%
-  mutate(PlantRecovery_N_high = PlantRecovery/100*isoF14_high_avg,
-         PlantRecovery_N_low = PlantRecovery/100*isoF14_low_avg,
-         R_MBN_N_high = R_MBN/100*isoF14_high_avg,
-         R_MBN_N_low = R_MBN/100*isoF14_low_avg) %>%
-  mutate(sysRec_N_high = PlantRecovery_N_high + R_MBN_N_high,
-         sysRec_N_low = PlantRecovery_N_low + R_MBN_N_low)
-
-
-  
-sysRec_N_high_sum <- summarySE(Rec15N_isoN, measurevar="sysRec_N_high", groupvars=c("Site", "Round"), na.rm=TRUE)
-
-# Total ecosystem recovery +/- 95% CI
-sysRec_N_high_sum %>%  
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  #geom_hline(yintercept = 100, color = "red") +
-  geom_errorbar(aes(x = Round, y = sysRec_N_high, ymin=sysRec_N_high, ymax=sysRec_N_high+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, sysRec_N_high),color = "black") +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("N per added "*{}^15*"N"), title = expression("Total ecosystem N taken up per "*{}^15*"N tracer recovery")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-
-
-
-
-
-# CR vs FR
-vegroot15N %>%
-  filter(Organ != "S" & Species != "BulkG") %>%
-  ggplot(aes(x = Species, y = d15N, color = Organ)) +
-  geom_boxplot() #+
-  #facet_wrap(~Organ)
 #
 #
 #
@@ -1182,53 +761,22 @@ vegroot15N %>%
 # Abisko vs Vassijaure
 AvsV<-c(1,-1)
 #
+# Plant organs
+SvsR<-c(-1, -1, 2) # Shoots vs roots
+CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
+Contr_organ <- cbind(SvsR,CRvsFR)
 #
-# Measuring period - Snow vs Snow-free and in between
+# Check contrasts are orthogonal
+crossprod(Contr_organ)
 #
-# Abisko
-# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-# Abi_SnowvsNot   <- c(-8,-8,-8,-8, 7, 7, 7, 7, 7, 7, 7, 7,-8,-8,-8) # Snow found on plots from November to May
-# Abi_SnowCvsW    <- c( 0, 0, 0, 0, 3, 3, 3, 3, 3,-5,-5,-5, 0, 0, 0) # Cold vs warm part of the snow covered period
-# Abi_freeWvsC    <- c( 2, 2,-5,-5, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2) # Warm vs cold part of the snow-free period
-# # The rest of the contrasts: Necessary for balanced test, but not interesting
-# Abi_Cont4       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-4, 1, 1)
-# Abi_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
-# Abi_Cont6       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0) # April(x2) vs May
-# Abi_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
-# Abi_Cont8       <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
-# Abi_Cont9       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Abi_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
-# Abi_Cont11      <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Abi_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Abi_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
-# Abi_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
-# #
-# Contr_Abisko_MP <- cbind(Abi_SnowvsNot, Abi_SnowCvsW, Abi_freeWvsC, Abi_Cont4, Abi_Cont5, Abi_Cont6, Abi_Cont7, Abi_Cont8, Abi_Cont9, Abi_Cont10, Abi_Cont11, Abi_Cont12, Abi_Cont13, Abi_Cont14)
-#
-# Vassijaure
-# Month             ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
-# MP                ( 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15)
-# Vas_SnowvsNot   <- c(-7,-7,-7,-7, 8, 8, 8, 8, 8, 8, 8, 8, 8,-7,-7) # Snow found on plots from November to June
-# Vas_SnowCvsW    <- c( 0, 0, 0, 0, 4, 4, 4, 4, 4,-5,-5,-5,-5, 0, 0) # Cold vs warm part of the snow covered period
-# Vas_freeWvsC    <- c( 2, 2,-4,-4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2) # Warm vs cold part of the snow-free period
-# # The rest of the contrasts: Necessary for balanced test, but not interesting
-# Vas_Cont4       <- c( 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Vas_Cont5       <- c( 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,-1,-1) # Summer 2019 vs 2020
-# Vas_Cont6       <- c( 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Vas_Cont7       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1)
-# Vas_Cont8       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1,-1,-1, 0, 0) # April(x2) vs May & June
-# Vas_Cont9       <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0)
-# Vas_Cont10      <- c( 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,-1, 0, 0)
-# Vas_Cont11      <- c( 0, 0, 0, 0, 3, 3,-2,-2,-2, 0, 0, 0, 0, 0, 0) # Nov-Dec vs Jan-Mar
-# Vas_Cont12      <- c( 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-# Vas_Cont13      <- c( 0, 0, 0, 0, 0, 0, 1, 1,-2, 0, 0, 0, 0, 0, 0)
-# Vas_Cont14      <- c( 0, 0, 0, 0, 0, 0, 1,-1, 0, 0, 0, 0, 0, 0, 0)
-# #
-# Contr_Vassijaure_MP <- cbind(Vas_SnowvsNot, Vas_SnowCvsW, Vas_freeWvsC, Vas_Cont4, Vas_Cont5, Vas_Cont6, Vas_Cont7, Vas_Cont8, Vas_Cont9, Vas_Cont10, Vas_Cont11, Vas_Cont12, Vas_Cont13, Vas_Cont14)
+# Contrasts for graphs
+# Define the winter period as snow covered period
+#seasonContr <- data.frame(Part = c("Summer", "Autumn", "Winter", "Spring"), pstart = c("01_Jul_19", "03_Sep_19", "05_Nov_19", "_20"), pend = c())
+winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
+winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
+winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
 #
 #
-# New contrasts:
 # Summer vs the cold season and autumn vs snow-covered
 # Abisko
 # Month               ( J, A, S, O, N, D, J, F, M, A, A, M, J, J, A) # Two times April
@@ -1278,26 +826,6 @@ Contr_Vassijaure_MP <- cbind(Vas_SummervsColdS, Vas_AutumnvsSnow, Vas_SnowCvsW, 
 # Check contrasts are orthogonal
 crossprod(Contr_Vassijaure_MP)
 #
-#
-# Plant organs
-SvsR<-c(-1, -1, 2) # Shoots vs roots
-CRvsFR<-c(1,-1,0) # Coarse roots vs fine roots
-Contr_organ <- cbind(SvsR,CRvsFR)
-#
-# Check contrasts are orthogonal
-crossprod(Contr_organ)
-#
-# Contrasts for graphs
-# Define the winter period as snow covered period
-#seasonContr <- data.frame(Part = c("Summer", "Autumn", "Winter", "Spring"), pstart = c("01_Jul_19", "03_Sep_19", "05_Nov_19", "_20"), pend = c())
-
-
-winterP <- data.frame(wstart = c(05, 12), wend = c(12, 13))
-winterP2 <- data.frame(wstart = c("05_Nov_19", "05_Nov_19"), wend = c("12_May_20", "13_Jun_20"))
-winterP_date <- data.frame(wstart = c(as.Date("2019-11-10"),as.Date("2019-11-12")), wend = c(as.Date("2020-05-06"),as.Date("2020-06-01")))
-
-data.frame(x = c(as.Date("2019-11-10"),as.Date("2019-11-12")), y = c(0,0,0,0)) %>%
-  ggplot(aes(x, y)) + geom_line(color = "red", linewidth = 1)
 #
 # New contrasts for the estimated N-uptake:
 # Summer vs the cold season and autumn vs snow-covered
@@ -1458,17 +986,10 @@ Q0_season_A %>%
 # Snow-covered
 # Warm: 41.1 Cold: 66.1
 #
-Q0_season_A %>%
-  summarise(sysRec_season = mean(sysRec), .by = c(Snow))
 #
 summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("SummerVsCold"))
 summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("AutumnVsSnow"))
 summarySE(Q0_season_A, measurevar = "sysRec", groupvars = c("SnowCW"))
-#
-Q0_season_A %>%
-  ggplot(aes(x = Round, y = sysRec, fill = FreeWC)) +
-  geom_boxplot() +
-  facet_wrap(~Site)
 #
 #
 # Contrasts - Vassijaure
@@ -1534,11 +1055,6 @@ Q0_season_V %>%
 summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("SummerVsCold"))
 summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("AutumnVsSnow"))
 summarySE(Q0_season_V, measurevar = "sysRec", groupvars = c("SnowCW"))
-#
-Q0_season_V %>%
-  ggplot(aes(x = Round, y = sysRec, fill = SnowCW)) +
-  geom_boxplot() +
-  facet_wrap(~Site)
 #
 #
 #
@@ -1650,11 +1166,6 @@ summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("SummerVsCold
 summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("AutumnVsSnow"))
 summarySE(Q1_season_A, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
 #
-Q1_season_A %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = SummerVsCold)) +
-  geom_boxplot() +
-  facet_wrap(~Site)
-#
 #
 # Contrasts Vassijaure
 contrasts(Q1_veg_stat_V$Round) <- Contr_Vassijaure_MP
@@ -1713,11 +1224,6 @@ Q1_season_V %>%
 summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("SummerVsCold"))
 summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("AutumnVsSnow"))
 summarySE(Q1_season_V, measurevar = "PlantRecovery", groupvars = c("SnowCW"))
-#
-Q1_season_V %>%
-  ggplot(aes(x = Round, y = PlantRecovery, fill = SummerVsCold)) +
-  geom_boxplot() +
-  facet_wrap(~Site)
 #
 #
 #
@@ -1845,12 +1351,6 @@ summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("SummerVsCol
 summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("AutumnVsSnow", "Organ"))
 summarySE(Q1a_season_A, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
 #
-Q1a_season_A %>%
-  ggplot(aes(x = Round, y = OrganRecovery, fill = SummerVsCold)) +
-  geom_boxplot() +
-  facet_wrap(~Organ)
-  #facet_grid(rows = vars(Organ), cols = vars(Site))
-#
 #
 # Contrasts Vassijaure
 contrasts(vegroot15N_Organ_V$Round) <- Contr_Vassijaure_MP
@@ -1918,94 +1418,6 @@ Q1a_season_V %>%
 summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("SummerVsCold", "Organ"))
 summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("AutumnVsSnow", "Organ"))
 summarySE(Q1a_season_V, measurevar = "OrganRecovery", groupvars = c("SnowCW", "Organ"))
-#
-Q1a_season_V %>%
-  ggplot(aes(x = Round, y = OrganRecovery, fill = SummerVsCold)) +
-  geom_boxplot() +
-  facet_wrap(~Organ)
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Q1a_season <- vegroot15N_Organ %>%
-  select(1:4, Organ, OrganRecovery) %>%
-  mutate(SeasonSW = case_when(MP == 1 | MP == 2 | MP == 13 | MP == 14 | MP == 15 ~ "Summer",
-                              MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 ~ "Winter",
-                              TRUE ~ NA),
-         SeasonAS = case_when(MP == 3 | MP == 4 | MP == 5 ~ "Autumn",
-                              MP == 10 | MP == 11 | MP == 12 ~ "Spring",
-                              TRUE ~ NA),
-         Snow = if_else(MP == 5 | MP == 6 | MP == 7 | MP == 8 | MP == 9 | MP == 10 | MP == 11 | MP == 12, "Snow", "Clear"))
-#
-# Significant for Summer vs Winter and Autumn vs Spring
-Q1a_season %>%
-  filter(!is.na(SeasonSW)) %>%
-  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(Organ, SeasonSW))
-Q1a_season %>%
-  filter(!is.na(SeasonAS)) %>%
-  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(SeasonAS))
-# Summer 5.72 and winter 7.14. But only really visible for Abisko
-# Autumn 6.56 and Spring 4.33, but larger for Abisko
-#
-# Significant for Snow covered season
-Q1a_season %>%
-  summarise(PlantRecov_season = mean(OrganRecovery), .by = c(Snow))
-# Snow covered period: 6.09 and outside: 5.96
-summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "Snow"))
-summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "SeasonSW"))
-summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("SeasonAS"))
-summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Organ", "Site"))
-summarySE(Q1a_season, measurevar = "OrganRecovery", groupvars = c("Site", "MP", "Organ"))
-#
-Q1a_season %>%
-  ggplot(aes(x = Round, y = OrganRecovery, fill = SeasonAS)) +
-  geom_col() +
-  facet_wrap(~Site)
-#
-Q1a_season %>%
-  filter(Snow == "Clear") %>%
-  summarise(Snow_sum = sum(OrganRecovery),
-            Snow_count = length(OrganRecovery)) %>%
-  mutate(Snow_avg = Snow_sum/Snow_count)
-#
-# Test correlation of biomass vs organ proportional recovery
-vegroot15N_bio_organ <- vegroot15N %>%
-  select(1:4,Species,Organ,Biomass_DW_g) %>%
-  group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
-  summarise(Biomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
-  ungroup() %>%
-  mutate(across(c("Plot", "MP"), as.character))%>%
-  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
-
-vegroot15N_organBioCorr <- vegroot15N_Organ %>%
-  select(1:4, Organ, OrganRecovery) %>%
-  left_join(vegroot15N_bio_organ, by = join_by(Site, Plot, MP, Round, Organ))
-vegroot15N_organBioCorr %>%
-  ggplot(aes(x = log(Biomass), y = (OrganRecovery), color = Organ)) +
-  geom_point() +
-  geom_smooth(method = lm, span = 0.3, se = TRUE, alpha = 0.6) +
-  #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
-  facet_wrap( ~ Site)
-#
-plyr::ddply(vegroot15N_organBioCorr, .(Organ, Site), CorrFunc)
-# No correlation for most < 0.6
 #
 #
 #
@@ -2234,9 +1646,6 @@ par(mfrow = c(1,1))
 Anova(lmeTDN_NO3, type=2)
 # Log-transformed (not great fit): Highly significant for Round (χ^2 = 190.3545, p = <2e-16)
 #
-Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NO3)) + geom_boxplot()
-Q_TDN_Nconc %>% ggplot(aes(x = Round, y = NH4)) + geom_boxplot()
-
 NH4_conc <- Q_TDN_Nconc %>%
   select(Site, Plot, Round, NH4) %>%
   summarise(NH4 = mean(NH4), .by = c(Round))
@@ -2390,11 +1799,6 @@ Compet_all <- Compet_all %>%
          cubeRecov = (Recov)^(1/3),
          arcRecov = asin(sqrt(Recov/100)))
 #
-Compet_all %>%
-  mutate(across("MP", ~ as.numeric(.x))) %>%
-  ggplot(aes(x = MP, y = Recov, fill = sysPart)) +
-  geom_point()
-#
 #
 #model:
 lmeCompet<-lme(Recov ~ Site*Round*sysPart,
@@ -2412,7 +1816,6 @@ par(mfrow = c(1,1))
 #
 #model output
 Anova(lmeCompet, type=2)
-#
 #
 #
 #
@@ -2661,58 +2064,6 @@ summary(lmeTotN_m2_V)
 #
 #=======  ###    Plotting    ### =======
 #-------   ## Plant Biomass  ## -------
-#
-vegroot15N_bio <- vegroot15N %>%
-  group_by(across(c("Site", "Plot", "Round"))) %>%
-  summarise(TotalBiomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
-  ungroup()
-#
-# Plant biomass total +/- SE
-vegroot15N_bio %>%
-  group_by(across(c("Site", "Round"))) %>%
-  summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgBiomass-se, ymax=avgBiomass+se), position=position_dodge(.9)) +
-  geom_col(aes(Round, avgBiomass),color = "black") +
-  #ylim(0,20) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Biomass (g pr sample)"), title = expression("Plant biomass")) + #, title = "15N Biomass in plants") + #guides(x = guide_axis(n.dodge = 2)) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# Plant biomass by organ + SE
-vegroot15N %>%
-  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
-  summarise(TotalBiomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  summarise(avgBiomass = mean(TotalBiomass, na.rm = TRUE), se = sd(TotalBiomass)/sqrt(length(TotalBiomass)), .groups = "keep") %>%
-  mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
-         se = if_else(Organ == "S", se, -se),
-         avgR_SE = if_else(Organ == "CR", avgBiomass, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgBiomass, avgBiomass)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-18,3)) +
-  scale_fill_viridis_d() +
-  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Biomass") +
-  geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-18, -15, -12, -9, -6, -3, 0, 3), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Biomass (g pr sample)"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
 # 
 # Biomass pr m2
 vegroot15N_prm2 <- vegroot15N %>%
@@ -2788,7 +2139,9 @@ Biomass_legend <- get_legend(Biomass_plotLegend) # Only works if legend position
 Biomass_plot.2 <- Biomass_plot + theme(legend.position = "none")
 #
 # Combine. OBS! Check that colors match!
-grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
+FigS_PlantBiom <- grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
+#
+#ggsave("Fig_S4_PlantBiom.png", plot = FigS_PlantBiom, path = "images", width = 32, height = 16, units = "cm", dpi = 600, bg = "white")
 #
 # The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph
 #
@@ -2798,161 +2151,7 @@ grid.arrange(Biomass_plot.2, Biomass_legend, ncol = 2, widths = c(2.7, 0.4))
 #
 #
 #
-# Plant biomass by organ 95% CI
-vegroot15N_biom_sum <- summarySE(vegroot15N, measurevar="Biomass_DW_g", groupvars=c("Site", "Round", "Organ"), na.rm=TRUE)
-
-vegroot15N_biom_sum %>%
-  rename("avgBiomass" = Biomass_DW_g) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  mutate(avgBiomass = if_else(Organ == "S", avgBiomass, -avgBiomass),
-         ci = if_else(Organ == "S", ci, -ci),
-         avgR_CI = if_else(Organ == "CR", avgBiomass, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+avgBiomass, avgBiomass)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgBiomass, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-18,3)) +
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = avgBiomass, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-18, -15, -12, -9, -6, -3, 0, 3), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("Biomass (g pr sample)"), title = expression("Plant biomass")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
 #-------   ##    Recovery    ## -------
-#
-# For species recovery, it is also possible to 
-vegroot15N_Species <- vegroot15N %>%
-  select(1:4,Species,Organ,Recovery) %>%
-  #group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
-  #summarise(OrganRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  #ungroup() %>%
-  left_join(vegroot15N_total_Plant, by = join_by(Site, Plot, MP, Round)) %>%
-  mutate(across(c("Plot", "MP"), as.character))%>%
-  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor)) %>%
-  select(1:8) %>%
-  mutate(SpOrganRecovery = Recovery/PlantRecovery*100)
-#
-# Sum recovery and calculate average
-# This means combining
-# Shoots: ES, DS, G, O, U
-# CR: ES, DS, G, bulk
-# FR: ES, DS, G, O, bulk
-vegroot15N %>%
-  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
-  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery),
-         se = if_else(Organ == "S", se, -se),
-         avgR_SE = if_else(Organ == "CR", avgRecovery, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgRecovery, avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-15,3)) +
-  scale_fill_viridis_d() +
-#  scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-15, -12, -9, -6, -3, 0, 3), labels = abs) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# Same as above, but Recovery proportional to total plant recovery
-# organRecovery / PlantRecovery
-vegroot15N_Organ %>%
-  group_by(across(c("Site", "Plot", "Round", "Organ"))) %>%
-  summarise(TotalRecovery = sum(OrganRecovery, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery),
-         se = if_else(Organ == "S", se, -se),
-         avgR_SE = if_else(Organ == "CR", avgRecovery, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_SE = if_else(Organ == "FR", cumsum(avgR_SE)+avgRecovery, avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-110,75)) +
-  scale_fill_viridis_d() +
-  #  scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
-  geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-# Each species or part separated. For a quick overview of where patterns might come from
-vegroot15N %>%
-  #group_by(across(c("Site", "Plot", "Round", "Organ", "Species"))) %>%
-  #summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Organ", "Species"))) %>%
-  summarise(avgRecovery = mean(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  #
-  # Plot 
-  ggplot() +
-  #geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack") +
-  coord_cartesian(ylim = c(-8,3)) +
-  scale_fill_viridis_d() +
-  scale_y_continuous(labels = abs) +
-  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
-  #geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site + Species, ncol = 5) +
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per species per organ")) +
-  guides(fill = guide_legend(title = "Plant organ")) + 
-  theme_light(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
-#
-# Species, excluding the belowground Bulk roots. Proportional to total recovered in plants
-vegroot15N_Species %>%
-  group_by(across(c("Site", "Round", "Organ", "Species"))) %>%
-  summarise(avgRecovery = mean(SpOrganRecovery, na.rm = TRUE), .groups = "keep") %>%
-  mutate(avgRecovery = if_else(Organ == "S", avgRecovery, -avgRecovery)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  filter(Species != "Bulk" & Species != "BulkG") %>%
-  #
-  # Plot 
-  ggplot() +
-  #geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack") +
-  coord_cartesian(ylim = c(-20,40)) +
-  scale_fill_viridis_d() +
-  scale_y_continuous(labels = abs) +
-  #scale_fill_manual(values = c("darkgreen", "navy", "brown"), name = "Recovery") +
-  #geom_errorbar(aes(x = Round, y = avgRecovery, ymin=avgR_SE-se, ymax=avgR_SE+se), position=position_dodge(.9)) +
-  facet_wrap( ~ Site + Species, ncol = 5) +
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per species per organ")) +
-  guides(fill = guide_legend(title = "Plant organ")) + 
-  theme_light(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1)) 
-#
-#
 #
 # Abisko and Vassijaure plant and microbial recovery faceted
 # Calculate means and 95% CI
@@ -2961,73 +2160,6 @@ Mic15N_sum <- summarySE(Rec15N, measurevar="R_MBN", groupvars=c("Site", "Round")
 TDN15N_sum <- summarySE(Rec15N, measurevar="R_TDN", groupvars=c("Site", "Round"), na.rm=TRUE)
 sysRec_sum <- summarySE(Rec15N, measurevar="sysRec", groupvars=c("Site", "Round"), na.rm=TRUE)
 #
-# Same calculations as with the summarySE function, but less flexible and would need to write code each place
-# vegroot15N_total_Plant %>%
-#   group_by(across(c("Site", "Round"))) %>%
-#   summarise(avgRecovery = mean(PlantRecovery, na.rm = TRUE), 
-#                    sd = sd(PlantRecovery),
-#                    se = sd(PlantRecovery)/sqrt(length(PlantRecovery)), 
-#                    N = length(PlantRecovery), # 5 replicates
-#                    ci = qt(0.95/2 + .5, length(PlantRecovery)-1) * (sd(PlantRecovery)/sqrt(length(PlantRecovery))), # t-distribution of 95% (97.5% as 2.5% each end) for N-1 times standard error
-#                    .groups = "keep")
-#
-#
-#
-# <><><><><> ABSOLUTE TOTAL RECOVERY - former FIG <><><><><>
-#
-#
-#
-# Total ecosystem recovery +/- 95% CI
-sysRec_sum %>%  
-  ggplot() + 
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  #geom_hline(yintercept = 100, color = "red") +
-  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec, ymax=sysRec+ci), position=position_dodge(.9)) +
-  geom_col(aes(Round, sysRec),color = "black") +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  coord_cartesian(ylim = c(0,150)) +
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# <><><><><> END former FIG <><><><><>
-#
-#
-#
-# Total ecosystem recovery stacked
-Rec15N %>%
-  select(1:4, PlantRecovery, R_MBN, R_TDN) %>%
-  pivot_longer(5:7, names_to = "Part", values_to = "Recovery") %>%
-  group_by(across(c("Site", "Plot", "Round", "Part"))) %>%
-  summarise(TotalRecovery = sum(Recovery, na.rm = TRUE), .groups = "keep") %>%
-  group_by(across(c("Site", "Round", "Part"))) %>%
-  summarise(avgRecovery = mean(TotalRecovery, na.rm = TRUE), se = sd(TotalRecovery)/sqrt(length(TotalRecovery)), .groups = "keep") %>%
-  ungroup() %>%
-  left_join(sysRec_sum, by = join_by(Site, Round)) %>%
-  select(1:4, sysRec, ci) %>%
-  mutate(ci = if_else(Part == "R_MBN", ci, 0)) %>%
-  mutate(Part=factor(Part)) %>%
-  mutate(Part = fct_relevel(Part, c("R_MBN", "PlantRecovery", "R_TDN"))) %>%
-  mutate(Part=case_when(Part == "PlantRecovery" ~ "Plant Recovery",
-                        Part == "R_MBN" ~ "Microbial Recovery",
-                        Part == "R_TDN" ~ "Total Dissolved Nitrogen (TDN)")) %>%
-  #
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, avgRecovery, fill = factor(Part)), position = "stack", color = "black") + # levels=c("S","FR","CR")
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = sysRec, ymin=sysRec+ci, ymax=sysRec), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of added "*{}^15*"N"), title = expression("Total ecosystem "*{}^15*"N tracer recovery")) + 
-  guides(fill = guide_legend(title = "System type")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
 #
 #
 # <><><><><> ABSOLUTE RECOVERY - SUPPL. FIG 2 <><><><><>
@@ -3035,7 +2167,7 @@ Rec15N %>%
 #
 #
 # Plant total recovery +/- 95% CI
-vegroot15N_total_Plant_sum %>%  
+FigS_PlantRec <- vegroot15N_total_Plant_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = PlantRecovery, ymin=PlantRecovery, ymax=PlantRecovery+ci), position=position_dodge(.9)) +
@@ -3048,15 +2180,11 @@ vegroot15N_total_Plant_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#ggsave("Fig_S2_PlantRec.png", plot = FigS_PlantRec, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+#
 #
 #
 # <><><><><> END SUPPL. FIG 2 <><><><><>
-#
-#
-#
-vegroot15N_total_Plant %>%
-  ggplot() +
-  geom_boxplot(aes(Round, PlantRecovery))
 #
 #
 #
@@ -3065,7 +2193,7 @@ vegroot15N_total_Plant %>%
 #
 #
 # Microbial total recovery +/- 95% CI
-Mic15N_sum %>%  
+FigS_MicRec <- Mic15N_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = R_MBN, ymin=R_MBN, ymax=R_MBN+ci), position=position_dodge(.9)) +
@@ -3078,6 +2206,7 @@ Mic15N_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#ggsave("Fig_S3_MicRec.png", plot = FigS_MicRec, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
 #
 #
 # <><><><><> END SUPPL. FIG 3 <><><><><>
@@ -3089,7 +2218,7 @@ Mic15N_sum %>%
 #
 #
 # TDN total recovery +/- 95% CI 
-TDN15N_sum %>%  
+FigS_TDNRec <- TDN15N_sum %>%  
   ggplot() + 
   geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
   geom_errorbar(aes(x = Round, y = R_TDN, ymin=R_TDN, ymax=R_TDN+ci), position=position_dodge(.9)) +
@@ -3102,6 +2231,8 @@ TDN15N_sum %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"),axis.text.x=element_text(angle=60, hjust=1))
 #
+#ggsave("Fig_S5_TDNRec.png", plot = FigS_TDNRec, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+#
 #
 #
 # <><><><><> END SUPPL. FIG 5 <><><><><>
@@ -3113,17 +2244,11 @@ TDN15N_sum %>%
 Rec15N_Plant_sum <- summarySE(Rec15N, measurevar = "PlantR_frac", groupvars = c("Site", "Round"))
 Rec15N_TDN_sum <- summarySE(Rec15N, measurevar = "R_TDN_frac", groupvars = c("Site", "Round"))
 Rec15N_MBN_sum <- summarySE(Rec15N, measurevar = "R_MBN_frac", groupvars = c("Site", "Round"))
-# Plot values using function
-plot_prop_Recovery(Rec15N_Plant_sum, plotvar=Rec15N_Plant_sum$PlantR_frac, titleExp = expression("Plant "*{}^15*"N tracer recovery"))
-plot_prop_Recovery(Rec15N_TDN_sum, plotvar=Rec15N_TDN_sum$R_TDN_frac, titleExp = expression("TDN "*{}^15*"N tracer recovery"))
-plot_prop_Recovery(Rec15N_MBN_sum, plotvar=Rec15N_MBN_sum$R_MBN_frac, titleExp = expression("Microbial "*{}^15*"N tracer recovery"))
-#
-#
 vegroot15N_Organ_sum <- summarySE(vegroot15N_Organ, measurevar = "OrganRecovery", groupvars = c("Site", "Round", "Organ"))
 #
 #
 #
-# <><><><><> ORGAN RECOVERY - FIG 3 <><><><><>
+# <><><><><> ORGAN RECOVERY - FIG 4 <><><><><>
 #
 #
 #
@@ -3179,92 +2304,16 @@ OrganRec_legend <- get_legend(OrganRec_plotLegend) # Only works if legend positi
 OrganRec_plot.2 <- OrganRec_plot + theme(legend.position = "none")
 #
 # Combine. OBS! Check that colors match!
-grid.arrange(OrganRec_plot.2, OrganRec_legend, ncol = 2, widths = c(2.7, 0.4))
+Fig_organRec <- grid.arrange(OrganRec_plot.2, OrganRec_legend, ncol = 2, widths = c(2.7, 0.4))
+#
+#ggsave("Fig_4_PlantOrganRec.png", plot = Fig_organRec, path = "images", width = 32, height = 16, units = "cm", dpi = 600, bg = "white")
 #
 # The color change could also be done in one figure, but by arranging the legend as separate, it can be moved closer to the graph
 #
 #
 #
-# <><><><><> END FIG 3 <><><><><>
+# <><><><><> END FIG 4 <><><><><>
 #
-#
-#
-# For the label to be correct
-vegroot15N_Organ_sum %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
-         ci = if_else(Organ == "S", ci, -ci),
-         avgR_CI = if_else(Organ == "CR", OrganRecovery, 0)) %>%
-  group_by(across(c("Site", "Round"))) %>%
-  mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
-  group_by(across(c("Site", "Round", "Organ"))) %>%
-  ungroup() %>%
-  mutate(Organ = case_when(Organ == "S" ~ "Shoots",
-                           Organ == "FR" ~ "Fine Roots",
-                           Organ == "CR" ~ "Coarse Roots")) %>%
-  # Plot 
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("Shoots","Fine Roots","Coarse Roots"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(-125,75)) +
-  scale_fill_viridis_d() +
-  geom_errorbar(aes(x = Round, y = OrganRecovery, ymin=avgR_CI, ymax=avgR_CI+ci), position=position_dodge(.9)) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(-125, -100, -75, -50, -25, 0, 25, 50, 75), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-vegroot15N_Organ_sum %>%
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","FR","CR"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(0,100)) +
-  scale_fill_viridis_d() +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
-  #scale_fill_discrete(labels = c("Shoots", "Fine Roots", "Course roots")) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-Rec15N_sum <- Rec15N_Plant_sum %>%
-  left_join(Rec15N_MBN_sum, by = join_by(Site, Round)) %>%
-  left_join(Rec15N_TDN_sum, by = join_by(Site, Round)) %>%
-  select(Site, Round, PlantR_frac, ci.x, R_MBN_frac, ci.y, R_TDN_frac, ci) %>%
-  rename("ci_plant" = ci.x,
-         "ci_MBN" = ci.y,
-         "ci_TDN" = ci)
-Rec15N_sum <- Rec15N_sum %>%
-  select(Site, Round, PlantR_frac, R_MBN_frac, R_TDN_frac) %>%
-  pivot_longer(cols = 3:5, names_to = "Type", values_to = "Recovery")
-#
-Rec15N_sum %>%
-  ggplot() +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP2$wstart, xmax=winterP2$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_col(aes(Round, Recovery, fill = factor(Type, levels=c("PlantR_frac","R_MBN_frac","R_TDN_frac"))), position = "stack", color = "black") +
-  coord_cartesian(ylim = c(0,100)) +
-  scale_fill_viridis_d(labels = c("Plant", "Microbial", "TDN")) +
-  scale_x_discrete(labels = measuringPeriod) +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs) +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") + 
-  labs(x = "Measuring period (MP)", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) + #guides(x = guide_axis(n.dodge = 2)) + 
-  guides(fill = guide_legend(title = "System part")) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"),axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# Attempting to add the 95% CI as smooth line
-test <- Rec15N %>%
-  left_join(coreData, by = join_by(Site, Plot, MP, Round)) %>%
-  select(1:11, Day_of_harvest) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x)))
 #
 #
 # Plant recovery fraction
@@ -3332,7 +2381,7 @@ Rec15N_abs_sum <- vegroot15N_total_Plant_sum2 %>%
 #
 #
 #
-# <><><><><> RECOVERY - FIG 2 <><><><><>
+# <><><><><> RECOVERY - FIG 3 <><><><><>
 #
 #
 #
@@ -3382,11 +2431,13 @@ Rec_Abs_plot2 <- Rec_Abs_plot + theme(legend.position = "none")
 #
 #
 #
-grid.arrange(Rec_Abs_legend, Rec_Abs_plot2, Rec_prop_legend, Rec_prop_plot2, ncol = 1, heights = c(0.5, 5, 0.5, 5))
+Fig_Recov <- grid.arrange(Rec_Abs_legend, Rec_Abs_plot2, Rec_prop_legend, Rec_prop_plot2, ncol = 1, heights = c(0.5, 5, 0.5, 5))
+#
+#ggsave("Fig_3_Recovery2.png", plot = Fig_Recov, path = "images", width = 28, height = 28, units = "cm", dpi = 600, bg = "white")
 #
 #
 #
-# <><><><><> END FIG 2 <><><><><>
+# <><><><><> END FIG 3 <><><><><>
 #
 #
 #
@@ -3482,135 +2533,10 @@ Thesis_plant_relRecov_circ <- Rec15N_sum2 %>%
 #
 # Save
 #ggsave("Thesis_Plant_rel_recovery_circle4.2.1200_rotated.png", plot = Thesis_plant_relRecov_circ, path = "images", width = 20, height = 10, units = "cm", dpi = 1200, bg = "white")
-
-
-
-
-#
-# Circle of the date ones
-Rec15N_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Type)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  #geom_hline(yintercept = c(10,20), color = "red") +
-  geom_line(linewidth = 1) +
-  geom_ribbon(alpha = 0.7) +
-  scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
-  scale_linetype(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "30 day", date_minor_breaks = "5 day", date_labels = "%b") +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+ #  10, 20,
-  labs(x = "Time of year", y = expression("Relative recovery (% of total recovered "*{}^15*"N)")) + #, title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +# per part of the system"))+# to wrap the title properly around use atop() ))) +
-  facet_wrap( ~ Site, ncol = 2)+#, scales = "free") +
-  guides(linetype = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery ")), fill = guide_legend(title = expression(bold("(b)")~"Ecosystem relative recovery "))) +
-  theme_minimal(base_size = 15) +
-  theme(
-    panel.grid.minor.x = element_blank()
-  ) +
-  coord_radial(start = 0, end = 1.8*pi, inner.radius = 0.1)
-
-
-
-
-# Organ
-vegroot15N_Organ_sum %>%
-  # group_by(across(c("Site", "Round", "Organ"))) %>%
-  # mutate(OrganRecovery = if_else(Organ == "S", OrganRecovery, -OrganRecovery),
-  #        ci = if_else(Organ == "S", ci, -ci),
-  #        avgR_CI = if_else(Organ == "CR", OrganRecovery, 0)) %>%
-  # group_by(across(c("Site", "Round"))) %>%
-  # mutate(avgR_CI = if_else(Organ == "FR", cumsum(avgR_CI)+OrganRecovery, OrganRecovery)) %>%
-  # group_by(across(c("Site", "Round", "Organ"))) %>%
-  mutate(Seasons8 = case_when(Round == "01_Jul_19" | Round == "14_Jul_20" ~ "Geassi",
-                              Round == "02_Aug_19" | Round == "15_Aug_20" ~ "Čakčageassi",
-                              Round == "03_Sep_19" | Round == "04_Oct_19" ~ "Čakča",
-                              Round == "05_Nov_19" | Round == "06_Dec_19" ~ "Čakčadálvi",
-                              Round == "07_Jan_20" | Round == "08_Feb_20" ~ "Dálvi",
-                              Round == "09_Mar_20" | Round == "10_Apr_20" | Round == "11_Apr_20" ~ "Giđđadálvi",
-                              Round == "12_May_20" ~ "Giđđa",
-                              Round == "13_Jun_20" ~ "Giđđageassi",
-                              TRUE ~ "YoYo_missing")) %>%
-  mutate(across(Seasons8, ~factor(.x, levels = c("Geassi", "Čakčageassi", "Čakča", "Čakčadálvi", "Dálvi", "Giđđadálvi", "Giđđa", "Giđđageassi")))) %>%
-  # Plot 
-  ggplot() +
-  #The seasons:
-  geom_col(aes(x = Round, y = 40, fill = Seasons8), alpha = 0.3) +
-  scale_fill_manual(values = seasonFill, na.value = NA) +
-  labs(fill = "Sámi Seasons") +
-  ggnewscale::new_scale_fill() +
-  #
-  geom_col(aes(Round, OrganRecovery, fill = factor(Organ, levels=c("S","CR","FR"))), position = "stack", color = "black") +
-  #scale_fill_viridis_d() +
-  scale_fill_manual(values = c("#440154","#fde725", "#21918c")) + # Don't have to swap around the colors in image editor. Check that they match!
-  scale_x_discrete(labels = measuringPeriod2_circle) +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100)) +
-  facet_wrap( ~ Site, ncol = 2) + 
-  labs(x = element_blank(), y = expression("Organ recovery (% of total plant recovered "*{}^15*"N)"), title = expression("Plant "*{}^15*"N tracer recovery per organ")) +
-  guides(fill = guide_legend(title = "Plant organ")) +
-  theme_minimal(base_size = 15) +
-  theme(
-    panel.grid.major.x = element_blank()
-  ) +
-  coord_radial(start = 0, end = 1.7*pi, inner.radius = 0.1)
-
-
-
-
 #
 #
 #
 # <><><><><> END Thesis graph <><><><><>
-#
-#
-#
-Rec15N_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = Recov_frac, ymin = Recov_frac-ci, ymax = Recov_frac+ci, fill=Type, linetype=Site)) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
-  scale_linetype(labels = c("Abisko", "Vassijaure")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-#
-# Recovery with all plots still available
-Rec15N_2 <- Rec15N %>%
-  rename(R_Plant_frac = "PlantR_frac") %>%
-  pivot_longer(cols = c(R_Plant_frac, R_MBN_frac, R_TDN_frac), names_to = "Type", values_to = "Recovery") %>%
-  select(1:4, Type, Recovery) %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x)))
-#
-Rec15N_3 <- Rec15N %>%
-  rename(R_Plant = "PlantRecovery") %>%
-  pivot_longer(cols = c(R_Plant, R_MBN, R_TDN), names_to = "Type", values_to = "Recovery") %>%
-  select(1:4, Type, Recovery) %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x)))
-#
-# Plot with geom_smooth
-Rec15N_2 %>%
-  ggplot(aes(x = Day_of_harvest, y = Recovery, color = Type)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
-  geom_point() +
-  geom_smooth(span = 0.3, se = TRUE, alpha = 0.6) +
-  scale_color_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  labs(x = "Time of harvest", y = expression("% of total system recovered "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery per part of the system")) +
-  facet_wrap( ~ Site) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-#
-Rec15N_3 %>%
-  ggplot(aes(x = Day_of_harvest, y = Recovery, color = Type)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
-  geom_point() +
-  geom_smooth(span = 0.3, se = TRUE, alpha = 0.6) +
-  scale_color_viridis_d(labels = c("Microbial", "Plant", "TDN")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  labs(x = "Time of harvest", y = expression("% of added "*{}^15*"N"), title = expression("Plant, microbial, and TDN "*{}^15*"N tracer recovery")) +
-  facet_wrap( ~ Site) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #
@@ -3638,7 +2564,7 @@ NO3_avg <- summarySE(InorgN_plot, measurevar="NO3", groupvars=c("Site", "Round")
 #
 #
 #
-InorgN_plot %>%
+FigS_InorgN <- InorgN_plot %>%
   select(1:4, NH4, NO3) %>%
   pivot_longer(5:6, names_to = "Type", values_to = "InorgN") %>%
   group_by(across(c("Site", "Plot", "Round", "Type"))) %>%
@@ -3661,6 +2587,8 @@ InorgN_plot %>%
   theme_classic(base_size = 20) +
   theme(panel.spacing = unit(2, "lines"), axis.text.x=element_text(angle=60, hjust=1))#, legend.position = "bottom")
 #
+#ggsave("Fig_S6_InorgN.png", plot = FigS_InorgN, path = "images", width = 30, height = 16, units = "cm", dpi = 600, bg = "white")
+#
 #
 #
 # <><><><><> END SUPPL. FIG 6 <><><><><>
@@ -3677,62 +2605,6 @@ coreData_snow <- coreData_snow %>%
   left_join(DayOf, by = join_by(Site, Round)) %>%
   mutate(across(Day_of_harvest, ~ as.Date(.x)))
 #
-
-# Soil mass
-coreData %>%
-  ggplot(aes(x = Round, y = Soil_RF_DW_g)) +
-  geom_boxplot() +
-  labs(x = "Time of harvest", y = "Root free soil g DW", title = "Soil mass for microbial") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-# Core depth
-# Boxplot
-coreData %>%
-  ggplot(aes(x = Round, y = -Soil_depth_cm)) +
-  geom_boxplot() +
-  coord_cartesian(y = c(-11,0)) + 
-  scale_y_continuous(breaks = c(0, -2, -4, -6, -8, -10), labels = abs) +
-  labs(x = "Time of harvest", y = "Depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-# Point data
-coreData %>%
-  ggplot(aes(x = Round, y = -Soil_depth_cm)) +
-  geom_point() +
-  coord_cartesian(y = c(-11,0)) + 
-  scale_y_continuous(breaks = c(0, -2, -4, -6, -8, -10), labels = abs) +
-  labs(x = "Time of harvest", y = "Depth of corer (cm)", title = "Corer depth as measured in the field at sampling") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# Snow cover
-coreData %>%
-  ggplot(aes(x = Round, y = Snow_depth_plot_cm)) +
-  geom_boxplot() +
-  labs(x = "Time of harvest", y = "Snow cover (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-
-coreData_snow %>%
-  ggplot(aes(x = Day_of_harvest, y = Snow_depth_plot_cm, ymin = Snow_depth_plot_cm-ci, ymax = Snow_depth_plot_cm+ci, fill = Site)) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_grey() +
-  #scale_fill_viridis_d() +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  labs(x = "Time of harvest", y = "Snow cover (cm)", title = "Snow cover measured over the entire plot (around all 15 patches)") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-
 #
 # Select only snow-covered period: MP5-MP13 (Vassijaure end)
 coreData_SnowP <- coreData %>%
@@ -3753,148 +2625,6 @@ par(mfrow = c(1,1))
 #model output
 Anova(lmeSnow, type=2)
 summary(lmeSnow)
-#
-#
-# Soil moisture
-coreData %>%
-  ggplot(aes(x = Round, y = (SM_FW_g - SM_DW_g)/SM_DW_g*100)) +
-  geom_boxplot() +
-  labs(x = "Time of harvest", y = "Soil moisture (g pr g FW)", title = "Soil moisture") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-#
-# • Testing ##----
-#
-vegroot15N_Organ_sum2 <- vegroot15N_Organ_sum %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  select(Site, Round, Organ, OrganRecovery, ci, Day_of_harvest)
-#
-vegroot15N_Organ_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill = Organ)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.4, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  #coord_cartesian(ylim = c(-110,75)) +
-  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
-  #scale_linetype(labels = c("Abisko", "Vassijaure")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  facet_wrap( ~ Site, ncol = 2, scales = "free") +
-  labs(x = "Measuring period (MP)", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  #guides(color = guide_legend(title = "Plant organ")) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100), labels = abs)
-#
-vegroot15N_Organ_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill=Organ, linetype=Site)) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
-  scale_linetype(labels = c("Abisko", "Vassijaure")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  theme_classic(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
-#
-vegroot15N_Organ_sum2 %>%
-  ggplot(aes(x = Day_of_harvest, y = OrganRecovery, ymin = OrganRecovery-ci, ymax = OrganRecovery+ci, fill=Organ, linetype=Organ)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
-  scale_linetype(labels = c("CR", "FR", "S")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  scale_y_continuous(breaks = c(0, 25, 50, 75, 100))+
-  labs(x = "Time of harvest", y = expression("% of total plant recovered "*{}^15*"N"), title = expression("Plant "*{}^15*"N tracer recovery")) +
-  facet_wrap( ~ Site, ncol = 2) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-# Biomass
-test_biom <- vegroot15N %>%
-  select(1:4, Species, Organ, Biomass_DW_g)
-test_biom_sum <- summarySE(test_biom, measurevar = "Biomass_DW_g", groupvars = c("Site", "Round", "Organ"), na.rm = TRUE)
-test_biom_sum <- test_biom_sum %>%
-  left_join(DayOf, by = join_by(Site, Round)) %>%
-  mutate(across(Day_of_harvest, ~ as.Date(.x))) %>%
-  select(Site, Round, Organ, Biomass_DW_g, ci, Day_of_harvest)
-#
-test_biom_sum %>%
-  ggplot(aes(x = Day_of_harvest, y = Biomass_DW_g, ymin = Biomass_DW_g-ci, ymax = Biomass_DW_g+ci, fill=Organ, linetype=Organ)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("CR", "FR", "S")) +
-  scale_linetype(labels = c("CR", "FR", "S")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  scale_y_continuous(breaks = c(0, 2, 4, 6, 8))+
-  labs(x = "Time of harvest", y = "Biomass (g)", title = "Plant biomass") +
-  facet_wrap( ~ Site, ncol = 2) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-# No CR
-test_biom_sum %>%
-  filter(Organ != "CR") %>%
-  ggplot(aes(x = Day_of_harvest, y = Biomass_DW_g, ymin = Biomass_DW_g-ci, ymax = Biomass_DW_g+ci, fill=Organ, linetype=Organ)) +
-  geom_rect(data=data.frame(variable=factor(1)), aes(xmin=winterP_date$wstart, xmax=winterP_date$wend, ymin=-Inf, ymax=Inf), alpha = 0.5, fill = 'grey', inherit.aes = FALSE) +
-  geom_line() +
-  geom_ribbon(alpha = 0.5) +
-  scale_fill_viridis_d(labels = c("FR", "S")) +
-  scale_linetype(labels = c("FR", "S")) +
-  scale_x_date(date_breaks = "4 weeks", date_labels = "%Y-%b-%d") +
-  scale_y_continuous(breaks = c(0, 1, 2, 3))+
-  labs(x = "Time of harvest", y = "Biomass (g)", title = "Plant biomass") +
-  facet_wrap( ~ Site, ncol = 2) +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-
-#
-# Trying out biomass vs recovery
-test2 <- vegroot15N %>%
-  select(1:4,Species,Organ,Biomass_DW_g) %>%
-  group_by(across(c("Site","Plot", "MP", "Round", "Organ"))) %>%
-  summarise(Biomass = sum(Biomass_DW_g, na.rm = TRUE), .groups = "keep") %>%
-  ungroup() %>%
-  mutate(across(c("Plot", "MP"), as.character))%>%
-  mutate(across(c("Site", "MP", "Round", "Organ"), as.factor))
-
-test <- vegroot15N_Organ %>%
-  select(1:4, Organ, OrganRecovery) %>%
-  left_join(test2, by = join_by(Site, Plot, MP, Round, Organ))
-test %>%
-  ggplot(aes(x = log(Biomass), y = (OrganRecovery), color = Organ)) +
-  geom_point() +
-  geom_smooth(method = lm, span = 0.3, se = TRUE, alpha = 0.6) +
-  #scale_color_viridis_d(labels = c("CR", "Plant", "TDN")) +
-  facet_wrap( ~ Site)
-#
-# TDN concentration changes
-soil15N %>%
-  left_join(coreData, by = join_by(Site,Plot,MP)) %>%
-  select(1:11, Round) %>%
-  ggplot(aes(x = Round, y = Nconc_microg_pr_gDW, fill = Extr_type)) +
-  geom_boxplot() +
-  labs(x = "Time of harvest", y = "TDN µg pr g DW", title = "TDN") +
-  facet_wrap(~Site, scales = "free") +
-  theme_classic(base_size = 20) +
-  theme(panel.spacing = unit(1, "lines"), axis.text.x=element_text(angle=60, hjust=1))
-#
-#
-# TDN d15N values
-soil15N_2 %>%
-  filter(Extr_type == "SE") %>%
-  ggplot(aes(x = Round, y = d15N, fill = Site)) + 
-  geom_boxplot() +
-  #scale_colour_viridis_d() +
-  labs(title = "TDN d15N") +
-  theme_bw(base_size = 20) +
-  theme(axis.text.x=element_text(angle=60, hjust=1))
 #
 #
 #

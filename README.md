@@ -1,16 +1,87 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# Project I - 15N seasonality
+# Replication analysis for: “Arctic plants can take up inorganic nitrogen year-round”
 
-## Part of PhD studies of Emil A.S. Andersen
+### Cite this work
 
-<!-- badges: start -->
-<!-- badges: end -->
+Andersen, E.A.S. (2026). Replication analysis for: Arctic plants can
+take up inorganic nitrogen year-round.
 
-This project is for analysis (and maybe data cleaning) of a year-round
-seasonal project that dealt with plant nitrogen uptake in a subarctic
-ecosystem located in the north of Sweden.
+### General information
 
-To better work with and across with other collaborators, I will make
-certain parts of this project public.
+This code repository is supplement to the publication “Emil Alexander
+Sherman Andersen<sup>1</sup>, Gesche Blume-Werry<sup>2</sup>, Chenxin
+Feng (冯晨辛)<sup>1,3</sup>, Friederike Gehrmann<sup>1</sup>, Niki
+Leblans<sup>1</sup>, Anders Michelsen<sup>4</sup>, Johan
+Olofsson<sup>2</sup>, Josefine Walz<sup>1</sup>, Ellen
+Dorrepaal<sup>1</sup>. 2026. Arctic plants can take up inorganic
+nitrogen year-round. New Phytologist”
+
+DOI: [10.1111/nph.71273](https://doi.org/10.1111/nph.71273)
+
+<small><sup>1</sup>Climate Impacts Research Centre, Department of
+Ecology and Environmental Sciences, Umeå University, 981 07 Abisko,
+Sweden  
+<sup>2</sup>Department of Ecology and Environmental Sciences, Umeå
+University, 901 87 Umeå, Sweden  
+<sup>3</sup>Faculty of Environmental and Agricultural Sciences,
+Agricultural University of Iceland, Hvanneyri, IS-311 Borgarness,
+Iceland  
+<sup>4</sup>Terrestrial Ecology Section, Department of Biology,
+University of Copenhagen, 2100 Copenhagen Ø, Denmark</small>
+
+For questions contact
+
+- Emil A.S. Andersen at <ea.sherman@proton.me>
+- Orcid ID: [0000-0003-3745-5044](https://orcid.org/0000-0003-3745-5044)
+
+### Publication summary:
+
+● Arctic tundra experiences strong climatic seasonality, with cold and
+long winters, but effective insulation by snow might enable plants and
+microbes to remain active in winter.  
+● We investigated year-round seasonality of plant and microbial
+inorganic nitrogen (N) uptake, within-plant allocation, and their
+dependence on snow depth in low-Arctic tundra, using monthly in situ
+<sup>15</sup>N-pulse-labelling.  
+● Plants and microbes took up the <sup>15</sup>N-label throughout the
+year, likely due to sufficiently deep and early snow that stabilised
+soil temperatures around 0°C in both study sites. Surprisingly, we found
+only a few indications for higher plant and microbial
+<sup>15</sup>N-uptake and (estimated) plant total inorganic N-uptake
+during the growing season compared to the cold season (i.e., the
+non-growing season). Instead, N-acquisition strongly varied within the
+cold season, with clearly higher uptake during the cold deep-winter
+(November–March) than the warmer spring-winter (April–May/June).  
+● Taken together, our results suggest that 78–82% of the annual plant
+inorganic N-uptake may take place during the long cold season and as
+much as 50–56% during deep-winter. This demonstrates the importance of
+nutrient dynamics during the cold season in the Arctic and challenges
+the general assumption that arctic plants remain dormant during the
+winter.
+
+### How to use analysis
+
+### Versioning
+
+- Download the code from this repository and the corresponding data from
+  zenodo. Unpack the data (to have two folders: *clean_data* and
+  *raw_data*) and run the “Study I.Rmd” Rproject in Rstudio
+- The code was compiled under R version 4.2.3. To access the R package
+  versions used for this analysis use the
+  [renv](https://rstudio.github.io/renv/index.html) package: Open the R
+  project and run in the console:
+
+``` r
+# install.package("renv") # if the renv package is not installed
+renv::restore()
+```
+
+#### Run the analysis
+
+- All analyses were done in the **15N_analysis.R** script
+- For cleaning of data files refer to **Cleaning_script_v2.R**
+- For environmental data, cleaning and graph, refer to
+  **Environmental_data.R**
+- RAW files can be provided upon request
